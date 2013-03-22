@@ -29,7 +29,6 @@
 
 /* Command line arguments */
 char *next_label = "menu.c32";
-int ht_force_ganged = 1;
 int ht_200mhz_only = 0;
 int ht_8bit_only = 0;
 bool boot_wait = false;
@@ -108,7 +107,6 @@ int parse_cmdline(const char *cmdline)
 {
 	static struct optargs options[] = {
 		{"next-label",	    &parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
-		{"ht.force-ganged", &parse_int,    &ht_force_ganged}, /* Force setup of 16bit (ganged) HT link to NC */
 		{"ht.8bit-only",    &parse_int,    &ht_8bit_only},
 		{"ht.200mhz-only",  &parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"boot-wait",       &parse_bool,   &boot_wait},

@@ -106,32 +106,21 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	printf("Checking HT width/freq.");
 
 	/* Gang link when appropriate, as the BIOS may not */
-	if (ht_force_ganged) {
-		val = cht_read_conf(neigh, FUNC0_HT, 0x170 + link * 4);
-		if ((val & 1) == 0) {
-			printf("<ganging>");
-			cht_write_conf(neigh, FUNC0_HT, 0x170 + link * 4, val | 1);
-		}
+	printf("*");
+	val = cht_read_conf(neigh, FUNC0_HT, 0x170 + link * 4);
+	printf(".");
+	if ((val & 1) == 0) {
+		printf("<ganging>");
+		cht_write_conf(neigh, FUNC0_HT, 0x170 + link * 4, val | 1);
+		reboot = true;
 	}
 
 	/* Optimize width (16b) */
-	val = cht_read_conf(neigh, FUNC0_HT, 0x84 + link * 0x20);
-	val &= ~(1 << 13); /* Disable LdtStopTriEn */
-	cht_write_conf(neigh, FUNC0_HT, 0x84 + link * 0x20, val);
-/*
-	if (!ht_8bit_only && (ht_force_ganged || (ganged && ((val >> 16) == 0x11)))) {
-		printf("*");
-		if ((val >> 24) != 0x11) {
-			printf("<CPU width>");
-			cht_write_conf(neigh, FUNC0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
-			reboot = true;
-		}
+	printf("+");
+	val = cht_read_conf(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
+	printf(".");
 
-		udelay(50);
-		printf(".");
-		val = cht_read_conf(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
-		printf(".");
-
+	if (!ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			cht_write_conf(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
@@ -139,39 +128,45 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		}
 
 		printf(".");
-	}
-*/
-	/* Optimize link frequency, if option to disable this is not set */
-/*	
-	if (!ht_200mhz_only) {
-		printf("+");
-		val = cht_read_conf(neigh, FUNC0_HT, 0x88 + link * 0x20);
+		val = cht_read_conf(neigh, FUNC0_HT, 0x84 + link * 0x20);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x5) {
-			printf("<CPU freq>");
-			cht_write_conf(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | 0x500);
+		if ((val >> 24) != 0x11) {
+			printf("<CPU width>");
+			cht_write_conf(neigh, FUNC0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
 			reboot = true;
 		}
+	}
 
-		udelay(50);
-		printf(".");
+	/* Optimize link frequency, if option to disable this is not set */
+	if (!ht_200mhz_only) {
+		printf("+");
 		val = cht_read_conf(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x5) {
+		if (((val >> 8) & 0xf) != 0x2) {
 			printf("<NC freq>");
-			cht_write_conf(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | 0x500);
+			cht_write_conf(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x2 << 8));
+			reboot = true;
+		}
+
+		printf(".");
+		val = cht_read_conf(neigh, FUNC0_HT, 0x88 + link * 0x20);
+		printf(".");
+
+		if (((val >> 8) & 0xf) != 0x2) {
+			printf("<CPU freq>");
+			cht_write_conf(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x2 << 8));
 			reboot = true;
 		}
 	}
-*/
+
 	printf("done\n");
 
 	if (reboot) {
 		printf("Rebooting to make new link settings effective...\n");
 		/* Ensure last lines were sent from management controller */
-		fflush(stdin);
+		fflush(stdout);
 		fflush(stderr);
 		udelay(2500000);
 		reset_cf9(2, nc - 1);
