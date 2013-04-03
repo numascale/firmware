@@ -21,6 +21,9 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+/* cpu_relax() defined here */
+#include "nc2-access.h"
+
 #define assert(cond) do { if (!(cond)) {				\
 	printf("Error: assertion '%s' failed in %s at %s:%d\n",		\
 	    #cond, __FUNCTION__, __FILE__, __LINE__);			\

@@ -27,6 +27,7 @@
 #include "nc2-defs.h"
 #include "nc2-bootloader.h"
 #include "nc2-access.h"
+#include "nc2-acpi.h"
 #include "nc2-version.h"
 
 /* Constants found in initialization */
@@ -153,6 +154,42 @@ static void get_hostname(void)
 	hostname = NULL;
 }
 
+static void stop_acpi(void)
+{
+	printf("ACPI handoff: ");
+	acpi_sdt_p fadt = find_sdt("FACP");
+
+	if (!fadt) {
+		printf("ACPI FACP table not found\n");
+		return;
+	}
+
+	uint32_t smi_cmd = *(uint32_t *)&fadt->data[48 - 36];
+	uint8_t acpi_enable = fadt->data[52 - 36];
+
+	if (!smi_cmd || !acpi_enable) {
+		printf("legacy support not enabled\n");
+		return;
+	}
+
+	uint32_t acpipm1cntblk = *(uint32_t *)&fadt->data[64 - 36];
+	uint16_t sci_en = inb(acpipm1cntblk);
+	outb(acpi_enable, smi_cmd);
+	int limit = 100;
+
+	do {
+		udelay(100);
+		sci_en = inb(acpipm1cntblk);
+
+		if ((sci_en & 1) == 1) {
+			printf("legacy handoff succeeded\n");
+			return;
+		}
+	} while (--limit);
+
+	printf("ACPI handoff timed out\n");
+}
+
 static int nc2_start(const char *cmdline)
 {
 	if (parse_cmdline(cmdline) < 0)
@@ -161,13 +198,16 @@ static int nc2_start(const char *cmdline)
 	constants();
 	get_hostname();
 
+	/* Stop ACPI first, SMM handler might do nasty things to us */
+	stop_acpi();
+	
 	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
 	if (nc2_ht_id < 0) {
 		printf("NumaChip-II not found\n");
 		return ERR_MASTER_HT_ID;
 	}
 	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
-	
+
 	start_user_os();
 
 	// XXX: Never reached

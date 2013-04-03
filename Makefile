@@ -53,15 +53,17 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 %.c32: %.elf $(syslinux_dir)/com32/samples/Makefile
 	(cd $(syslinux_dir)/com32/samples && make $(CURDIR)/$@ NOGPL=1)
 
-nc2-version.h: nc2-defs.h nc2-access.h nc2-bootloader.h nc2-access.c nc2-bootloader.c
+nc2-version.h: nc2-defs.h nc2-access.h nc2-acpi.h nc2-bootloader.h nc2-access.c nc2-bootloader.c
 	@echo \#define VER \"`git describe --always`\" >nc2-version.h
 
-nc2-bootloader.elf: nc2-bootloader.o nc2-htscan.o nc2-options.o nc2-access.o $(COM32DEPS)
+nc2-bootloader.elf: nc2-bootloader.o nc2-acpi.o nc2-htscan.o nc2-options.o nc2-access.o $(COM32DEPS)
 
-nc2-bootloader.o: nc2-bootloader.c nc2-defs.h nc2-bootloader.h nc2-access.h nc2-version.h
+nc2-bootloader.o: nc2-bootloader.c nc2-defs.h nc2-bootloader.h nc2-acpi.h nc2-access.h nc2-version.h
 
 nc2-htscan.o: nc2-htscan.c nc2-defs.h nc2-bootloader.h nc2-access.h
 
 nc2-options.o: nc2-options.c nc2-defs.h nc2-bootloader.h
 
 nc2-access.o: nc2-access.c nc2-defs.h nc2-access.h
+
+nc2-acpi.o: nc2-acpi.c nc2-acpi.h
