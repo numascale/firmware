@@ -50,7 +50,7 @@ void pmio_writeb(uint16_t offset, uint8_t val)
 	outw(offset | val << 8, PMIO_PORT);
 }
 
-uint32_t read_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+uint32_t pci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 {
 	uint32_t ret;
 	DEBUG("pci:%02x:%02x.%x %03x -> ",
@@ -63,10 +63,11 @@ uint32_t read_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	return ret;
 }
 
-void write_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+void pci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 {
 	DEBUG("pci:%02x:%02x.%x %03x <- %08x",
 	      bus, dev, func, reg, val);
+	assert(!(reg & 3));
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	outl(val, PCI_CONF_DATA);
@@ -74,11 +75,12 @@ void write_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t v
 	DEBUG("\n");
 }
 
-uint32_t cht_read_conf(uint8_t node, uint8_t func, uint16_t reg)
+uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg)
 {
 	uint32_t ret;
 	DEBUG("HT#%d F%xx%03x -> ",
 	      node, func, reg);
+	assert(!(reg & 3));
 	cli();
 	outl(HT_REG(node, func, reg), PCI_CONF_SEL);
 	ret = inl(PCI_CONF_DATA);
@@ -87,10 +89,11 @@ uint32_t cht_read_conf(uint8_t node, uint8_t func, uint16_t reg)
 	return ret;
 }
 
-void cht_write_conf(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
+void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
 {
 	DEBUG("HT#%d F%xx%03x <- %08x",
 	      node, func, reg, val);
+	assert(!(reg & 3));
 	cli();
 	outl(HT_REG(node, func, reg), PCI_CONF_SEL);
 	outl(val, PCI_CONF_DATA);
@@ -102,8 +105,8 @@ void reset_cf9(int mode, int last)
 {
 	int i;
 	for (i = 0; i <= last; i++) {
-		uint32_t val = cht_read_conf(i, FUNC0_HT, 0x6c);
-		cht_write_conf(i, FUNC0_HT, 0x6c, val | 0x20); /* BiosRstDet */
+		uint32_t val = cht_readl(i, FUNC0_HT, 0x6c);
+		cht_writel(i, FUNC0_HT, 0x6c, val | 0x20); /* BiosRstDet */
 	}
 	outb(mode, 0xcf9);
 	outb(mode | 4, 0xcf9);

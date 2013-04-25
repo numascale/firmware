@@ -36,12 +36,12 @@ static uint32_t get_phy_register(int node, int link, int idx, int direct)
 	int base = 0x180 + link * 8;
 	int i;
 	uint32_t reg;
-	cht_write_conf(node, FUNC4_LINK, base, idx | (direct << 29));
+	cht_writel(node, FUNC4_LINK, base, idx | (direct << 29));
 
 	for (i = 0; i < 1000; i++) {
-		reg = cht_read_conf(node, FUNC4_LINK, base);
+		reg = cht_readl(node, FUNC4_LINK, base);
 		if (reg & 0x80000000)
-			return cht_read_conf(node, FUNC4_LINK, base + 4);
+			return cht_readl(node, FUNC4_LINK, base + 4);
 	}
 
 	printf("Read from phy register HT#%d F4x%x idx %x did not complete\n",
@@ -53,11 +53,11 @@ static void cht_print(int neigh, int link)
 {
 	uint32_t val;
 	printf("HT#%d L%d Link Control       : 0x%08x\n", neigh, link,
-	      cht_read_conf(neigh, FUNC0_HT, 0x84 + link * 0x20));
+	      cht_readl(neigh, FUNC0_HT, 0x84 + link * 0x20));
 	printf("HT#%d L%d Link Freq/Revision : 0x%08x\n", neigh, link,
-	       cht_read_conf(neigh, FUNC0_HT, 0x88 + link * 0x20));
+	       cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20));
 	printf("HT#%d L%d Link Ext. Control  : 0x%08x\n", neigh, link,
-	       cht_read_conf(neigh, 0, 0x170 + link * 4));
+	       cht_readl(neigh, 0, 0x170 + link * 4));
 	val = get_phy_register(neigh, link, 0xe0, 0); /* Link phy compensation and calibration control 1 */
 	printf("HT#%d L%d Link Phy Settings  : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
@@ -76,11 +76,11 @@ static void ht_optimize_link(int nc, int neigh, int link)
 
 		while (1) {
 			next = 0;
-			rqrt = cht_read_conf(neigh, FUNC0_HT, 0x40 + 4 * nc) & 0x1f;
+			rqrt = cht_readl(neigh, FUNC0_HT, 0x40 + 4 * nc) & 0x1f;
 
 			/* Look for other CPUs routed on same link as NC */
 			for (i = 0; i < nc; i++) {
-				if (rqrt == (cht_read_conf(neigh, FUNC0_HT, 0x40 + 4 * i) & 0x1f)) {
+				if (rqrt == (cht_readl(neigh, FUNC0_HT, 0x40 + 4 * i) & 0x1f)) {
 					next = i;
 					break;
 				}
@@ -98,7 +98,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 			link ++;
 	}
 
-	ganged = cht_read_conf(neigh, 0, 0x170 + link * 4) & 1;
+	ganged = cht_readl(neigh, 0, 0x170 + link * 4) & 1;
 	printf("Found %s link to NC on HT#%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
 	cht_print(neigh, link);
@@ -107,33 +107,33 @@ static void ht_optimize_link(int nc, int neigh, int link)
 
 	/* Gang link when appropriate, as the BIOS may not */
 	printf("*");
-	val = cht_read_conf(neigh, FUNC0_HT, 0x170 + link * 4);
+	val = cht_readl(neigh, FUNC0_HT, 0x170 + link * 4);
 	printf(".");
 	if ((val & 1) == 0) {
 		printf("<ganging>");
-		cht_write_conf(neigh, FUNC0_HT, 0x170 + link * 4, val | 1);
+		cht_writel(neigh, FUNC0_HT, 0x170 + link * 4, val | 1);
 		reboot = true;
 	}
 
 	/* Optimize width (16b) */
 	printf("+");
-	val = cht_read_conf(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
+	val = cht_readl(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
 	printf(".");
 
 	if (!ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
-			cht_write_conf(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
+			cht_writel(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
 			reboot = true;
 		}
 
 		printf(".");
-		val = cht_read_conf(neigh, FUNC0_HT, 0x84 + link * 0x20);
+		val = cht_readl(neigh, FUNC0_HT, 0x84 + link * 0x20);
 		printf(".");
 
 		if ((val >> 24) != 0x11) {
 			printf("<CPU width>");
-			cht_write_conf(neigh, FUNC0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
+			cht_writel(neigh, FUNC0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
 			reboot = true;
 		}
 	}
@@ -141,22 +141,22 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	/* Optimize link frequency, if option to disable this is not set */
 	if (!ht_200mhz_only) {
 		printf("+");
-		val = cht_read_conf(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
+		val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
 		printf(".");
 
 		if (((val >> 8) & 0xf) != 0x2) {
 			printf("<NC freq>");
-			cht_write_conf(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x2 << 8));
+			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x2 << 8));
 			reboot = true;
 		}
 
 		printf(".");
-		val = cht_read_conf(neigh, FUNC0_HT, 0x88 + link * 0x20);
+		val = cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20);
 		printf(".");
 
 		if (((val >> 8) & 0xf) != 0x2) {
 			printf("<CPU freq>");
-			cht_write_conf(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x2 << 8));
+			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x2 << 8));
 			reboot = true;
 		}
 	}
@@ -175,7 +175,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 
 void detect_southbridge(void)
 {
-	southbridge_id = read_conf(0, 0x14, 0, 0);
+	southbridge_id = pci_readl(0, 0x14, 0, 0);
 
 	if (southbridge_id != VENDEV_SP5100)
 		printf("Warning: Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs\n", southbridge_id);
@@ -216,14 +216,14 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 	int nodes, nc = -1;
 	uint32_t val;
 
-	val = cht_read_conf(0, FUNC0_HT, 0x60);
+	val = cht_readl(0, FUNC0_HT, 0x60);
 	nodes = (val >> 4) & 7;
-	
+
 	/* Check the last cHT node for our VID/DID incase it's already been included in the cHT fabric */
-	val = cht_read_conf(nodes, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
+	val = cht_readl(nodes, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
 	if (val == VENDEV_NC2) {
 		nc = nodes;
-		*p_chip_rev = cht_read_conf(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
+		*p_chip_rev = cht_readl(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
 		printf("NumaChip-II rev %d already present on HT node %d\n", *p_chip_rev, nc);
 		/* Chip already found; make sure the desired width/frequency is set */
 		ht_optimize_link(nc, -1, -1);
@@ -234,10 +234,10 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 		bool use = true;
 
 		for (neigh = 0; neigh <= nodes; neigh++) {
-			uint32_t aggr = cht_read_conf(neigh, FUNC0_HT, 0x164);
+			uint32_t aggr = cht_readl(neigh, FUNC0_HT, 0x164);
 
 			for (link = 0; link < 4; link++) {
-				val = cht_read_conf(neigh, FUNC0_HT, 0x98 + link * 0x20);
+				val = cht_readl(neigh, FUNC0_HT, 0x98 + link * 0x20);
 
 				if ((val & 0x1f) != 0x3)
 					continue; /* Not coherent */
@@ -248,7 +248,7 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 					use = true;
 
 				for (rt = 0; rt <= nodes; rt++) {
-					val = cht_read_conf(neigh, FUNC0_HT, 0x40 + rt * 4);
+					val = cht_readl(neigh, FUNC0_HT, 0x40 + rt * 4);
 
 					if (val & (2 << link))
 						use = true; /* Routing entry "rt" uses link "link" */
@@ -271,70 +271,70 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 
 		nc = nodes + 1;
 		/* "neigh" request/response routing, copy bcast values from self */
-		val = cht_read_conf(neigh, FUNC0_HT, 0x40 + neigh * 4);
-		cht_write_conf(neigh, FUNC0_HT, 0x40 + nc * 4,
-			       (val & 0x07fc0000) | (0x402 << link));
+		val = cht_readl(neigh, FUNC0_HT, 0x40 + neigh * 4);
+		cht_writel(neigh, FUNC0_HT, 0x40 + nc * 4,
+			   (val & 0x07fc0000) | (0x402 << link));
 
 		for (i = 0; i <= nodes; i++) {
-			val = cht_read_conf(i, FUNC0_HT, 0x68);
-			cht_write_conf(i, FUNC0_HT, 0x68, val & ~(1 << 15)); /* LimitCldtCfg */
+			val = cht_readl(i, FUNC0_HT, 0x68);
+			cht_writel(i, FUNC0_HT, 0x68, val & ~(1 << 15)); /* LimitCldtCfg */
 
 			if (i == neigh)
 				continue;
 
 			/* Route "nc" same as "neigh" for all other nodes */
-			val = cht_read_conf(i, FUNC0_HT, 0x40 + neigh * 4);
-			cht_write_conf(i, FUNC0_HT, 0x40 + nc * 4, val);
+			val = cht_readl(i, FUNC0_HT, 0x40 + neigh * 4);
+			cht_writel(i, FUNC0_HT, 0x40 + nc * 4, val);
 		}
 
-		val = cht_read_conf(nc, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
+		val = cht_readl(nc, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
 		if (val != VENDEV_NC2) {
 			printf("Error: Unrouted coherent device %08x is not NumaChip-II\n", val);
 			for (i = 0; i <= nodes; i++) {
 				/* Reassert LimitCldtCfg */
-				val = cht_read_conf(i, FUNC0_HT, 0x68);
-				cht_write_conf(i, FUNC0_HT, 0x68, val | (1 << 15));
+				val = cht_readl(i, FUNC0_HT, 0x68);
+				cht_writel(i, FUNC0_HT, 0x68, val | (1 << 15));
 			}
 			return -1;
 		}
 
-		*p_chip_rev = cht_read_conf(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
+		*p_chip_rev = cht_readl(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
 		printf("NumaChip-II rev %d found connected to HT%d L%d\n", *p_chip_rev, neigh, link);
 
 		/* Ramp up link speed and width before adding to coherent fabric */
 		ht_optimize_link(nc, neigh, link);
-		
+
 		printf("Adjusting HT fabric...");
 		critical_enter();
 
 		for (i = nodes; i >= 0; i--) {
 			uint32_t ltcr, val2;
 			/* Disable probes while adjusting */
-			ltcr = cht_read_conf(i, FUNC0_HT, 0x68);
-			cht_write_conf(i, FUNC0_HT, 0x68,
-				       ltcr | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
+			ltcr = cht_readl(i, FUNC0_HT, 0x68);
+			cht_writel(i, FUNC0_HT, 0x68,
+				   ltcr | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
 			/* Update "neigh" bcast values for node about to increment fabric size */
-			val = cht_read_conf(neigh, FUNC0_HT, 0x40 + i * 4);
-			val2 = cht_read_conf(i, FUNC0_HT, 0x60);
-			cht_write_conf(neigh, FUNC0_HT, 0x40 + i * 4, val | (0x80000 << link));
+			val = cht_readl(neigh, FUNC0_HT, 0x40 + i * 4);
+			val2 = cht_readl(i, FUNC0_HT, 0x60);
+			cht_writel(neigh, FUNC0_HT, 0x40 + i * 4, val | (0x80000 << link));
 			/* FIXME: Race condition observered to cause lockups at this point */
 			/* Increase fabric size */
-			cht_write_conf(i, FUNC0_HT, 0x60, val2 + (1 << 4));
+			cht_writel(i, FUNC0_HT, 0x60, val2 + (1 << 4));
 			/* Reassert LimitCldtCfg */
-			cht_write_conf(i, FUNC0_HT, 0x68, ltcr | (1 << 15));
+			cht_writel(i, FUNC0_HT, 0x68, ltcr | (1 << 15));
 		}
 
 		critical_leave();
 		printf("done\n");
 	}
 
-	val = cht_read_conf(0, FUNC0_HT, 0x60);
-	cht_write_conf(nc, 0,
-	               NC2_F0_NODE_ID_REGISTER,
-	               (((val >> 12) & 7) << 24) | /* LkNode */
-	               (((val >> 8)  & 7) << 16) | /* SbNode */
-	               (nc << 8) | /* NodeCnt */
-	               nc); /* NodeId */
+	val = cht_readl(0, FUNC0_HT, 0x60);
+	cht_writel(nc, 0,
+		   NC2_F0_NODE_ID_REGISTER,
+		   (((val >> 12) & 7) << 24) | /* LkNode */
+		   (((val >> 8)  & 7) << 16) | /* SbNode */
+		   (nc << 8) | /* NodeCnt */
+		   nc); /* NodeId */
 
 	return nc;
 }

@@ -73,10 +73,10 @@ static inline void wrmsr(uint32_t msr, uint64_t v)
 
 uint8_t pmio_readb(uint16_t offset);
 void pmio_writeb(uint16_t offset, uint8_t val);
-uint32_t read_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-void write_conf(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
-uint32_t cht_read_conf(uint8_t node, uint8_t func, uint16_t reg);
-void cht_write_conf(uint8_t node, uint8_t func, uint16_t reg, uint32_t val);
+uint32_t pci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+void pci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg);
+void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val);
 void reset_cf9(int mode, int last);
 
 #endif

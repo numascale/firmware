@@ -43,17 +43,17 @@ static void constants(void)
 	uint32_t val;
 	int fam, model, stepping;
 
-	val = cht_read_conf(0, FUNC3_MISC, 0xfc);
+	val = cht_readl(0, FUNC3_MISC, 0xfc);
 	fam = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 	model = ((val >> 12) & 0xf0) | ((val >> 4) & 0xf);
 	stepping = val & 0xf;
 	family = (fam << 16) | (model << 8) | stepping;
 
 	if (family >= 0x15) {
-		uint32_t val = cht_read_conf(0, FUNC5_EXTD, 0x160);
+		uint32_t val = cht_readl(0, FUNC5_EXTD, 0x160);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
-		uint32_t val = cht_read_conf(0, FUNC3_MISC, 0xd4);
+		uint32_t val = cht_readl(0, FUNC3_MISC, 0xd4);
 		uint64_t val6 = rdmsr(0xc0010071);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
@@ -200,7 +200,7 @@ static int nc2_start(const char *cmdline)
 
 	/* Stop ACPI first, SMM handler might do nasty things to us */
 	stop_acpi();
-	
+
 	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
 	if (nc2_ht_id < 0) {
 		printf("NumaChip-II not found\n");
@@ -216,8 +216,8 @@ static int nc2_start(const char *cmdline)
 
 void set_cf8extcfg_enable(const int ht)
 {
-	uint32_t val = cht_read_conf(ht, FUNC3_MISC, 0x8c);
-	cht_write_conf(ht, FUNC3_MISC, 0x8c, val | (1 << (46 - 32)));
+	uint32_t val = cht_readl(ht, FUNC3_MISC, 0x8c);
+	cht_writel(ht, FUNC3_MISC, 0x8c, val | (1 << (46 - 32)));
 }
 
 void udelay(const uint32_t usecs)
