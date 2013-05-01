@@ -28,15 +28,20 @@
 #include "nc2-bootloader.h"
 #include "nc2-access.h"
 #include "nc2-acpi.h"
+#include "nc2-spd.h"
 #include "nc2-version.h"
 
-/* Constants found in initialization */
+/* Global constants found in initialization */
 int family = 0;
-int nc2_ht_id = -1;     /* HT id of NC-II */
+uint32_t southbridge_id = -1;
+int nc2_ht_id = -1; /* HT id of NC-II */
 uint32_t nc2_chip_rev = -1;
 uint32_t tsc_mhz = 0;
-char *hostname = NULL;
 struct in_addr myip = {0xffffffff};
+char *hostname = NULL;
+char nc2_card_type[16];
+
+static ddr2_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 
 static void constants(void)
 {
@@ -59,6 +64,23 @@ static void constants(void)
 	}
 
 	printf("NB/TSC frequency is %dMHz\n", tsc_mhz);
+
+	southbridge_id = extpci_readl(0, 0x14, 0, 0);
+
+	if (southbridge_id != VENDEV_SP5100)
+		warning("Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs", southbridge_id);
+}
+
+static void set_cf8extcfg_enable(void)
+{
+	uint64_t val = rdmsr(MSR_NB_CFG);
+	wrmsr(MSR_NB_CFG, val | (1ULL << 46));
+}
+
+static void set_cf8extcfg_disable(void)
+{
+	uint64_t val = rdmsr(MSR_NB_CFG);
+	wrmsr(MSR_NB_CFG, val & ~(1ULL << 46));
 }
 
 static void set_wrap32_disable(void)
@@ -94,6 +116,8 @@ static int check_api_version(void)
 static void start_user_os(void)
 {
 	static com32sys_t rm;
+	/* Disable CF8 extended access */
+	set_cf8extcfg_disable();
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
 	strcpy(__com32.cs_bounce, next_label);
@@ -190,16 +214,83 @@ static void stop_acpi(void)
 	printf("ACPI handoff timed out\n");
 }
 
-static int nc2_start(const char *cmdline)
+static int read_spd_info(int spd_no, ddr2_spd_eeprom_t *spd)
 {
+	const uint8_t spd_device_adr = 0x50 + spd_no;
+
+	if (i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr2_spd_eeprom_t), (uint8_t *)spd) < 0)
+		return -1;
+
+	/* Check SPD validity */
+	if (nc2_ddr2_spd_check(spd) < 0) {
+		error("Couldn't find a valid DDR2 SDRAM memory module on DIMM%d", spd_no);
+		return -1;
+	}
+
+	uint8_t addr_bits = (spd->nrow_addr & 0xf) + (spd->ncol_addr & 0xf) + (spd->mod_ranks & 1) + ((spd->nbanks == 8) ? 3 : 2);
+
+	printf("DIMM%d is a x%d %dMB %s-rank module (%s)\n", spd_no,
+	       spd->primw, 1 << (addr_bits - 17),
+	       (spd->mod_ranks & 1) ? "dual" : "single",
+	       spd->mpart[0] ? (char *)spd->mpart : "unknown");
+	
+	return 0;
+}
+
+static void platform_quirks(void)
+{
+	const char *biosver = NULL, *biosdate = NULL;
+	const char *sysmanuf = NULL, *sysproduct = NULL;
+	const char *boardmanuf = NULL, *boardproduct = NULL;
+
+	smbios_parse(&biosver, &biosdate, &sysmanuf, &sysproduct, &boardmanuf, &boardproduct);
+	assert(biosver && biosdate && sysmanuf && sysproduct && boardmanuf && boardproduct);
+
+	printf("Platform is %s %s (%s %s) with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
+
+	/* Skip if already set */
+	if (!handover_acpi) {
+		/* Systems where ACPI must be handed off early */
+		const char *acpi_blacklist[] = {"H8QGL", NULL};
+
+		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
+			if (!strcmp(boardproduct, acpi_blacklist[i])) {
+				printf(" (blacklisted)");
+				handover_acpi = 1;
+				break;
+			}
+		}
+	}
+
+	printf("\n");
+}
+
+static uint32_t identify_eeprom(char p_type[16])
+{
+	uint8_t p_uuid[4];
+
+	/* Read print type */
+	(void)spi_master_read(0xffc0, 16, (uint8_t *)p_type);
+	p_type[15] = '\0';
+
+	/* Read UUID */
+	(void)spi_master_read(0xfffc, 4, p_uuid);
+	return *((uint32_t *)p_uuid);
+}
+
+static int nc2_start(const char *cmdline)
+{	
 	if (parse_cmdline(cmdline) < 0)
 		return ERR_GENERAL_NC_START_ERROR;
 
 	constants();
 	get_hostname();
 
-	/* Stop ACPI first, SMM handler might do nasty things to us */
-	stop_acpi();
+	platform_quirks();
+	
+	/* SMI often assumes HT nodes are Northbridges, so handover early */
+	if (handover_acpi)
+		stop_acpi();
 
 	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
 	if (nc2_ht_id < 0) {
@@ -208,16 +299,19 @@ static int nc2_start(const char *cmdline)
 	}
 	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
 
+	uint32_t uuid = identify_eeprom(nc2_card_type);
+	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
+	
+	/* Read the SPD info from our DIMMs to see if they are supported */
+	for (int i = 0; i < 2; i++) {
+		if (read_spd_info(i, &spd_eeproms[i]) < 0)
+			return ERR_GENERAL_NC_START_ERROR;
+	}
+
 	start_user_os();
 
 	// XXX: Never reached
 	return 0;
-}
-
-void set_cf8extcfg_enable(const int ht)
-{
-	uint32_t val = cht_readl(ht, FUNC3_MISC, 0x8c);
-	cht_writel(ht, FUNC3_MISC, 0x8c, val | (1 << (46 - 32)));
 }
 
 void udelay(const uint32_t usecs)
@@ -243,13 +337,13 @@ int main(void)
 {
 	int ret;
 	openconsole(&dev_rawcon_r, &dev_stdcon_w);
-	printf("*** NumaConnect system unification module " VER " ***\n");
+	printf(CLEAR BANNER "NumaConnect system unification module " VER COL_DEFAULT "\n");
 
 	if (check_api_version() < 0)
 		return ERR_API_VERSION;
 
-	/* Enable CF8 extended access for first Northbridge; we do others for Linux later */
-	set_cf8extcfg_enable(0);
+	/* Enable CF8 extended access, we use it extensively */
+	set_cf8extcfg_enable();
 
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
 	set_wrap32_disable();
@@ -261,7 +355,11 @@ int main(void)
 		wait_key();
 	}
 
+	/* Disable CF8 extended access */
+	set_cf8extcfg_disable();
+
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
+
 	return ret;
 }

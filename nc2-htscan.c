@@ -28,9 +28,6 @@
 #include "nc2-bootloader.h"
 #include "nc2-access.h"
 
-static uint32_t southbridge_id = -1;
-static uint8_t smi_state;
-
 static uint32_t get_phy_register(int node, int link, int idx, int direct)
 {
 	int base = 0x180 + link * 8;
@@ -172,44 +169,6 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		reset_cf9(2, nc - 1);
 	}
 }
-
-void detect_southbridge(void)
-{
-	southbridge_id = pci_readl(0, 0x14, 0, 0);
-
-	if (southbridge_id != VENDEV_SP5100)
-		printf("Warning: Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs\n", southbridge_id);
-}
-
-/* Mask southbridge SMI generation */
-void disable_smi(void)
-{
-	if (southbridge_id == VENDEV_SP5100) {
-		smi_state = pmio_readb(0x53);
-		pmio_writeb(0x53, smi_state | (1 << 3));
-	}
-}
-
-/* Restore previous southbridge SMI mask */
-void enable_smi(void)
-{
-	if (southbridge_id == VENDEV_SP5100) {
-		pmio_writeb(0x53, smi_state);
-	}
-}
-
-void critical_enter(void)
-{
-	cli();
-	disable_smi();
-}
-
-void critical_leave(void)
-{
-	enable_smi();
-	sti();
-}
-
 
 int ht_fabric_fixup(uint32_t *p_chip_rev)
 {

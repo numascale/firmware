@@ -30,9 +30,6 @@
 	(0x80000000 | (((reg) & 0xF00) << 16) | ((bus) << 16)	\
 	 | ((devfn) << 8) | ((reg) & 0xFC))
 
-#define HT_REG(node, func, reg)					\
-	PCI_EXT_CONF(0, (((24 + (node)) << 3) | (func)), (reg))
-
 int lirq_nest = 0;
 
 /* #define DEBUG(...) printf(__VA_ARGS__) */
@@ -50,55 +47,72 @@ void pmio_writeb(uint16_t offset, uint8_t val)
 	outw(offset | val << 8, PMIO_PORT);
 }
 
-uint32_t pci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 {
 	uint32_t ret;
 	DEBUG("pci:%02x:%02x.%x %03x -> ",
 	      bus, dev, func, reg);
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	ret = inl(PCI_CONF_DATA);
+	ret = inl(PCI_CONF_DATA + (reg & 3));
 	sti();
 	DEBUG("%08x\n", ret);
 	return ret;
 }
 
-void pci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+{
+	uint8_t ret;
+	DEBUG("pci:%02x:%02x.%x %03x -> ",
+	      bus, dev, func, reg);
+	cli();
+	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+	ret = inb(PCI_CONF_DATA + (reg & 3));
+	sti();
+	DEBUG("%02x\n", ret);
+	return ret;
+}
+
+void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 {
 	DEBUG("pci:%02x:%02x.%x %03x <- %08x",
 	      bus, dev, func, reg, val);
-	assert(!(reg & 3));
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	outl(val, PCI_CONF_DATA);
+	outl(val, PCI_CONF_DATA + (reg & 3));
+	sti();
+	DEBUG("\n");
+}
+
+void extpci_writeb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
+{
+	DEBUG("pci:%02x:%02x.%x %03x <- %02x",
+	      bus, dev, func, reg, val);
+	cli();
+	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+	outb(val, PCI_CONF_DATA + (reg & 3));
 	sti();
 	DEBUG("\n");
 }
 
 uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg)
 {
-	uint32_t ret;
-	DEBUG("HT#%d F%xx%03x -> ",
-	      node, func, reg);
-	assert(!(reg & 3));
-	cli();
-	outl(HT_REG(node, func, reg), PCI_CONF_SEL);
-	ret = inl(PCI_CONF_DATA);
-	sti();
-	DEBUG("%08x\n", ret);
-	return ret;
+	return extpci_readl(0, 24 + node, func, reg);
+}
+
+uint8_t cht_readb(uint8_t node, uint8_t func, uint16_t reg)
+{
+	return extpci_readb(0, 24 + node, func, reg);
 }
 
 void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
 {
-	DEBUG("HT#%d F%xx%03x <- %08x",
-	      node, func, reg, val);
-	assert(!(reg & 3));
-	cli();
-	outl(HT_REG(node, func, reg), PCI_CONF_SEL);
-	outl(val, PCI_CONF_DATA);
-	sti();
-	DEBUG("\n");
+	extpci_writel(0, 24 + node, func, reg, val);
+}
+
+void cht_writeb(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
+{
+	extpci_writeb(0, 24 + node, func, reg, val);
 }
 
 void reset_cf9(int mode, int last)
@@ -110,4 +124,35 @@ void reset_cf9(int mode, int last)
 	}
 	outb(mode, 0xcf9);
 	outb(mode | 4, 0xcf9);
+}
+
+static uint8_t smi_state;
+
+/* Mask southbridge SMI generation */
+void disable_smi(void)
+{
+	if (southbridge_id == VENDEV_SP5100) {
+		smi_state = pmio_readb(0x53);
+		pmio_writeb(0x53, smi_state | (1 << 3));
+	}
+}
+
+/* Restore previous southbridge SMI mask */
+void enable_smi(void)
+{
+	if (southbridge_id == VENDEV_SP5100) {
+		pmio_writeb(0x53, smi_state);
+	}
+}
+
+void critical_enter(void)
+{
+	cli();
+	disable_smi();
+}
+
+void critical_leave(void)
+{
+	enable_smi();
+	sti();
 }

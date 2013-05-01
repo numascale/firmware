@@ -29,6 +29,7 @@
 #define COL_RED       "\033[31m"
 #define COL_YELLOW    "\033[33m"
 #define CLEAR         "\033\143"
+#define BANNER        "\033[1m"
 
 #define assert(cond) do { if (!(cond)) {				\
 	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
@@ -66,25 +67,33 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
-/* Constants found in initialization */
+/* Global constants found in initialization */
 extern int family;
+extern uint32_t southbridge_id;
 extern int nc2_ht_id;
 extern uint32_t nc2_chip_rev;
 extern uint32_t tsc_mhz;
 extern struct in_addr myip;
 extern char *hostname;
+extern char nc2_card_type[16];
 
+/* Options */
 extern char *next_label;
 extern int ht_force_ganged;
 extern int ht_200mhz_only;
 extern int ht_8bit_only;
 extern bool boot_wait;
+extern bool handover_acpi;
 extern int verbose;
 
-void set_cf8extcfg_enable(const int ht);
 void udelay(const uint32_t usecs);
 void wait_key(void);
 int parse_cmdline(const char *cmdline);
 int ht_fabric_fixup(uint32_t *p_chip_rev);
+int i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
+int spi_master_read(const uint16_t addr, const int len, uint8_t *data);
+int smbios_parse(const char **biosver, const char **biosdate,
+		 const char **sysmanuf, const char **sysproduct,
+		 const char **boardmanuf, const char **boardproduct);
 
 #endif

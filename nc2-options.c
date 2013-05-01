@@ -22,9 +22,7 @@
 #include <com32.h>
 #include <inttypes.h>
 
-#include "nc2-defs.h"
 #include "nc2-bootloader.h"
-#include "nc2-access.h"
 #include "nc2-version.h"
 
 /* Command line arguments */
@@ -32,8 +30,8 @@ char *next_label = "menu.c32";
 int ht_200mhz_only = 0;
 int ht_8bit_only = 0;
 bool boot_wait = false;
+bool handover_acpi = false;
 int verbose = 0;
-
 
 struct optargs {
 	char label[16];
@@ -110,6 +108,7 @@ int parse_cmdline(const char *cmdline)
 		{"ht.8bit-only",    &parse_int,    &ht_8bit_only},
 		{"ht.200mhz-only",  &parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"boot-wait",       &parse_bool,   &boot_wait},
+		{"handover-acpi",   &parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
 		{"verbose",         &parse_int,    &verbose},
 	};
 	char arg[256];

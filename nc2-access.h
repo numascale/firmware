@@ -50,6 +50,12 @@ static inline uint64_t rdtscll(void)
 	return val;
 }
 
+static inline uint32_t uint32_tbswap(uint32_t val)
+{
+	asm volatile("bswap %0" : "+r"(val));
+	return val;
+}
+
 static inline uint64_t rdmsr(uint32_t msr)
 {
 	union {
@@ -73,10 +79,18 @@ static inline void wrmsr(uint32_t msr, uint64_t v)
 
 uint8_t pmio_readb(uint16_t offset);
 void pmio_writeb(uint16_t offset, uint8_t val);
-uint32_t pci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-void pci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+void extpci_writeb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
 uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg);
+uint8_t cht_readb(uint8_t node, uint8_t func, uint16_t reg);
 void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val);
+void cht_writeb(uint8_t node, uint8_t func, uint16_t reg, uint8_t val);
 void reset_cf9(int mode, int last);
+void disable_smi(void);
+void enable_smi(void);
+void critical_enter(void);
+void critical_leave(void);
 
 #endif

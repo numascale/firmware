@@ -56,14 +56,22 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 nc2-version.h: nc2-defs.h nc2-access.h nc2-acpi.h nc2-bootloader.h nc2-access.c nc2-bootloader.c
 	@echo \#define VER \"`git describe --always`\" >nc2-version.h
 
-nc2-bootloader.elf: nc2-bootloader.o nc2-acpi.o nc2-htscan.o nc2-options.o nc2-access.o $(COM32DEPS)
+nc2-bootloader.elf: nc2-bootloader.o nc2-htscan.o nc2-acpi.o nc2-smbios.o nc2-options.o nc2-access.o nc2-i2cmaster.o nc2-spd.o nc2-spimaster.o $(COM32DEPS)
 
-nc2-bootloader.o: nc2-bootloader.c nc2-defs.h nc2-bootloader.h nc2-acpi.h nc2-access.h nc2-version.h
+nc2-bootloader.o: nc2-bootloader.c nc2-defs.h nc2-bootloader.h nc2-access.h nc2-acpi.h nc2-version.h
 
 nc2-htscan.o: nc2-htscan.c nc2-defs.h nc2-bootloader.h nc2-access.h
 
-nc2-options.o: nc2-options.c nc2-defs.h nc2-bootloader.h
+nc2-options.o: nc2-options.c nc2-defs.h nc2-bootloader.h nc2-access.h
 
 nc2-access.o: nc2-access.c nc2-defs.h nc2-access.h
 
 nc2-acpi.o: nc2-acpi.c nc2-acpi.h
+
+nc2-smbios.o: nc2-smbios.c nc2-bootloader.h
+
+nc2-spd.o: nc2-spd.c nc2-spd.h nc2-bootloader.h
+
+nc2-i2cmaster.o: nc2-i2cmaster.c nc2-bootloader.h nc2-access.h
+
+nc2-spimaster.o: nc2-spimaster.c nc2-bootloader.h nc2-access.h
