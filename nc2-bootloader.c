@@ -352,7 +352,8 @@ int main(void)
 
 	if (ret < 0) {
 		printf("Error: nc2_start() failed with error code %d\n", ret);
-		wait_key();
+//		wait_key();
+		reset_cf9(0xa, 0);
 	}
 
 	/* Disable CF8 extended access */
