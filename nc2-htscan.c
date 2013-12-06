@@ -198,9 +198,9 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x2) {
+		if (((val >> 8) & 0xf) != 0x4) {
 			printf("<NC freq>");
-			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x2 << 8));
+			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x4 << 8));
 			reboot = true;
 		}
 
@@ -208,9 +208,9 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		val = cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x2) {
+		if (((val >> 8) & 0xf) != 0x4) {
 			printf("<CPU freq>");
-			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x2 << 8));
+			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x4 << 8));
 			reboot = true;
 		}
 	}

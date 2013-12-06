@@ -298,7 +298,7 @@ static int nc2_start(const char *cmdline)
 		return ERR_MASTER_HT_ID;
 	}
 	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
-
+#if 0
 	uint32_t uuid = identify_eeprom(nc2_card_type);
 	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
 	
@@ -307,7 +307,7 @@ static int nc2_start(const char *cmdline)
 		if (read_spd_info(i, &spd_eeproms[i]) < 0)
 			return ERR_GENERAL_NC_START_ERROR;
 	}
-
+#endif
 	start_user_os();
 
 	// XXX: Never reached
