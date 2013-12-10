@@ -115,15 +115,19 @@ void cht_writeb(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
 	extpci_writeb(0, 24 + node, func, reg, val);
 }
 
-void reset_cf9(int mode, int last)
+void reset_cf9(enum reboot_mode mode, int last)
 {
-	int i;
-	for (i = 0; i <= last; i++) {
-		uint32_t val = cht_readl(i, FUNC0_HT, 0x6c);
-		cht_writel(i, FUNC0_HT, 0x6c, val | 0x20); /* BiosRstDet */
+	uint8_t code = mode == REBOOT_WARM ? 0x02 : 0x0A;
+	if (mode == REBOOT_WARM) {
+		for (int i = 0; i <= last; i++) {
+			uint32_t val = cht_readl(i, FUNC0_HT, 0x6c);
+			val |=  (1<<5); /* BiosRstDet */
+			cht_writel(i, FUNC0_HT, 0x6c, val);
+		}
 	}
-	outb(mode, 0xcf9);
-	outb(mode | 4, 0xcf9);
+	outb(code, 0xcf9);
+	udelay(50);
+	outb(code|4, 0xcf9);
 }
 
 static uint8_t smi_state;

@@ -28,63 +28,6 @@
 #include "nc2-bootloader.h"
 #include "nc2-access.h"
 
-static void mmio_range(const int ht, uint8_t range, uint64_t base, uint64_t limit, const int dest)
-{
-	if (verbose > 1)
-		printf("Adding MMIO range %d on HT#%x from 0x%012llx to 0x%012llx towards %d\n",
-		       range, ht, base, limit, dest);
-
-	if (family >= 0x15) {
-		assert(range < 12);
-
-		int loff = 0, hoff = 0;
-		if (range > 7) {
-			loff = 0xe0;
-			hoff = 0x20;
-		}
-
-		uint32_t val = cht_readl(ht, FUNC1_MAPS, 0x80 + loff + range * 8);
-		if (val & (1 << 3))
-			return; /* Locked */
-		assert((val & 3) == 0); /* Unused */
-
-		cht_writel(ht, FUNC1_MAPS, 0x180 + hoff + range * 4, ((limit >> 40) << 16) | (base >> 40));
-		cht_writel(ht, FUNC1_MAPS, 0x84 + loff + range * 8, ((limit >> 16) << 8) | dest);
-		cht_writel(ht, FUNC1_MAPS, 0x80 + loff + range * 8, ((base >> 16) << 8 | 3));
-		return;
-	}
-
-	/* Family 10h */
-	if (range < 8) {
-		assert(limit < (1ULL << 40));
-		uint32_t val = cht_readl(ht, FUNC1_MAPS, 0x80 + range * 8);
-		if (val & (1 << 3))
-			return; /* Locked */
-		assert((val & 3) == 0); /* Unused */
-
-		cht_writel(ht, FUNC1_MAPS, 0x84 + range * 8, ((limit >> 16) << 8) | dest);
-		cht_writel(ht, FUNC1_MAPS, 0x80 + range * 8, ((base >> 16) << 8 | 3));
-		return;
-	}
-
-	assert(range < 12);
-	range -= 8;
-
-	/* Reading an uninitialised extended MMIO ranges results in MCE, so can't assert */
-
-	uint64_t mask = 0;
-	base  >>= 27;
-	limit >>= 27;
-
-	while ((base | mask) != (limit | mask))
-		mask = (mask << 1) | 1;
-
-	cht_writel(ht, FUNC1_MAPS, 0x110, (2 << 28) | range);
-	cht_writel(ht, FUNC1_MAPS, 0x114, (base << 8) | dest);
-	cht_writel(ht, FUNC1_MAPS, 0x110, (3 << 28) | range);
-	cht_writel(ht, FUNC1_MAPS, 0x114, (mask << 8) | 1);
-}
-
 static uint32_t get_phy_register(int node, int link, int idx, int direct)
 {
 	int base = 0x180 + link * 8;
@@ -194,13 +137,19 @@ static void ht_optimize_link(int nc, int neigh, int link)
 
 	/* Optimize link frequency, if option to disable this is not set */
 	if (!ht_200mhz_only) {
+		uint8_t max_supported = 0;
+
 		printf("+");
 		val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x4) {
-			printf("<NC freq>");
-			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (0x4 << 8));
+		// Find maximum supported frequency
+		for (int i = 0; i < 16; i++)
+			if (val >> (16+i) & 1) max_supported = i;
+
+		if (((val >> 8) & 0xf) != max_supported) {
+			printf("<NC freq=%d>",max_supported);
+			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (max_supported << 8));
 			reboot = true;
 		}
 
@@ -208,9 +157,9 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		val = cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != 0x4) {
-			printf("<CPU freq>");
-			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (0x4 << 8));
+		if (((val >> 8) & 0xf) != max_supported) {
+			printf("<CPU freq=%d>",max_supported);
+			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (max_supported << 8));
 			reboot = true;
 		}
 	}
@@ -223,7 +172,8 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		fflush(stdout);
 		fflush(stderr);
 		udelay(2500000);
-		reset_cf9(2, nc - 1);
+		reset_cf9(REBOOT_WARM, nc - 1);
+		/* Does not return */
 	}
 }
 
@@ -231,7 +181,6 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 {
 	int nodes, nc = -1;
 	uint32_t val;
-	const uint64_t bar0 = 0xf0000000ULL;
 
 	val = cht_readl(0, FUNC0_HT, 0x60);
 	nodes = (val >> 4) & 7;
@@ -255,7 +204,8 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 
 			for (link = 0; link < 4; link++) {
 				val = cht_readl(neigh, FUNC0_HT, 0x98 + link * 0x20);
-
+				uint32_t val2 = cht_readl(neigh, FUNC0_HT, 0x84 + link * 0x20);
+				printf("HT%d.%d LinkControl = %08x\n", neigh, link, val2);
 				if ((val & 0x1f) != 0x3)
 					continue; /* Not coherent */
 
@@ -280,8 +230,13 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 		}
 
 		if (use) {
-			printf("Error: No unrouted coherent links found\n");
-			return -1;
+			printf("Error: No unrouted coherent links found, issuing COLD reboot\n");
+			/* Ensure last lines were sent from management controller */
+			fflush(stdout);
+			fflush(stderr);
+			udelay(2500000);
+			reset_cf9(REBOOT_COLD, nodes);
+			/* Does not return */
 		}
 
 		printf("HT#%d L%d is coherent and unrouted\n", neigh, link);
@@ -352,17 +307,6 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 		   (((val >> 8)  & 7) << 16) | /* SbNode */
 		   (nc << 8) | /* NodeCnt */
 		   nc); /* NodeId */
-
-	printf("Setting MemorySpaceEnable\n");
-	cht_writel(nc, 0, NC2_F0_STATUS_COMMAND_REGISTER, 2);
-
-	printf("Setting BAR0 to %012llx\n", bar0);
-	cht_writel(nc, 0, NC2_F0_BASE_ADDRESS_REGISTER_0, bar0 & 0xff000000);
-	cht_writel(nc, 0, NC2_F0_BASE_ADDRESS_REGISTER_0+4, bar0 >> 32);
-
-	printf("Setting HT maps...\n");
-	for (int i = 0; i <= nodes; i++)
-		mmio_range(i, 7, bar0, bar0 + 0xffffffULL, nc);
 
 	return nc;
 }

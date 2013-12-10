@@ -41,7 +41,7 @@ struct in_addr myip = {0xffffffff};
 char *hostname = NULL;
 char nc2_card_type[16];
 
-static ddr2_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
+static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 
 static void constants(void)
 {
@@ -214,26 +214,21 @@ static void stop_acpi(void)
 	printf("ACPI handoff timed out\n");
 }
 
-static int read_spd_info(int spd_no, ddr2_spd_eeprom_t *spd)
+static int read_spd_info(int spd_no, ddr3_spd_eeprom_t *spd)
 {
 	const uint8_t spd_device_adr = 0x50 + spd_no;
 
-	if (i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr2_spd_eeprom_t), (uint8_t *)spd) < 0)
+	if (i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr3_spd_eeprom_t), (uint8_t *)spd) < 0)
 		return -1;
 
 	/* Check SPD validity */
-	if (nc2_ddr2_spd_check(spd) < 0) {
-		error("Couldn't find a valid DDR2 SDRAM memory module on DIMM%d", spd_no);
+	if (nc2_ddr3_spd_check(spd) < 0) {
+		error("Couldn't find a valid DDR3 SDRAM memory module on DIMM%d", spd_no);
 		return -1;
 	}
 
-	uint8_t addr_bits = (spd->nrow_addr & 0xf) + (spd->ncol_addr & 0xf) + (spd->mod_ranks & 1) + ((spd->nbanks == 8) ? 3 : 2);
+	printf("DIMM%d is a %s module\n", spd_no, nc2_ddr3_module_type(spd->module_type));
 
-	printf("DIMM%d is a x%d %dMB %s-rank module (%s)\n", spd_no,
-	       spd->primw, 1 << (addr_bits - 17),
-	       (spd->mod_ranks & 1) ? "dual" : "single",
-	       spd->mpart[0] ? (char *)spd->mpart : "unknown");
-	
 	return 0;
 }
 
@@ -298,7 +293,7 @@ static int nc2_start(const char *cmdline)
 		return ERR_MASTER_HT_ID;
 	}
 	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
-#if 0
+
 	uint32_t uuid = identify_eeprom(nc2_card_type);
 	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
 	
@@ -307,7 +302,7 @@ static int nc2_start(const char *cmdline)
 		if (read_spd_info(i, &spd_eeproms[i]) < 0)
 			return ERR_GENERAL_NC_START_ERROR;
 	}
-#endif
+
 	start_user_os();
 
 	// XXX: Never reached
@@ -352,8 +347,7 @@ int main(void)
 
 	if (ret < 0) {
 		printf("Error: nc2_start() failed with error code %d\n", ret);
-//		wait_key();
-		reset_cf9(0xa, 0);
+		wait_key();
 	}
 
 	/* Disable CF8 extended access */
