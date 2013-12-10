@@ -263,12 +263,41 @@ extern int nc2_ddr3_spd_check(const ddr3_spd_eeprom_t *spd);
 #define DDR2_SPD_DIMMTYPE_MINI_UDIMM    (0x20)
 
 /* Byte 3 Key Byte / Module Type for DDR3 SPD */
-#define DDR3_SPD_MODULETYPE_MASK        (0x0f)
-#define DDR3_SPD_MODULETYPE_RDIMM       (0x01)
-#define DDR3_SPD_MODULETYPE_UDIMM       (0x02)
-#define DDR3_SPD_MODULETYPE_SO_DIMM     (0x03)
-#define DDR3_SPD_MODULETYPE_MICRO_DIMM  (0x04)
-#define DDR3_SPD_MODULETYPE_MINI_RDIMM  (0x05)
-#define DDR3_SPD_MODULETYPE_MINI_UDIMM  (0x06)
+#define DDR3_SPD_MODULETYPE_MASK          (0x0f)
+#define DDR3_SPD_MODULETYPE_RDIMM         (0x01)
+#define DDR3_SPD_MODULETYPE_UDIMM         (0x02)
+#define DDR3_SPD_MODULETYPE_SO_DIMM       (0x03)
+#define DDR3_SPD_MODULETYPE_MICRO_DIMM    (0x04)
+#define DDR3_SPD_MODULETYPE_MINI_RDIMM    (0x05)
+#define DDR3_SPD_MODULETYPE_MINI_UDIMM    (0x06)
+#define DDR3_SPD_MODULETYPE_MINI_CDIMM    (0x07)
+#define DDR3_SPD_MODULETYPE_72B_SO_UDIMM  (0x08)
+#define DDR3_SPD_MODULETYPE_72B_SO_RDIMM  (0x09)
+#define DDR3_SPD_MODULETYPE_72B_SO_CDIMM  (0x0A)
+#define DDR3_SPD_MODULETYPE_LRDIMM        (0x0B)
+#define DDR3_SPD_MODULETYPE_16B_SO_DIMM   (0x0C)
+#define DDR3_SPD_MODULETYPE_32B_SO_DIMM   (0x0D)
+
+static inline const char *nc2_ddr3_module_type(uint8_t module_type)
+{
+	static char type[64];
+	switch (module_type & DDR3_SPD_MODULETYPE_MASK) {
+		case DDR3_SPD_MODULETYPE_RDIMM:         snprintf(type, sizeof(type), "RDIMM"); break;
+		case DDR3_SPD_MODULETYPE_UDIMM:         snprintf(type, sizeof(type), "UDIMM"); break;
+		case DDR3_SPD_MODULETYPE_SO_DIMM:       snprintf(type, sizeof(type), "SO-DIMM"); break;
+		case DDR3_SPD_MODULETYPE_MICRO_DIMM:    snprintf(type, sizeof(type), "Micro-DIMM"); break;
+		case DDR3_SPD_MODULETYPE_MINI_RDIMM:    snprintf(type, sizeof(type), "Mini-RDIMM"); break;
+		case DDR3_SPD_MODULETYPE_MINI_UDIMM:    snprintf(type, sizeof(type), "Mini-UDIMM"); break;
+		case DDR3_SPD_MODULETYPE_MINI_CDIMM:    snprintf(type, sizeof(type), "Mini-CDIMM"); break;
+		case DDR3_SPD_MODULETYPE_72B_SO_UDIMM:  snprintf(type, sizeof(type), "72b-SO-UDIMM"); break;
+		case DDR3_SPD_MODULETYPE_72B_SO_RDIMM:  snprintf(type, sizeof(type), "72b-SO-RDIMM"); break;
+		case DDR3_SPD_MODULETYPE_72B_SO_CDIMM:  snprintf(type, sizeof(type), "72b-SO-CDIMM"); break;
+		case DDR3_SPD_MODULETYPE_LRDIMM:        snprintf(type, sizeof(type), "LRDIMM"); break;
+		case DDR3_SPD_MODULETYPE_16B_SO_DIMM:   snprintf(type, sizeof(type), "16b-SO-DIMM"); break;
+		case DDR3_SPD_MODULETYPE_32B_SO_DIMM:   snprintf(type, sizeof(type), "32b-SO-DIMM"); break;
+		default: snprintf(type, sizeof(type), "Unknown (%x)", module_type); break;
+	}
+	return (const char*)type;
+}
 
 #endif /* _NC2_SPD_H_ */
