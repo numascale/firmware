@@ -25,9 +25,99 @@
 #include <sys/io.h>
 
 #include "nc2-defs.h"
+#include "nc2-acpi.h"
 #include "nc2-bootloader.h"
 #include "nc2-access.h"
 
+#define HT_INIT_CONTROL		0x6C
+#define HTIC_BIOSR_Detect	(1<<5)
+
+enum reboot_mode {
+	REBOOT_WARM,
+	REBOOT_COLD,
+};
+
+static void reset_cf9(enum reboot_mode mode, int last)
+{
+	for (int i = 0; i <= last; i++) {
+		uint32_t val = cht_readl(i, FUNC0_HT, HT_INIT_CONTROL);
+		val &= ~HTIC_BIOSR_Detect;
+		cht_writel(i, FUNC0_HT, HT_INIT_CONTROL, val);
+	}
+	if (southbridge_id == VENDEV_SP5100) {
+		uint8_t pm_control = pmio_readb(0x42);
+		pm_control |= (1 << 1); // Clear the DisableBootFailCpuRst bit
+		printf("pm_control = %02x\n", pm_control);
+		pmio_writeb(0x42, pm_control | (1 << 3)); // Set the RstCpuPGEn bit to toggle PWROK
+		wait_key();
+	}
+	if (mode == REBOOT_COLD) {
+#if 0
+		if (southbridge_id == VENDEV_SP5100) {
+			uint8_t pm_reg_04 = pmio_readb(0x04);
+			printf("pm_reg_04 = %02x\n", pm_reg_04);
+			pmio_writeb(0x04, pm_reg_04 | (1 << 7)); /* Enable SMI# on sleep command */
+
+			uint8_t pm_reg_41 = pmio_readb(0x41);
+			printf("pm_reg_41 = %02x\n", pm_reg_41);
+			pmio_writeb(0x41, pm_reg_41 | (1 << 3)); /* Deassert PWROK when entering S3 */
+
+			uint8_t pm_reg_8d = pmio_readb(0x8d);
+			printf("pm_reg_8d = %02x\n", pm_reg_8d);
+			pmio_writeb(0x8d, pm_reg_8d | (1 << 5)); /* Extend SLP_S3# */
+
+			uint16_t AcpiPm1CntBlk = ((uint16_t)pmio_readb(0x23) << 8) | (uint16_t)pmio_readb(0x22);
+			printf("AcpiPm1CntBlk = %04x\n", AcpiPm1CntBlk);
+			uint16_t pm_control = inw(AcpiPm1CntBlk);
+			printf("pm_control = %04x\n", pm_control);
+
+			wait_key();
+			fflush(stdout);
+			fflush(stderr);
+			udelay(2500000);
+			outw(pm_control | (3 << 10) | (1 << 13), AcpiPm1CntBlk); /* Enter S3 state */
+			pm_control = inw(AcpiPm1CntBlk);
+			printf("pm_control = %04x\n", pm_control);
+		}
+#endif
+		outb((1 << 3) | (0 << 2) | (1 << 1), 0xcf9);
+		outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
+	} else {
+		outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);
+		outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
+	}
+}
+
+static uint8_t smi_state;
+
+/* Mask southbridge SMI generation */
+static void disable_smi(void)
+{
+	if (southbridge_id == VENDEV_SP5100) {
+		smi_state = pmio_readb(0x53);
+		pmio_writeb(0x53, smi_state | (1 << 3));
+	}
+}
+
+/* Restore previous southbridge SMI mask */
+static void enable_smi(void)
+{
+	if (southbridge_id == VENDEV_SP5100) {
+		pmio_writeb(0x53, smi_state);
+	}
+}
+
+static void critical_enter(void)
+{
+	cli();
+	disable_smi();
+}
+
+static void critical_leave(void)
+{
+	enable_smi();
+	sti();
+}
 static uint32_t get_phy_register(int node, int link, int idx, int direct)
 {
 	int base = 0x180 + link * 8;
@@ -277,6 +367,7 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 		ht_optimize_link(nc, neigh, link);
 
 		printf("Adjusting HT fabric...");
+
 		critical_enter();
 
 		for (i = nodes; i >= 0; i--) {
