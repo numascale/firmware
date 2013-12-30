@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Numascale AS, support@numascale.com
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -201,18 +201,18 @@ out:
 	return (uint32_t)next_table - (uint32_t)parent - parent->len;
 }
 
-int replace_child(const char *sig, acpi_sdt_p new, acpi_sdt_p parent, unsigned int ptrsize)
+int replace_child(const char *sig, acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize)
 {
 	uint64_t newp, childp;
 	acpi_sdt_p table;
 
-	if (!checksum_ok(new, new->len)) {
+	if (!checksum_ok(replacement, replacement->len)) {
 		printf("Error: Bad new %.4s table checksum\n", sig);
 		return 0;
 	}
 
 	newp = 0;
-	memcpy(&newp, &new, sizeof(new));
+	memcpy(&newp, &replacement, sizeof(replacement));
 	int i;
 
 	for (i = 0; i + sizeof(*parent) < parent->len; i += ptrsize) {
@@ -251,16 +251,16 @@ int replace_child(const char *sig, acpi_sdt_p new, acpi_sdt_p parent, unsigned i
 	return 1;
 }
 
-bool add_child(acpi_sdt_p new, acpi_sdt_p parent, unsigned int ptrsize)
+bool add_child(acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize)
 {
 	if (slack(parent) < ptrsize) {
-		printf("Error: Not enough space to add %.4s table to %.4s\n", new->sig.s, parent->sig.s);
+		printf("Error: Not enough space to add %.4s table to %.4s\n", replacement->sig.s, parent->sig.s);
 		return 1;
 	}
 
-	assert(checksum_ok(new, new->len));
+	assert(checksum_ok(replacement, replacement->len));
 	uint64_t newp = 0;
-	memcpy(&newp, &new, sizeof(new));
+	memcpy(&newp, &replacement, sizeof(replacement));
 	int i = parent->len - sizeof(*parent);
 	memcpy(&parent->data[i], &newp, ptrsize);
 	parent->len += ptrsize;
@@ -305,7 +305,7 @@ acpi_sdt_p find_root(const char *sig)
 	return NULL;
 }
 
-int replace_root(const char *sig, acpi_sdt_p new)
+int replace_root(const char *sig, acpi_sdt_p replacement)
 {
 	if (!rdsp_exists())
 		return 0;
@@ -316,7 +316,7 @@ int replace_root(const char *sig, acpi_sdt_p new)
 	}
 
 	if (STR_DW_H(sig) == STR_DW_H("RSDT")) {
-		rptr->rsdt_addr = (uint32_t)new;
+		rptr->rsdt_addr = (uint32_t)replacement;
 		rptr->checksum -= checksum(rptr, 20);
 
 		if (rptr->len > 20)
@@ -327,7 +327,7 @@ int replace_root(const char *sig, acpi_sdt_p new)
 
 	if (STR_DW_H(sig) == STR_DW_H("XSDT")) {
 		if ((rptr->len >= 33) && checksum_ok(rptr, rptr->len)) {
-			rptr->xsdt_addr = (uint32_t)new;
+			rptr->xsdt_addr = (uint32_t)replacement;
 			rptr->echecksum -= checksum(rptr, rptr->len);
 			return 1;
 		}

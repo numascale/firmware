@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Numascale AS, support@numascale.com
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NC2_ACPI
-#define __NC2_ACPI
+#ifndef __ACPI_H
+#define __ACPI_H
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -121,10 +121,10 @@ typedef struct acpi_sdt *acpi_sdt_p;
 void debug_acpi(void);
 uint8_t checksum(void *addr, int len);
 acpi_sdt_p find_sdt(char *sig);
-int replace_child(const char *sig, acpi_sdt_p new, acpi_sdt_p parent, unsigned int ptrsize);
-bool add_child(acpi_sdt_p new, acpi_sdt_p parent, unsigned int ptrsize);
+int replace_child(const char *sig, acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize);
+bool add_child(acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize);
 acpi_sdt_p find_root(const char *sig);
-int replace_root(const char *sig, acpi_sdt_p new);
+int replace_root(const char *sig, acpi_sdt_p replacement);
 bool acpi_append(acpi_sdt_p parent, int ptrsize, const char *sig, const unsigned char *extra, uint32_t extra_len);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Numascale AS, support@numascale.com
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _NC2_SPD_H_
-#define _NC2_SPD_H_
+#ifndef __SPD_H
+#define __SPD_H
 
 #include <inttypes.h>
 

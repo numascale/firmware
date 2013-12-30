@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2012 Numascale AS, support@numascale.com
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NC2_DEFS
-#define __NC2_DEFS 1
+#ifndef __DEFS_H
+#define __DEFS_H
 
 #define VENDEV_NC2      0x07001b47
 #define VENDEV_SP5100	0x43851002
