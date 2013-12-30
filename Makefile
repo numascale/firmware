@@ -13,7 +13,7 @@ all: platform/bootloader.c32
 
 .PHONY: clean
 clean:
-	rm -f $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) nc2-bootloader.c32 nc2-bootloader.elf nc2-bootloader.o version.h
+	rm -f $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) version.h platform/bootloader.c32 platform/bootloader.elf
 
 .PHONY: realclean
 realclean: clean
