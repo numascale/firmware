@@ -22,7 +22,7 @@
 #include <stdbool.h>
 
 /* cpu_relax() defined here */
-#include "nc2-access.h"
+#include "../library/access.h"
 
 /* ASCII-Art */
 #define COL_DEFAULT   "\033[0m"

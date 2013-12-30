@@ -18,8 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "nc2-bootloader.h"
-#include "nc2-acpi.h"
+#include "../platform/bootloader.h"
+#include "acpi.h"
 
 static struct acpi_rsdp *rptr = NULL;
 

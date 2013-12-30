@@ -19,8 +19,8 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "nc2-spd.h"
-#include "nc2-bootloader.h"
+#include "spd.h"
+#include "../platform/bootloader.h"
 
 /* used for ddr1 and ddr2 spd */
 static int spd_check(const uint8_t *buf, uint8_t spd_rev, uint8_t spd_cksum)

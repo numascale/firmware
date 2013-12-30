@@ -19,9 +19,9 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#include "nc2-defs.h"
-#include "nc2-bootloader.h"
-#include "nc2-access.h"
+#include "../opteron/defs.h"
+#include "../platform/bootloader.h"
+#include "../library/access.h"
 
 #define I2C_MASTER_CR_START (1<<7)
 #define I2C_MASTER_CR_STOP  (1<<6)

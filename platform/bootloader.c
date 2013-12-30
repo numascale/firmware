@@ -24,12 +24,12 @@
 #include <syslinux/pxe.h>
 #include <sys/io.h>
 
-#include "nc2-defs.h"
-#include "nc2-bootloader.h"
-#include "nc2-access.h"
-#include "nc2-acpi.h"
-#include "nc2-spd.h"
-#include "nc2-version.h"
+#include "../opteron/defs.h"
+#include "bootloader.h"
+#include "../library/access.h"
+#include "acpi.h"
+#include "../numachip2/spd.h"
+#include "../version.h"
 
 /* Global constants found in initialization */
 int family = 0;

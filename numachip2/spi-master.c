@@ -19,8 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "nc2-bootloader.h"
-#include "nc2-access.h"
+#include "../platform/bootloader.h"
+#include "../library/access.h"
 
 #define SPI_INSTR_WRSR  0x01
 #define SPI_INSTR_WRITE 0x02

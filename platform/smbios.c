@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 
-#include "nc2-bootloader.h"
+#include "../platform/bootloader.h"
 
 struct smbios_header {
 	uint8_t type;

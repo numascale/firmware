@@ -24,10 +24,10 @@
 #include <syslinux/pxe.h>
 #include <sys/io.h>
 
-#include "nc2-defs.h"
-#include "nc2-acpi.h"
-#include "nc2-bootloader.h"
-#include "nc2-access.h"
+#include "../opteron/defs.h"
+#include "../platform/acpi.h"
+#include "../platform/bootloader.h"
+#include "../library/access.h"
 
 #define HT_INIT_CONTROL		0x6C
 #define HTIC_BIOSR_Detect	(1<<5)

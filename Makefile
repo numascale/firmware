@@ -1,18 +1,19 @@
 COPT      := -g -Wall -Wextra -Wno-unused-parameter -O3 -std=gnu99
 
-syslinux_version := 4.06
+syslinux_version := 4.07
 syslinux_dir     := syslinux-$(syslinux_version)
 
 COM32DEPS := $(syslinux_dir)/com32/libutil/libutil_com.a $(syslinux_dir)/com32/lib/libcom32.a
+DIRS := platform/ opteron/ numachip2/ library/
 
 .PHONY: all
-all: nc2-bootloader.c32
+all: platform/bootloader.c32
 
 .PRECIOUS: %.bz2
 
 .PHONY: clean
 clean:
-	rm -f *~ *.o *.c32 *.elf .*.o.d *.orig nc2-version.h
+	rm -f $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) nc2-bootloader.c32 nc2-bootloader.elf nc2-bootloader.o version.h
 
 .PHONY: realclean
 realclean: clean
@@ -53,25 +54,25 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 %.c32: %.elf $(syslinux_dir)/com32/samples/Makefile
 	(cd $(syslinux_dir)/com32/samples && make $(CURDIR)/$@ NOGPL=1)
 
-nc2-version.h: nc2-defs.h nc2-access.h nc2-acpi.h nc2-bootloader.h nc2-access.c nc2-bootloader.c
-	@echo \#define VER \"`git describe --always`\" >nc2-version.h
+version.h: opteron/defs.h library/access.h platform/acpi.h platform/bootloader.h library/access.c platform/bootloader.c
+	@echo \#define VER \"`git describe --always`\" >version.h
 
-nc2-bootloader.elf: nc2-bootloader.o nc2-htscan.o nc2-acpi.o nc2-smbios.o nc2-options.o nc2-access.o nc2-i2cmaster.o nc2-spd.o nc2-spimaster.o $(COM32DEPS)
+platform/bootloader.elf: platform/bootloader.o opteron/ht-scan.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o $(COM32DEPS)
 
-nc2-bootloader.o: nc2-bootloader.c nc2-defs.h nc2-bootloader.h nc2-access.h nc2-acpi.h nc2-version.h nc2-spd.h
+platform/bootloader.o: platform/bootloader.c opteron/defs.h platform/bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
-nc2-htscan.o: nc2-htscan.c nc2-defs.h nc2-bootloader.h nc2-access.h
+opteron/ht-scan.o: opteron/ht-scan.c opteron/defs.h platform/bootloader.h library/access.h
 
-nc2-options.o: nc2-options.c nc2-defs.h nc2-bootloader.h nc2-access.h
+platform/options.o: platform/options.c opteron/defs.h platform/bootloader.h library/access.h
 
-nc2-access.o: nc2-access.c nc2-defs.h nc2-access.h
+library/access.o: library/access.c opteron/defs.h library/access.h
 
-nc2-acpi.o: nc2-acpi.c nc2-acpi.h
+platform/acpi.o: platform/acpi.c platform/acpi.h
 
-nc2-smbios.o: nc2-smbios.c nc2-bootloader.h
+platform/smbios.o: platform/smbios.c platform/bootloader.h
 
-nc2-spd.o: nc2-spd.c nc2-spd.h nc2-bootloader.h
+numachip2/spd.o: numachip2/spd.c numachip2/spd.h platform/bootloader.h
 
-nc2-i2cmaster.o: nc2-i2cmaster.c nc2-bootloader.h nc2-access.h
+numachip2/i2c-master.o: numachip2/i2c-master.c platform/bootloader.h library/access.h
 
-nc2-spimaster.o: nc2-spimaster.c nc2-bootloader.h nc2-access.h
+numachip2/spi-master.o: numachip2/spi-master.c platform/bootloader.h library/access.h

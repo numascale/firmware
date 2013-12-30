@@ -22,8 +22,8 @@
 #include <com32.h>
 #include <inttypes.h>
 
-#include "nc2-bootloader.h"
-#include "nc2-version.h"
+#include "../platform/bootloader.h"
+#include "../version.h"
 
 /* Command line arguments */
 char *next_label = "menu.c32";

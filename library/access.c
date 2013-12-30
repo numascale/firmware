@@ -18,9 +18,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "nc2-defs.h"
-#include "nc2-bootloader.h"
-#include "nc2-access.h"
+#include "../opteron/defs.h"
+#include "../platform/bootloader.h"
+#include "access.h"
 
 #define PCI_CONF_SEL 0xcf8
 #define PCI_CONF_DATA 0xcfc
