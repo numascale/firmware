@@ -1,4 +1,4 @@
-COPT      := -g -Wall -Wextra -Wno-unused-parameter -O3 -std=gnu99
+COPT      := -g -Wall -Wextra -Wno-unused-parameter -Wshadow -O3
 
 syslinux_version := 4.07
 syslinux_dir     := syslinux-$(syslinux_version)
@@ -38,7 +38,7 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 	(cd $(syslinux_dir)/com32/lib && make all)
 
 %.o: %.c $(syslinux_dir)/com32/samples/Makefile
-	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make $(CURDIR)/$@ NOGPL=1)
+	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make CC="g++ -fpermissive" $(CURDIR)/$@ NOGPL=1)
 
 %.o: %.S $(syslinux_dir)/com32/samples/Makefile
 	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make $(CURDIR)/$@ NOGPL=1)

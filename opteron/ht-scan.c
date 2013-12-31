@@ -18,10 +18,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <console.h>
-#include <com32.h>
+//#include <console.h>
+//#include <com32.h>
 #include <inttypes.h>
-#include <syslinux/pxe.h>
+//#include <syslinux/pxe.h>
 #include <sys/io.h>
 
 #include "../opteron/defs.h"
@@ -156,13 +156,13 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	uint32_t val;
 
 	if ((neigh < 0) || (link < 0)) {
-		int next, i;
+		int i;
 		uint32_t rqrt;
 		/* Start looking from node 0 */
 		neigh = 0;
 
 		while (1) {
-			next = 0;
+			int next = 0;
 			rqrt = cht_readl(neigh, FUNC0_HT, 0x40 + 4 * nc) & 0x1f;
 
 			/* Look for other CPUs routed on same link as NC */
@@ -283,8 +283,7 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 		printf("NumaChip-II rev %d already present on HT node %d\n", *p_chip_rev, nc);
 		/* Chip already found; make sure the desired width/frequency is set */
 		ht_optimize_link(nc, -1, -1);
-	}
-	else {
+	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
 		int neigh, link = 0, rt, i;
 		bool use = true;
@@ -401,5 +400,4 @@ int ht_fabric_fixup(uint32_t *p_chip_rev)
 
 	return nc;
 }
-
 

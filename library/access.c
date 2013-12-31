@@ -35,13 +35,27 @@ int lirq_nest = 0;
 /* #define DEBUG(...) printf(__VA_ARGS__) */
 #define DEBUG(...) do { } while (0)
 
-uint8_t pmio_readb(uint16_t offset)
+uint8_t rtc_read(const int addr)
+{
+	outb(addr, 0x70);
+	uint8_t val = inb(0x71);
+
+	/* Convert from BCD if needed */
+	outb(RTC_SETTINGS, 0x70);
+	uint8_t settings = inb(0x71);
+	if (!(settings & 4))
+		return (val & 0xf) + (val / 16) * 10;
+
+	return val;
+}
+
+uint8_t pmio_readb(const uint16_t offset)
 {
 	outb(offset, PMIO_PORT /* PMIO index */);
 	return inb(PMIO_PORT + 1 /* PMIO data */);
 }
 
-void pmio_writeb(uint16_t offset, uint8_t val)
+void pmio_writeb(const uint16_t offset, const uint8_t val)
 {
 	/* Write offset and value in single 16-bit write */
 	outw(offset | val << 8, PMIO_PORT);
@@ -50,8 +64,7 @@ void pmio_writeb(uint16_t offset, uint8_t val)
 uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 {
 	uint32_t ret;
-	DEBUG("pci:%02x:%02x.%x %03x -> ",
-	      bus, dev, func, reg);
+	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	ret = inl(PCI_CONF_DATA + (reg & 3));
@@ -63,8 +76,7 @@ uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 {
 	uint8_t ret;
-	DEBUG("pci:%02x:%02x.%x %03x -> ",
-	      bus, dev, func, reg);
+	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	ret = inb(PCI_CONF_DATA + (reg & 3));
@@ -75,8 +87,7 @@ uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 
 void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 {
-	DEBUG("pci:%02x:%02x.%x %03x <- %08x",
-	      bus, dev, func, reg, val);
+	DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	outl(val, PCI_CONF_DATA + (reg & 3));
@@ -86,8 +97,7 @@ void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_
 
 void extpci_writeb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
 {
-	DEBUG("pci:%02x:%02x.%x %03x <- %02x",
-	      bus, dev, func, reg, val);
+	DEBUG("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	outb(val, PCI_CONF_DATA + (reg & 3));

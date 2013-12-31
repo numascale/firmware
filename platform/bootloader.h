@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-/* cpu_relax() defined here */
 #include "../library/access.h"
 
 /* ASCII-Art */
@@ -78,7 +77,7 @@ extern char *hostname;
 extern char nc2_card_type[16];
 
 /* Options */
-extern char *next_label;
+extern const char *next_label;
 extern int ht_force_ganged;
 extern int ht_200mhz_only;
 extern int ht_8bit_only;
@@ -88,7 +87,7 @@ extern int verbose;
 
 void udelay(const uint32_t usecs);
 void wait_key(void);
-int parse_cmdline(const char *cmdline);
+void parse_cmdline(const int argc, const char *argv[]);
 int ht_fabric_fixup(uint32_t *p_chip_rev);
 int i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
 int spi_master_read(const uint16_t addr, const int len, uint8_t *data);

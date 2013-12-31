@@ -22,57 +22,11 @@
 #include "spd.h"
 #include "../platform/bootloader.h"
 
-/* used for ddr1 and ddr2 spd */
-static int spd_check(const uint8_t *buf, uint8_t spd_rev, uint8_t spd_cksum)
-{
-	uint32_t cksum = 0;
-	int err = 0;
-
-        /*
-         * Check SPD revision supported
-         * Rev 1.X or less supported by this code
-         */
-        if ((spd_rev >= 0x20) ||
-	    (spd_rev > 0x13)) {
-                error("SPD revision %02X not supported",
-		      spd_rev);
-                err = -1;
-        }
-	
-	/*
-	 * Calculate checksum
-	 */
-	for (int i = 0; i < 63; i++) {
-		cksum += *buf++;
-	}
-	cksum &= 0xFF;
-
-	if (cksum != spd_cksum) {
-		error("SPD checksum unexpected. "
-		      "Checksum in SPD = %02X, computed = %02X",
-		      spd_cksum, cksum);
-		err = -1;
-	}
-
-	return err;
-}
-
-int nc2_ddr2_spd_check(const ddr2_spd_eeprom_t *spd)
-{
-	const uint8_t *p = (const uint8_t *)spd;
-
-	return spd_check(p, spd->spd_rev, spd->cksum);
-}
-
-/*
- * CRC16 compute for DDR3 SPD
- * Copied from DDR3 SPD spec.
- */
+/* CRC16 compute for DDR3 SPD; from DDR3 SPD spec */
 static int crc16(char *ptr, int count)
 {
-	int crc, i;
+	int i, crc = 0;
 
-	crc = 0;
 	while (--count >= 0) {
 		crc = crc ^ (int)*ptr++ << 8;
 		for (i = 0; i < 8; ++i)
@@ -84,33 +38,22 @@ static int crc16(char *ptr, int count)
 	return crc & 0xffff;
 }
 
-int nc2_ddr3_spd_check(const ddr3_spd_eeprom_t *spd)
+void ddr3_spd_check(const ddr3_spd_eeprom_t *spd)
 {
 	char *p = (char *)spd;
-	int csum16;
-	int len;
+	int csum16, len;
 	char crc_lsb;	/* byte 126 */
 	char crc_msb;	/* byte 127 */
 
-	/*
-	 * SPD byte0[7] - CRC coverage
-	 * 0 = CRC covers bytes 0~125
-	 * 1 = CRC covers bytes 0~116
-	 */
-
+	/* SPD byte0[7] is CRC coverage: 0 = bytes 0-125, 1 = bytes 0-116 */
 	len = !(spd->info_size_crc & 0x80) ? 126 : 117;
 	csum16 = crc16(p, len);
 
-	crc_lsb = (char) (csum16 & 0xff);
-	crc_msb = (char) (csum16 >> 8);
+	crc_lsb = (char)(csum16 & 0xff);
+	crc_msb = (char)(csum16 >> 8);
 
-	if (spd->crc[0] != crc_lsb || spd->crc[1] != crc_msb) {
-		error("SPD checksum unexpected. "
-		      "Checksum lsb in SPD = %02X, computed = %02X "
-		      "Checksum msb in SPD = %02X, computed = %02X",
-		      spd->crc[0], crc_lsb, spd->crc[1], crc_msb);
-		return -1;
-	}
-
-	return 0;
+	if (spd->crc[0] != crc_lsb || spd->crc[1] != crc_msb)
+		fatal("SPD checksum 0x%02x%02x differs from expected 0x%02x%02x",
+			crc_msb, crc_lsb, spd->crc[1], spd->crc[0]);
 }
+

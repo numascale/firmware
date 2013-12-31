@@ -21,6 +21,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+#include "../library/base.h"
+
 struct acpi_rsdp {
 	unsigned char sig[8];
 	uint8_t checksum;
@@ -119,12 +121,12 @@ struct acpi_mcfg_allocation {
 typedef struct acpi_sdt *acpi_sdt_p;
 
 void debug_acpi(void);
-uint8_t checksum(void *addr, int len);
-acpi_sdt_p find_sdt(char *sig);
-int replace_child(const char *sig, acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize);
-bool add_child(acpi_sdt_p replacement, acpi_sdt_p parent, unsigned int ptrsize);
-acpi_sdt_p find_root(const char *sig);
-int replace_root(const char *sig, acpi_sdt_p replacement);
-bool acpi_append(acpi_sdt_p parent, int ptrsize, const char *sig, const unsigned char *extra, uint32_t extra_len);
+checked uint8_t checksum(const acpi_sdt_p addr, const int len);
+checked bool replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize);
+void add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, unsigned int ptrsize);
+checked acpi_sdt_p find_root(const char *sig);
+checked bool replace_root(const char *sig, const acpi_sdt_p replacement);
+checked acpi_sdt_p find_sdt(const char *sig);
+checked bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
 
 #endif

@@ -21,6 +21,8 @@
 #include <inttypes.h>
 #include <sys/io.h>
 
+#include "base.h"
+
 extern int lirq_nest;
 #define cli() if (lirq_nest++ == 0) { asm volatile("cli"); }
 #define sti() if (--lirq_nest == 0) { asm volatile("sti"); }
@@ -41,6 +43,15 @@ extern int lirq_nest;
 	"and $~0x40000000, %%eax\n" \
 	"mov %%eax, %%cr0\n" ::: "eax", "memory"); \
 	} while (0)
+
+#define RTC_SECONDS     0
+#define RTC_MINUTES     2
+#define RTC_HOURS       4
+#define RTC_DAY_OF_WEEK 6
+#define RTC_DAY         7
+#define RTC_MONTH       8
+#define RTC_YEAR        9
+#define RTC_SETTINGS    11
 
 static inline uint64_t rdtscll(void)
 {
@@ -77,8 +88,9 @@ static inline void wrmsr(uint32_t msr, uint64_t v)
 	asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
 }
 
-uint8_t pmio_readb(uint16_t offset);
-void pmio_writeb(uint16_t offset, uint8_t val);
+checked uint8_t rtc_read(const int addr);
+uint8_t pmio_readb(const uint16_t offset);
+void pmio_writeb(const uint16_t offset, const uint8_t val);
 uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
 uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
 void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);

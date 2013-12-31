@@ -19,13 +19,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <console.h>
-#include <com32.h>
 #include <inttypes.h>
-#include <syslinux/pxe.h>
 #include <sys/io.h>
+
+extern "C" {
+	#include <com32.h>
+	#include <syslinux/pxe.h>
+}
 
 #include "../opteron/defs.h"
 #include "bootloader.h"
+#include "../library/base.h"
 #include "../library/access.h"
 #include "acpi.h"
 #include "../numachip2/spd.h"
@@ -95,24 +99,6 @@ static void set_wrap32_enable(void)
 	wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 }
 
-static int check_api_version(void)
-{
-	static com32sys_t inargs, outargs;
-	int major, minor;
-	inargs.eax.w[0] = 0x0001;
-	__intcall(0x22, &inargs, &outargs);
-	major = outargs.ecx.b[1];
-	minor = outargs.ecx.b[0];
-	printf("Detected SYSLINUX API version %d.%02d\n", major, minor);
-
-	if ((major * 100 + minor) < 372) {
-		printf("Error: SYSLINUX API version >= 3.72 is required\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 static void start_user_os(void)
 {
 	static com32sys_t rm;
@@ -120,7 +106,7 @@ static void start_user_os(void)
 	set_cf8extcfg_disable();
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
-	strcpy(__com32.cs_bounce, next_label);
+	strcpy((char *)__com32.cs_bounce, next_label);
 	rm.eax.w[0] = 0x0003;
 	rm.ebx.w[0] = OFFS(__com32.cs_bounce);
 	rm.es = SEG(__com32.cs_bounce);
@@ -214,18 +200,14 @@ static void stop_acpi(void)
 	printf("ACPI handoff timed out\n");
 }
 
-static int read_spd_info(int spd_no, ddr3_spd_eeprom_t *spd)
+static int read_spd_info(int spd_no, const ddr3_spd_eeprom_t *spd)
 {
 	const uint8_t spd_device_adr = 0x50 + spd_no;
 
 	if (i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr3_spd_eeprom_t), (uint8_t *)spd) < 0)
 		return -1;
 
-	/* Check SPD validity */
-	if (nc2_ddr3_spd_check(spd) < 0) {
-		error("Couldn't find a valid DDR3 SDRAM memory module on DIMM%d", spd_no);
-		return -1;
-	}
+	ddr3_spd_check(spd);
 
 	printf("DIMM%d is a %s module\n", spd_no, nc2_ddr3_module_type(spd->module_type));
 
@@ -273,11 +255,8 @@ static uint32_t identify_eeprom(char p_type[16])
 	return *((uint32_t *)p_uuid);
 }
 
-static int nc2_start(const char *cmdline)
+static int nc2_start(void)
 {	
-	if (parse_cmdline(cmdline) < 0)
-		return ERR_GENERAL_NC_START_ERROR;
-
 	constants();
 	get_hostname();
 
@@ -328,14 +307,14 @@ void wait_key(void)
 	printf("\n");
 }
 
-int main(void)
+int main(const int argc, const char *argv[])
 {
 	int ret;
 	openconsole(&dev_rawcon_r, &dev_stdcon_w);
-	printf(CLEAR BANNER "NumaConnect system unification module " VER COL_DEFAULT "\n");
 
-	if (check_api_version() < 0)
-		return ERR_API_VERSION;
+	printf(CLEAR BANNER "NumaConnect system unification module " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
+	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
+	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
 
 	/* Enable CF8 extended access, we use it extensively */
 	set_cf8extcfg_enable();
@@ -343,18 +322,15 @@ int main(void)
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
 	set_wrap32_disable();
 
-	ret = nc2_start(__com32.cs_cmdline);
+	parse_cmdline(argc, argv);
 
+	ret = nc2_start();
 	if (ret < 0) {
-		printf("Error: nc2_start() failed with error code %d\n", ret);
+		error("nc_start() failed with error code %d; check configuration files match hardware and UUIDs\n", ret);
 		wait_key();
 	}
 
-	/* Disable CF8 extended access */
-	set_cf8extcfg_disable();
-
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
-
 	return ret;
 }
