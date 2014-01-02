@@ -34,6 +34,7 @@ extern "C" {
 #include "acpi.h"
 #include "../numachip2/spd.h"
 #include "../version.h"
+#include "options.h"
 
 /* Global constants found in initialization */
 int family = 0;
@@ -46,6 +47,7 @@ char *hostname = NULL;
 char nc2_card_type[16];
 
 static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
+Options *options;
 
 static void constants(void)
 {
@@ -106,13 +108,13 @@ static void start_user_os(void)
 	set_cf8extcfg_disable();
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
-	strcpy((char *)__com32.cs_bounce, next_label);
+	strcpy((char *)__com32.cs_bounce, options->next_label);
 	rm.eax.w[0] = 0x0003;
 	rm.ebx.w[0] = OFFS(__com32.cs_bounce);
 	rm.es = SEG(__com32.cs_bounce);
-	printf("Unification succeeded; loading %s...\n", next_label);
+	printf("Unification succeeded; loading %s...\n", options->next_label);
 
-	if (boot_wait)
+	if (options->boot_wait)
 		wait_key();
 
 	__intcall(0x22, &rm, NULL);
@@ -226,14 +228,14 @@ static void platform_quirks(void)
 	printf("Platform is %s %s (%s %s) with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
 
 	/* Skip if already set */
-	if (!handover_acpi) {
+	if (!options->handover_acpi) {
 		/* Systems where ACPI must be handed off early */
 		const char *acpi_blacklist[] = {"H8QGL", NULL};
 
 		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
 			if (!strcmp(boardproduct, acpi_blacklist[i])) {
 				printf(" (blacklisted)");
-				handover_acpi = 1;
+				options->handover_acpi = 1;
 				break;
 			}
 		}
@@ -263,7 +265,7 @@ static int nc2_start(void)
 	platform_quirks();
 	
 	/* SMI often assumes HT nodes are Northbridges, so handover early */
-	if (handover_acpi)
+	if (options->handover_acpi)
 		stop_acpi();
 
 	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
@@ -322,7 +324,7 @@ int main(const int argc, const char *argv[])
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
 	set_wrap32_disable();
 
-	parse_cmdline(argc, argv);
+	options = new Options(argc, argv);
 
 	ret = nc2_start();
 	if (ret < 0) {

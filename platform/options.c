@@ -18,20 +18,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include <console.h>
-//#include <com32.h>
 #include <inttypes.h>
 
 #include "../platform/bootloader.h"
 #include "../version.h"
-
-/* Command line arguments */
-const char *next_label = "menu.c32";
-int ht_200mhz_only = 0;
-int ht_8bit_only = 0;
-bool boot_wait = false;
-bool handover_acpi = false;
-int verbose = 0;
+#include "options.h"
 
 struct optargs {
 	const char label[20];
@@ -39,7 +30,7 @@ struct optargs {
 	void *result;
 };
 
-static void parse_string(const char *val, void *stringp)
+void Options::parse_string(const char *val, void *stringp)
 {
 	assert(val);
 	char **string = (char **)stringp;
@@ -47,7 +38,7 @@ static void parse_string(const char *val, void *stringp)
 	assert(*string);
 }
 
-static void parse_bool(const char *val, void *voidp)
+void Options::parse_bool(const char *val, void *voidp)
 {
 	bool *boolp = (bool *)voidp;
 
@@ -59,7 +50,7 @@ static void parse_bool(const char *val, void *voidp)
 		*boolp = true;
 }
 
-static void parse_int(const char *val, void *intp)
+void Options::parse_int(const char *val, void *intp)
 {
 	int *int32 = (int *)intp;
 	if (val && val[0] != '\0')
@@ -68,7 +59,7 @@ static void parse_int(const char *val, void *intp)
 		*int32 = 1;
 }
 
-static void parse_int64(const char *val, void *intp)
+void Options::parse_int64(const char *val, void *intp)
 {
 	uint64_t *int64 = (uint64_t *)intp;
 
@@ -99,15 +90,16 @@ static void parse_int64(const char *val, void *intp)
 		*int64 = 1;
 }
 
-void parse_cmdline(const int argc, const char *argv[])
+Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json")
 {
-	static const struct optargs options[] = {
-		{"next-label",	    &parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
-		{"ht.8bit-only",    &parse_bool,   &ht_8bit_only},
-		{"ht.200mhz-only",  &parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
-		{"boot-wait",       &parse_bool,   &boot_wait},
-		{"handover-acpi",   &parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
-		{"verbose",         &parse_int,    &verbose},
+	static const struct optargs list[] = {
+		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
+		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
+		{"ht.200mhz-only",  &Options::parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
+		{"boot-wait",       &Options::parse_bool,   &boot_wait},
+		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
+		{"verbose",         &Options::parse_int,    &verbose},
+		{"config",          &Options::parse_string, &config_filename},
 	};
 
 	int errors = 0;
@@ -121,13 +113,13 @@ void parse_cmdline(const int argc, const char *argv[])
 		}
 
 		bool handled = 0;
-		for (unsigned int i = 0; i < (sizeof(options) / sizeof(options[0])); i++) {
-			if (!strcmp(argv[arg], options[i].label)) {
+		for (unsigned int i = 0; i < (sizeof(list) / sizeof(list[0])); i++) {
+			if (!strcmp(argv[arg], list[i].label)) {
 				printf(" %s", argv[arg]);
 				if (val)
 					printf("=%s", val);
 
-				options[i].handler(val, options[i].result);
+				list[i].handler(val, list[i].result);
 				handled = 1;
 				break;
 			}

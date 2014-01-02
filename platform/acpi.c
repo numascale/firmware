@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "../platform/bootloader.h"
+#include "../platform/options.h"
 #include "../opteron/defs.h"
 #include "acpi.h"
 
@@ -418,7 +419,7 @@ bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, co
 	table->len += extra_len;
 	table->checksum += checksum(table, table->len);
 
-	if (verbose > 2)
+	if (options->verbose > 2)
 		acpi_dump(table);
 
 	return 1;

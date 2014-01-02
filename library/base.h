@@ -22,6 +22,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#define roundup(x, n) (((x) + ((n) - 1)) & (~((n) - 1)))
+#define cpu_relax() asm volatile("pause" ::: "memory")
+#define PRInode "node 0x%03x (%s)"
+
 #define checked __attribute__ ((warn_unused_result))
 #define lassert(cond) do { if (!(cond)) { \
         printf("Error: assertion '%s' failed in %s at %s:%d\n", \
@@ -35,6 +41,26 @@
 
 typedef uint8_t ht_t;
 typedef uint16_t sci_t;
+
+inline void *operator new(const size_t size)
+{
+    return malloc(size);
+}
+
+inline void *operator new[](const size_t size)
+{
+    return malloc(size);
+}
+
+inline void operator delete(void *const p)
+{
+    free(p);
+}
+
+inline void operator delete[](void *const p)
+{
+    free(p);
+}
 
 template<class T> class Vector {
 	unsigned lim;

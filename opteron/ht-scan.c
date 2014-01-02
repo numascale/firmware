@@ -27,6 +27,7 @@
 #include "../opteron/defs.h"
 #include "../platform/acpi.h"
 #include "../platform/bootloader.h"
+#include "../platform/options.h"
 #include "../library/access.h"
 
 #define HT_INIT_CONTROL		0x6C
@@ -207,7 +208,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	val = cht_readl(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
 	printf(".");
 
-	if (!ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
+	if (!options->ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			cht_writel(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
@@ -226,7 +227,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	}
 
 	/* Optimize link frequency, if option to disable this is not set */
-	if (!ht_200mhz_only) {
+	if (!options->ht_200mhz_only) {
 		uint8_t max_supported = 0;
 
 		printf("+");
