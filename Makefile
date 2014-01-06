@@ -57,7 +57,7 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 version.h: opteron/defs.h library/access.h platform/acpi.h platform/bootloader.h library/access.c platform/bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
-platform/bootloader.elf: platform/bootloader.o opteron/ht-scan.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o platform/syslinux.o $(COM32DEPS)
+platform/bootloader.elf: platform/bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o platform/syslinux.o $(COM32DEPS)
 
 platform/bootloader.o: platform/bootloader.c opteron/defs.h platform/bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
@@ -72,6 +72,8 @@ platform/acpi.o: platform/acpi.c platform/acpi.h
 platform/smbios.o: platform/smbios.c platform/bootloader.h
 
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
+
+platform/config.o: platform/config.c platform/config.h
 
 numachip2/spd.o: numachip2/spd.c numachip2/spd.h platform/bootloader.h
 

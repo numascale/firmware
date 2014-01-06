@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <console.h>
 
 extern "C" {
 	#include <com32.h>
@@ -24,6 +25,11 @@ extern "C" {
 
 #include "syslinux.h"
 #include "../library/base.h"
+
+Syslinux::Syslinux(void)
+{
+	openconsole(&dev_rawcon_r, &dev_stdcon_w);
+}
 
 char *Syslinux::read_file(const char *filename, int *const len)
 {

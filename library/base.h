@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -29,10 +30,52 @@
 #define PRInode "node 0x%03x (%s)"
 
 #define checked __attribute__ ((warn_unused_result))
+
+/* ASCII-Art */
+#define COL_DEFAULT   "\033[0m"
+#define COL_RED       "\033[31m"
+#define COL_YELLOW    "\033[33m"
+#define CLEAR         "\033\143"
+#define BANNER        "\033[1m"
+
 #define lassert(cond) do { if (!(cond)) { \
         printf("Error: assertion '%s' failed in %s at %s:%d\n", \
             #cond, __FUNCTION__, __FILE__, __LINE__); while (1); \
     } } while (0)
+
+#define assert(cond) do { if (!(cond)) {				\
+	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
+	    #cond, __FUNCTION__, __FILE__, __LINE__);			\
+	printf(COL_DEFAULT);						\
+	while (1) cpu_relax();						\
+    } } while (0)
+
+#define fatal(format, args...) do {					\
+	printf(COL_RED "Error: ");					\
+	printf(format, ## args);					\
+	printf(COL_DEFAULT);						\
+	while (1) cpu_relax();						\
+   } while (0)
+
+#define warning(format, args...) do {					\
+	printf(COL_YELLOW "Warning: ");					\
+	printf(format, ## args);					\
+	printf(COL_DEFAULT "\n");					\
+   } while (0)
+
+#define error(format, args...) do {					\
+	printf(COL_RED "Error: ");					\
+	printf(format, ## args);					\
+	printf(COL_DEFAULT "\n");					\
+   } while (0)
+
+#define assertf(cond, format, args...) do { if (!(cond)) {		\
+	printf(COL_RED "Error: ");					\
+	printf(format, ## args);					\
+	printf(COL_DEFAULT);						\
+	while (1) cpu_relax();						\
+    } } while(0)
+
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate
 #define REL8(sym) ((uint8_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
 #define REL16(sym) ((uint16_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))

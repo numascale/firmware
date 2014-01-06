@@ -18,10 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include <console.h>
-//#include <com32.h>
 #include <inttypes.h>
-//#include <syslinux/pxe.h>
 #include <sys/io.h>
 
 #include "../opteron/defs.h"
@@ -47,9 +44,9 @@ static void reset_cf9(enum reboot_mode mode, int last)
 	}
 	if (southbridge_id == VENDEV_SP5100) {
 		uint8_t pm_control = pmio_readb(0x42);
-		pm_control |= (1 << 1); // Clear the DisableBootFailCpuRst bit
+		pm_control |= (1 << 1); /* Clear the DisableBootFailCpuRst bit */
 		printf("pm_control = %02x\n", pm_control);
-		pmio_writeb(0x42, pm_control | (1 << 3)); // Set the RstCpuPGEn bit to toggle PWROK
+		pmio_writeb(0x42, pm_control | (1 << 3)); /* Set the RstCpuPGEn bit to toggle PWROK */
 		wait_key();
 	}
 	if (mode == REBOOT_COLD) {
@@ -234,7 +231,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 		val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
 		printf(".");
 
-		// Find maximum supported frequency
+		/* Find maximum supported frequency */
 		for (int i = 0; i < 16; i++)
 			if (val >> (16+i) & 1) max_supported = i;
 

@@ -20,8 +20,12 @@
 
 class Syslinux
 {
+public:
+	Syslinux(void);
 	char *read_file(const char *filename, int *const len);
 };
+
+extern Syslinux *syslinux;
 
 #endif
 

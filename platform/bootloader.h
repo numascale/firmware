@@ -23,49 +23,6 @@
 
 #include "../library/access.h"
 
-/* ASCII-Art */
-#define COL_DEFAULT   "\033[0m"
-#define COL_RED       "\033[31m"
-#define COL_YELLOW    "\033[33m"
-#define CLEAR         "\033\143"
-#define BANNER        "\033[1m"
-
-#define assert(cond) do { if (!(cond)) {				\
-	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
-	    #cond, __FUNCTION__, __FILE__, __LINE__);			\
-	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
-    } } while (0)
-
-#define assertf(cond, format, args...) do { if (!(cond)) {		\
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
-    } } while(0)
-
-#define fatal(format, args...) do {					\
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
-   } while (0)
-
-#define warning(format, args...) do {					\
-	printf(COL_YELLOW "Warning: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT "\n");					\
-   } while (0)
-
-#define error(format, args...) do {					\
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT "\n");					\
-   } while (0)
-
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-
 /* Global constants found in initialization */
 extern int family;
 extern uint32_t southbridge_id;

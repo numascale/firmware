@@ -18,7 +18,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <console.h>
 #include <inttypes.h>
 #include <sys/io.h>
 
@@ -35,6 +34,8 @@ extern "C" {
 #include "../numachip2/spd.h"
 #include "../version.h"
 #include "options.h"
+#include "syslinux.h"
+#include "config.h"
 
 /* Global constants found in initialization */
 int family = 0;
@@ -48,6 +49,8 @@ char nc2_card_type[16];
 
 static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 Options *options;
+Syslinux *syslinux;
+Config *config;
 
 static void constants(void)
 {
@@ -285,8 +288,6 @@ static int nc2_start(void)
 	}
 
 	start_user_os();
-
-	// XXX: Never reached
 	return 0;
 }
 
@@ -301,7 +302,7 @@ void udelay(const uint32_t usecs)
 void wait_key(void)
 {
 	char ch;
-	printf("... ( press any key to continue ) ... ");
+	printf("Press any key to continue");
 
 	while (fread(&ch, 1, 1, stdin) == 0)
 		;
@@ -312,7 +313,8 @@ void wait_key(void)
 int main(const int argc, const char *argv[])
 {
 	int ret;
-	openconsole(&dev_rawcon_r, &dev_stdcon_w);
+
+	syslinux = new Syslinux();
 
 	printf(CLEAR BANNER "NumaConnect system unification module " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),

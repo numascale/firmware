@@ -23,5 +23,7 @@ class Config {
 	~Config(void);
 };
 
+extern Config *config;
+
 #endif
 

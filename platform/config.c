@@ -16,11 +16,19 @@
  */
 
 #include "../library/jsmn.h"
+#include "../library/base.h"
+#include "syslinux.h"
+#include "options.h"
 #include "config.h"
+
+extern "C" {
+	#include "com32.h"
+}
 
 Config::Config(void)
 {
-	char *const json = syslinux.read_file(options->config_filename);
+	int len;
+	char *json = syslinux->read_file(options->config_filename, &len);
 	assertf(config, "Fabric configuration file <%s> not found", options->config_filename);
 
 //	jsmn_init();
