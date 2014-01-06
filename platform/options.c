@@ -100,6 +100,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
 		{"verbose",         &Options::parse_int,    &verbose},
 		{"config",          &Options::parse_string, &config_filename},
+		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
 	};
 
 	int errors = 0;

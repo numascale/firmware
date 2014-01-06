@@ -31,6 +31,7 @@ public:
 	bool boot_wait;
 	bool handover_acpi;
 	int verbose;
+	bool reentrant;
 
 	Options(const int argc, const char *argv[]);
 };

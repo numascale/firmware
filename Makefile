@@ -3,6 +3,9 @@ COPT      := -g -Wall -Wextra -Wno-unused-parameter -Wshadow -O3
 syslinux_version := 4.07
 syslinux_dir     := syslinux-$(syslinux_version)
 
+mjson_version    := 1.5
+mjson_dir        := json-$(mjson_version)
+
 COM32DEPS := $(syslinux_dir)/com32/libutil/libutil_com.a $(syslinux_dir)/com32/lib/libcom32.a
 DIRS := platform/ opteron/ numachip2/ library/
 
@@ -22,6 +25,9 @@ realclean: clean
 syslinux-%.tar.bz2:
 	wget -O $@ http://www.kernel.org/pub/linux/utils/boot/syslinux/4.xx/$@ || rm -f $@
 
+mjson-%.tar.gz:
+	wget -O $@ http://sourceforge.net/projects/mjson/files/latest/download?source=files || rm -f $@
+
 $(syslinux_dir)/com32/samples/Makefile: syslinux-$(syslinux_version).tar.bz2
 	tar -jxf $<
 	touch -c $(syslinux_dir)/com32/samples/Makefile
@@ -36,6 +42,14 @@ $(syslinux_dir)/com32/libutil/libutil_com.a: $(syslinux_dir)/com32/samples/Makef
 
 $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(syslinux_dir)/com32/tools/relocs
 	(cd $(syslinux_dir)/com32/lib && make all)
+
+$(mjson_dir)/src/json.h \
+$(mjson_dir)/src/json.c: mjson-$(mjson_version).tar.gz
+	echo $@
+	tar -zxf $<
+	touch -c $(mjson_dir)/src/json.h
+	perl -npi -e 's/#include <memory.h>/#include <string.h>/' $(mjson_dir)/src/json.c
+	perl -npi -e 's/SIZE_MAX/10485760/' $(mjson_dir)/src/json.h
 
 %.o: %.c $(syslinux_dir)/com32/samples/Makefile
 	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make CC="g++ -fpermissive -fno-threadsafe-statics" $(CURDIR)/$@ NOGPL=1)
@@ -57,7 +71,7 @@ $(syslinux_dir)/com32/lib/libcom32.a: $(syslinux_dir)/com32/samples/Makefile $(s
 version.h: opteron/defs.h library/access.h platform/acpi.h platform/bootloader.h library/access.c platform/bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
-platform/bootloader.elf: platform/bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o platform/syslinux.o $(COM32DEPS)
+platform/bootloader.elf: platform/bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o platform/syslinux.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
 platform/bootloader.o: platform/bootloader.c opteron/defs.h platform/bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
@@ -73,7 +87,7 @@ platform/smbios.o: platform/smbios.c platform/bootloader.h
 
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
 
-platform/config.o: platform/config.c platform/config.h
+platform/config.o: platform/config.c platform/config.h $(mjson_dir)/src/json.h
 
 numachip2/spd.o: numachip2/spd.c numachip2/spd.h platform/bootloader.h
 

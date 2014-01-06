@@ -50,7 +50,7 @@ char nc2_card_type[16];
 static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 Options *options;
 Syslinux *syslinux;
-Config *config;
+Config config;
 
 static void constants(void)
 {
@@ -328,11 +328,7 @@ int main(const int argc, const char *argv[])
 
 	options = new Options(argc, argv);
 
-	ret = nc2_start();
-	if (ret < 0) {
-		error("nc_start() failed with error code %d; check configuration files match hardware and UUIDs\n", ret);
-		wait_key();
-	}
+	nc2_start();
 
 	/* Restore 32-bit only access */
 	set_wrap32_enable();
