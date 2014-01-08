@@ -265,7 +265,7 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
-int ht_fabric_fixup(uint32_t *p_chip_rev)
+int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 {
 	int nodes, nc = -1;
 	uint32_t val;

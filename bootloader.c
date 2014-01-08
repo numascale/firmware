@@ -25,30 +25,27 @@ extern "C" {
 	#include <com32.h>
 }
 
-#include "opteron/defs.h"
+#include "version.h"
 #include "bootloader.h"
+#include "opteron/defs.h"
 #include "library/base.h"
 #include "library/access.h"
 #include "platform/acpi.h"
-#include "numachip2/spd.h"
-#include "version.h"
 #include "platform/options.h"
 #include "platform/syslinux.h"
 #include "platform/config.h"
+#include "numachip2/numachip.h"
 
 /* Global constants found in initialization */
 int family = 0;
 uint32_t southbridge_id = -1;
-int nc2_ht_id = -1; /* HT id of NC-II */
-uint32_t nc2_chip_rev = -1;
 uint32_t tsc_mhz = 0;
-char nc2_card_type[16];
 
-static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
-Options *options;
 Syslinux *syslinux;
+Options *options;
 Config *config;
 Opteron *opteron;
+Numachip2 *numachip;
 
 static void constants(void)
 {
@@ -114,20 +111,6 @@ static void stop_acpi(void)
 	printf("ACPI handoff timed out\n");
 }
 
-static int read_spd_info(int spd_no, const ddr3_spd_eeprom_t *spd)
-{
-	const uint8_t spd_device_adr = 0x50 + spd_no;
-
-	if (i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr3_spd_eeprom_t), (uint8_t *)spd) < 0)
-		return -1;
-
-	ddr3_spd_check(spd);
-
-	printf("DIMM%d is a %s module\n", spd_no, nc2_ddr3_module_type(spd->module_type));
-
-	return 0;
-}
-
 static void platform_quirks(void)
 {
 	const char *biosver = NULL, *biosdate = NULL;
@@ -156,19 +139,6 @@ static void platform_quirks(void)
 	printf("\n");
 }
 
-static uint32_t identify_eeprom(char p_type[16])
-{
-	uint8_t p_uuid[4];
-
-	/* Read print type */
-	(void)spi_master_read(0xffc0, 16, (uint8_t *)p_type);
-	p_type[15] = '\0';
-
-	/* Read UUID */
-	(void)spi_master_read(0xfffc, 4, p_uuid);
-	return *((uint32_t *)p_uuid);
-}
-
 void udelay(const uint32_t usecs)
 {
 	uint64_t limit = rdtscll() + (uint64_t)usecs * tsc_mhz;
@@ -190,6 +160,8 @@ void wait_key(void)
 
 int main(const int argc, const char *argv[])
 {
+	syslinux = new Syslinux(); /* Needed first for console access */
+
 	printf(CLEAR BANNER "NumaConnect system unification module " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
@@ -199,26 +171,12 @@ int main(const int argc, const char *argv[])
 
 	constants();
 	platform_quirks();
-	
+
 	/* SMI often assumes HT nodes are Northbridges, so handover early */
 	if (options->handover_acpi)
 		stop_acpi();
 
-	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
-	if (nc2_ht_id < 0) {
-		printf("NumaChip-II not found\n");
-		exit(ERR_MASTER_HT_ID);
-	}
-	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
-
-	uint32_t uuid = identify_eeprom(nc2_card_type);
-	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
-	
-	/* Read the SPD info from our DIMMs to see if they are supported */
-	for (int i = 0; i < 2; i++) {
-		if (read_spd_info(i, &spd_eeproms[i]) < 0)
-			exit(ERR_GENERAL_NC_START_ERROR);
-	}
+	numachip = new Numachip2();
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

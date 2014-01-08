@@ -26,26 +26,22 @@
 #include "platform/options.h"
 #include "library/access.h"
 #include "opteron/opteron.h"
+#include "numachip2/numachip.h"
 
 /* Global constants found in initialization */
 extern int family;
 extern uint32_t southbridge_id;
-extern int nc2_ht_id;
-extern uint32_t nc2_chip_rev;
 extern uint32_t tsc_mhz;
 extern struct in_addr myip;
 extern char *hostname;
-extern char nc2_card_type[16];
-extern Opteron *opteron;
-extern Config *config;
+extern Syslinux *syslinux;
 extern Options *options;
+extern Config *config;
+extern Opteron *opteron;
+extern Numachip2 *numachip;
 
 void udelay(const uint32_t usecs);
 void wait_key(void);
-void parse_cmdline(const int argc, const char *argv[]);
-int ht_fabric_fixup(uint32_t *p_chip_rev);
-int i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
-int spi_master_read(const uint16_t addr, const int len, uint8_t *data);
 int smbios_parse(const char **biosver, const char **biosdate,
 		 const char **sysmanuf, const char **sysproduct,
 		 const char **boardmanuf, const char **boardproduct);

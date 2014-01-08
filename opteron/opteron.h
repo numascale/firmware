@@ -18,10 +18,13 @@
 #ifndef __OPTERON_H
 #define __OPTERON_H
 
+#include "../library/base.h"
+
 class Opteron {
 public:
 	Opteron(void);
 	~Opteron(void);
+	int ht_fabric_fixup(uint32_t *p_chip_rev);
 };
 
 #endif

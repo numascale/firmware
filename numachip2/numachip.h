@@ -18,12 +18,22 @@
 #ifndef __NUMACHIP_H
 #define __NUMACHIP_H
 
-class Numachip {
-public:
-	uint32_t uuid;
+#include "spd.h"
 
-	Numachip(void);
+class Numachip2 {
+	char card_type[16];
+	uint32_t uuid;
+	uint32_t chip_rev;
+	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
+
+	void i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
+	int spi_master_read(const uint16_t addr, const int len, uint8_t *data);
+	void read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd);
+	uint32_t identify_eeprom(char p_type[16]);
+public:
+	int ht;
+
+	Numachip2(void);
 };
 
 #endif
-

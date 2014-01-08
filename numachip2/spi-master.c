@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "numachip.h"
 #include "../bootloader.h"
 #include "../library/access.h"
 
@@ -41,7 +42,6 @@
 #define SPI_MASTER_SR_RFFULL  (1<<1)
 #define SPI_MASTER_SR_RFEMPTY (1<<0)
 
-
 static void _spi_master_enable(void)
 {
 /*
@@ -61,45 +61,45 @@ static void _spi_master_enable(void)
 	const uint8_t espr = 4;
 
 	/* Set extended control register first */
-	cht_writeb(nc2_ht_id, 2, 0x4b, (espr & 0xC) >> 2);
+	cht_writeb(numachip->ht, 2, 0x4b, (espr & 0xC) >> 2);
 
 	/* Set clock prescaler, chip enable etc. */
-	cht_writeb(nc2_ht_id, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
+	cht_writeb(numachip->ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
 }
 
 static void _spi_master_disable(void)
 {
-	cht_writeb(nc2_ht_id, 2, 0x48, 0);
+	cht_writeb(numachip->ht, 2, 0x48, 0);
 }
 
 static uint8_t _spi_master_read_fifo(void)
 {
 	uint8_t val;
 
-	do { val = cht_readb(nc2_ht_id, 2, 0x49); cpu_relax(); } while (val & SPI_MASTER_SR_RFEMPTY);  /* Wait for read-fifo non-empty */
-	return cht_readb(nc2_ht_id, 2, 0x4a);
+	do { val = cht_readb(numachip->ht, 2, 0x49); cpu_relax(); } while (val & SPI_MASTER_SR_RFEMPTY);  /* Wait for read-fifo non-empty */
+	return cht_readb(numachip->ht, 2, 0x4a);
 }
 
-int spi_master_read(const uint16_t addr, const int len, uint8_t *data)
+int Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
 {
 	/* Enable SPI Core */
 	_spi_master_enable();
 
 	/* Write SPI Read instruction to the transmit fifo */
-	cht_writeb(nc2_ht_id, 2, 0x4a, SPI_INSTR_READ);
+	cht_writeb(numachip->ht, 2, 0x4a, SPI_INSTR_READ);
 	(void)_spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte1 (most significant 8 bit) to the transmit fifo */
-	cht_writeb(nc2_ht_id, 2, 0x4a, (addr >> 8) & 0xff);
+	cht_writeb(numachip->ht, 2, 0x4a, (addr >> 8) & 0xff);
 	(void)_spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte2 (least significant 8 bit) to the transmit fifo */
-	cht_writeb(nc2_ht_id, 2, 0x4a, addr & 0xff);
+	cht_writeb(numachip->ht, 2, 0x4a, addr & 0xff);
 	(void)_spi_master_read_fifo(); /* Dummy read */
 
 	/* Read SPI data */
 	for (int i=0; i < len; i++) {
-		cht_writeb(nc2_ht_id, 2, 0x4a, 0); /* Dummy write */
+		cht_writeb(numachip->ht, 2, 0x4a, 0); /* Dummy write */
 		data[i] = _spi_master_read_fifo();
 	}
 
