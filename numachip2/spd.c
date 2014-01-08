@@ -20,7 +20,7 @@
 #include <inttypes.h>
 
 #include "spd.h"
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 
 /* CRC16 compute for DDR3 SPD; from DDR3 SPD spec */
 static int crc16(char *ptr, int count)

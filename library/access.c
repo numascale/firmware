@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 #include "../opteron/defs.h"
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 #include "access.h"
 
 #define PCI_CONF_SEL 0xcf8

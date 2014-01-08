@@ -15,22 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYSLINUX_H
-#define __SYSLINUX_H
+#ifndef __OPTERON_H
+#define __OPTERON_H
 
-#include <netinet/in.h>
-
-class Syslinux
-{
-	struct in_addr myip;
-
-	void get_hostname(void);
+class Opteron {
 public:
-	const char *hostname;
-
-	Syslinux(void);
-	char *read_file(const char *filename, int *const len);
-	void exec(const char *label);
+	Opteron(void);
+	~Opteron(void);
 };
 
 #endif

@@ -21,14 +21,62 @@
 
 extern "C" {
 	#include <com32.h>
+	#include <syslinux/pxe.h>
 }
 
 #include "syslinux.h"
 #include "../library/base.h"
 
+void Syslinux::get_hostname(void)
+{
+	int sts;
+	char *dhcpdata;
+	size_t dhcplen;
+
+	if ((sts = pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen)) != 0) {
+		printf("pxe_get_cached_info() returned status : %d\n", sts);
+		return;
+	}
+
+	/* Save MyIP for later (in udp_open) */
+	myip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
+	printf("My IP address is %s\n", inet_ntoa(myip));
+
+	/* Skip standard fields, as hostname is an option */
+	unsigned int offset = 4 + offsetof(pxe_bootp_t, vendor.d);
+
+	while (offset < dhcplen) {
+		int code = dhcpdata[offset];
+		int len = dhcpdata[offset + 1];
+
+		/* Sanity-check length */
+		if (len == 0)
+			return;
+
+		/* Skip non-hostname options */
+		if (code != 12) {
+			offset += 2 + len;
+			continue;
+		}
+
+		/* Sanity-check length */
+		if ((offset + len) > dhcplen)
+			break;
+
+		/* Create a private copy */
+		hostname = strndup(&dhcpdata[offset + 2], len);
+		assert(hostname);
+		printf("Hostname is %s\n", hostname);
+		return;
+	}
+
+	hostname = NULL;
+}
+
 Syslinux::Syslinux(void)
 {
 	openconsole(&dev_rawcon_r, &dev_stdcon_w);
+	get_hostname();
 }
 
 char *Syslinux::read_file(const char *filename, int *const len)
@@ -78,3 +126,14 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	return buf;
 }
 
+void Syslinux::exec(const char *label)
+{
+	static com32sys_t rm;
+
+	strcpy((char *)__com32.cs_bounce, label);
+	rm.eax.w[0] = 0x0003;
+	rm.ebx.w[0] = OFFS(__com32.cs_bounce);
+	rm.es = SEG(__com32.cs_bounce);
+
+	__intcall(0x22, &rm, NULL);
+}

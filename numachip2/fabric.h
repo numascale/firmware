@@ -15,22 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYSLINUX_H
-#define __SYSLINUX_H
+#ifndef __FABRIC_H
+#define __FABRIC_H
 
-#include <netinet/in.h>
+class Fabric {
 
-class Syslinux
-{
-	struct in_addr myip;
-
-	void get_hostname(void);
-public:
-	const char *hostname;
-
-	Syslinux(void);
-	char *read_file(const char *filename, int *const len);
-	void exec(const char *label);
 };
 
 #endif
+

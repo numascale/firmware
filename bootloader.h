@@ -21,7 +21,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-#include "../library/access.h"
+#include "platform/config.h"
+#include "platform/syslinux.h"
+#include "platform/options.h"
+#include "library/access.h"
+#include "opteron/opteron.h"
 
 /* Global constants found in initialization */
 extern int family;
@@ -32,15 +36,9 @@ extern uint32_t tsc_mhz;
 extern struct in_addr myip;
 extern char *hostname;
 extern char nc2_card_type[16];
-
-/* Options */
-extern const char *next_label;
-extern int ht_force_ganged;
-extern int ht_200mhz_only;
-extern int ht_8bit_only;
-extern bool boot_wait;
-extern bool handover_acpi;
-extern int verbose;
+extern Opteron *opteron;
+extern Config *config;
+extern Options *options;
 
 void udelay(const uint32_t usecs);
 void wait_key(void);

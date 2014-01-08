@@ -59,7 +59,5 @@ public:
 	int config_local(const struct node_info *info, const uint32_t uuid);
 };
 
-extern Config config;
-
 #endif
 

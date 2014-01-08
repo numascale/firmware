@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 #include "../platform/options.h"
 #include "../opteron/defs.h"
 #include "acpi.h"

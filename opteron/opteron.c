@@ -15,22 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYSLINUX_H
-#define __SYSLINUX_H
+#include "opteron.h"
+#include "../library/base.h"
+#include "../library/access.h"
+#include "defs.h"
 
-#include <netinet/in.h>
-
-class Syslinux
+Opteron::Opteron(void)
 {
-	struct in_addr myip;
+	/* Enable CF8 extended access, we use it extensively */
+	uint64_t val = rdmsr(MSR_NB_CFG);
+	wrmsr(MSR_NB_CFG, val | (1ULL << 46));
 
-	void get_hostname(void);
-public:
-	const char *hostname;
+	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
+	val = rdmsr(MSR_HWCR);
+	wrmsr(MSR_HWCR, val | (1ULL << 17));
+}
 
-	Syslinux(void);
-	char *read_file(const char *filename, int *const len);
-	void exec(const char *label);
-};
-
-#endif
+Opteron::~Opteron(void)
+{
+	/* Restore 32-bit only access */
+	uint64_t val = rdmsr(MSR_HWCR);
+	wrmsr(MSR_HWCR, val & ~(1ULL << 17));
+}

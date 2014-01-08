@@ -23,19 +23,18 @@
 
 extern "C" {
 	#include <com32.h>
-	#include <syslinux/pxe.h>
 }
 
-#include "../opteron/defs.h"
+#include "opteron/defs.h"
 #include "bootloader.h"
-#include "../library/base.h"
-#include "../library/access.h"
-#include "acpi.h"
-#include "../numachip2/spd.h"
-#include "../version.h"
-#include "options.h"
-#include "syslinux.h"
-#include "config.h"
+#include "library/base.h"
+#include "library/access.h"
+#include "platform/acpi.h"
+#include "numachip2/spd.h"
+#include "version.h"
+#include "platform/options.h"
+#include "platform/syslinux.h"
+#include "platform/config.h"
 
 /* Global constants found in initialization */
 int family = 0;
@@ -43,14 +42,13 @@ uint32_t southbridge_id = -1;
 int nc2_ht_id = -1; /* HT id of NC-II */
 uint32_t nc2_chip_rev = -1;
 uint32_t tsc_mhz = 0;
-struct in_addr myip = {0xffffffff};
-char *hostname = NULL;
 char nc2_card_type[16];
 
 static ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 Options *options;
 Syslinux *syslinux;
-Config config;
+Config *config;
+Opteron *opteron;
 
 static void constants(void)
 {
@@ -78,95 +76,6 @@ static void constants(void)
 
 	if (southbridge_id != VENDEV_SP5100)
 		warning("Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs", southbridge_id);
-}
-
-static void set_cf8extcfg_enable(void)
-{
-	uint64_t val = rdmsr(MSR_NB_CFG);
-	wrmsr(MSR_NB_CFG, val | (1ULL << 46));
-}
-
-static void set_cf8extcfg_disable(void)
-{
-	uint64_t val = rdmsr(MSR_NB_CFG);
-	wrmsr(MSR_NB_CFG, val & ~(1ULL << 46));
-}
-
-static void set_wrap32_disable(void)
-{
-	uint64_t val = rdmsr(MSR_HWCR);
-	wrmsr(MSR_HWCR, val | (1ULL << 17));
-}
-
-static void set_wrap32_enable(void)
-{
-	uint64_t val = rdmsr(MSR_HWCR);
-	wrmsr(MSR_HWCR, val & ~(1ULL << 17));
-}
-
-static void start_user_os(void)
-{
-	static com32sys_t rm;
-	/* Disable CF8 extended access */
-	set_cf8extcfg_disable();
-	/* Restore 32-bit only access */
-	set_wrap32_enable();
-	strcpy((char *)__com32.cs_bounce, options->next_label);
-	rm.eax.w[0] = 0x0003;
-	rm.ebx.w[0] = OFFS(__com32.cs_bounce);
-	rm.es = SEG(__com32.cs_bounce);
-	printf("Unification succeeded; loading %s...\n", options->next_label);
-
-	if (options->boot_wait)
-		wait_key();
-
-	__intcall(0x22, &rm, NULL);
-}
-
-static void get_hostname(void)
-{
-	int sts;
-	char *dhcpdata;
-	size_t dhcplen;
-
-	if ((sts = pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen)) != 0) {
-		printf("pxe_get_cached_info() returned status : %d\n", sts);
-		return;
-	}
-
-	/* Save MyIP for later (in udp_open) */
-	myip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
-	printf("My IP address is %s\n", inet_ntoa(myip));
-
-	/* Skip standard fields, as hostname is an option */
-	unsigned int offset = 4 + offsetof(pxe_bootp_t, vendor.d);
-
-	while (offset < dhcplen) {
-		int code = dhcpdata[offset];
-		int len = dhcpdata[offset + 1];
-
-		/* Sanity-check length */
-		if (len == 0)
-			return;
-
-		/* Skip non-hostname options */
-		if (code != 12) {
-			offset += 2 + len;
-			continue;
-		}
-
-		/* Sanity-check length */
-		if ((offset + len) > dhcplen)
-			break;
-
-		/* Create a private copy */
-		hostname = strndup(&dhcpdata[offset + 2], len);
-		assert(hostname);
-		printf("Hostname is %s\n", hostname);
-		return;
-	}
-
-	hostname = NULL;
 }
 
 static void stop_acpi(void)
@@ -260,37 +169,6 @@ static uint32_t identify_eeprom(char p_type[16])
 	return *((uint32_t *)p_uuid);
 }
 
-static int nc2_start(void)
-{	
-	constants();
-	get_hostname();
-
-	platform_quirks();
-	
-	/* SMI often assumes HT nodes are Northbridges, so handover early */
-	if (options->handover_acpi)
-		stop_acpi();
-
-	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
-	if (nc2_ht_id < 0) {
-		printf("NumaChip-II not found\n");
-		return ERR_MASTER_HT_ID;
-	}
-	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
-
-	uint32_t uuid = identify_eeprom(nc2_card_type);
-	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
-	
-	/* Read the SPD info from our DIMMs to see if they are supported */
-	for (int i = 0; i < 2; i++) {
-		if (read_spd_info(i, &spd_eeproms[i]) < 0)
-			return ERR_GENERAL_NC_START_ERROR;
-	}
-
-	start_user_os();
-	return 0;
-}
-
 void udelay(const uint32_t usecs)
 {
 	uint64_t limit = rdtscll() + (uint64_t)usecs * tsc_mhz;
@@ -312,25 +190,41 @@ void wait_key(void)
 
 int main(const int argc, const char *argv[])
 {
-	int ret;
-
-	syslinux = new Syslinux();
-
 	printf(CLEAR BANNER "NumaConnect system unification module " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
 
-	/* Enable CF8 extended access, we use it extensively */
-	set_cf8extcfg_enable();
-
-	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
-	set_wrap32_disable();
-
 	options = new Options(argc, argv);
+	opteron = new Opteron();
 
-	nc2_start();
+	constants();
+	platform_quirks();
+	
+	/* SMI often assumes HT nodes are Northbridges, so handover early */
+	if (options->handover_acpi)
+		stop_acpi();
 
-	/* Restore 32-bit only access */
-	set_wrap32_enable();
-	return ret;
+	nc2_ht_id = ht_fabric_fixup(&nc2_chip_rev);
+	if (nc2_ht_id < 0) {
+		printf("NumaChip-II not found\n");
+		exit(ERR_MASTER_HT_ID);
+	}
+	printf("NumaChip-II incorporated as HT node %d\n", nc2_ht_id);
+
+	uint32_t uuid = identify_eeprom(nc2_card_type);
+	printf("UUID: %08X, TYPE: %s\n", uuid, nc2_card_type);
+	
+	/* Read the SPD info from our DIMMs to see if they are supported */
+	for (int i = 0; i < 2; i++) {
+		if (read_spd_info(i, &spd_eeproms[i]) < 0)
+			exit(ERR_GENERAL_NC_START_ERROR);
+	}
+
+	printf("Unification succeeded; loading %s...\n", options->next_label);
+	if (options->boot_wait)
+		wait_key();
+
+	syslinux->exec(options->next_label);
+
+	return 0;
 }

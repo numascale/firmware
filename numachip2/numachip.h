@@ -15,22 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYSLINUX_H
-#define __SYSLINUX_H
+#ifndef __NUMACHIP_H
+#define __NUMACHIP_H
 
-#include <netinet/in.h>
-
-class Syslinux
-{
-	struct in_addr myip;
-
-	void get_hostname(void);
+class Numachip {
 public:
-	const char *hostname;
+	uint32_t uuid;
 
-	Syslinux(void);
-	char *read_file(const char *filename, int *const len);
-	void exec(const char *label);
+	Numachip(void);
 };
 
 #endif
+

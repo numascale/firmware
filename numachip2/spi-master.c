@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 #include "../library/access.h"
 
 #define SPI_INSTR_WRSR  0x01

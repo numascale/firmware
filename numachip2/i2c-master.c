@@ -20,7 +20,7 @@
 #include <inttypes.h>
 
 #include "../opteron/defs.h"
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 #include "../library/access.h"
 
 #define I2C_MASTER_CR_START (1<<7)

@@ -23,7 +23,7 @@
 
 #include "../opteron/defs.h"
 #include "../platform/acpi.h"
-#include "../platform/bootloader.h"
+#include "../bootloader.h"
 #include "../platform/options.h"
 #include "../library/access.h"
 
