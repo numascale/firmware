@@ -21,9 +21,23 @@
 #include "../library/base.h"
 
 class Opteron {
+	uint8_t smi_state;
 public:
+	enum reboot_mode {REBOOT_WARM, REBOOT_COLD};
+	int family;
+	uint32_t southbridge_id;
+	uint32_t tsc_mhz;
+
 	Opteron(void);
 	~Opteron(void);
+	void reset_cf9(const enum reboot_mode mode, int last);
+	void disable_smi(void);
+	void enable_smi(void);
+	void critical_enter(void);
+	void critical_leave(void);
+	void cht_print(int neigh, int link);
+	uint32_t get_phy_register(int node, int link, int idx, int direct);
+	void ht_optimize_link(int nc, int neigh, int link);
 	int ht_fabric_fixup(uint32_t *p_chip_rev);
 };
 

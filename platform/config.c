@@ -18,7 +18,7 @@
 #include <string.h>
 
 #include "../library/base.h"
-#include "syslinux.h"
+#include "../bootloader.h"
 #include "options.h"
 #include "config.h"
 
@@ -136,23 +136,23 @@ bool Config::parse_json(json_t *root)
 		goto out1;
 	}
 
-	if (!parse_json_num(fab->child, "x-size", &cfg_fabric.x_size, 0)) {
+	if (!parse_json_num(fab->child, "x-size", &fabric.x_size, 0)) {
 		error("Label <x-size> not found in fabric configuration file");
 		goto out1;
 	}
 
-	if (!parse_json_num(fab->child, "y-size", &cfg_fabric.y_size, 0)) {
+	if (!parse_json_num(fab->child, "y-size", &fabric.y_size, 0)) {
 		error("Label <y-size> not found in fabric configuration file");
 		goto out1;
 	}
 
-	if (!parse_json_num(fab->child, "z-size", &cfg_fabric.z_size, 0)) {
+	if (!parse_json_num(fab->child, "z-size", &fabric.z_size, 0)) {
 		error("Label <z-size> not found in fabric configuration file");
 		goto out1;
 	}
 
-	if (!parse_json_bool(fab->child, "strict", &cfg_fabric.strict, 1))
-		cfg_fabric.strict = 0;
+	if (!parse_json_bool(fab->child, "strict", &fabric.strict, 1))
+		fabric.strict = 0;
 
 	list = json_find_first_label(fab->child, "nodes");
 
@@ -161,42 +161,42 @@ bool Config::parse_json(json_t *root)
 		goto out1;
 	}
 
-	for (cfg_nodes = 0, obj = list->child->child; obj; obj = obj->next)
-		cfg_nodes++;
+	for (nodes = 0, obj = list->child->child; obj; obj = obj->next)
+		nodes++;
 
-	cfg_nodelist = (node_info *)malloc(cfg_nodes * sizeof(*cfg_nodelist));
-	assert(cfg_nodelist);
+	nodelist = (node_info *)malloc(nodes * sizeof(*nodelist));
+	assert(nodelist);
 
 	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
 		/* UUID is optional */
-		if (!parse_json_num(obj, "uuid", &cfg_nodelist[i].uuid, 1)) {
-			cfg_nodelist[i].uuid = 0;
+		if (!parse_json_num(obj, "uuid", &nodelist[i].uuid, 1)) {
+			nodelist[i].uuid = 0;
 			name_matching = 1;
 		}
 
-		if (!parse_json_num(obj, "sciid", &cfg_nodelist[i].sci, 0)) {
+		if (!parse_json_num(obj, "sciid", &nodelist[i].sci, 0)) {
 			error("Label <sciid> not found in fabric configuration file");
 			goto out2;
 		}
 
-		if (!parse_json_num(obj, "partition", &cfg_nodelist[i].partition, 0)) {
+		if (!parse_json_num(obj, "partition", &nodelist[i].partition, 0)) {
 			error("Label <partition> not found in fabric configuration file");
 			goto out2;
 		}
 
 		/* OSC is optional */
-		if (!parse_json_num(obj, "osc", &cfg_nodelist[i].osc, 1))
-			cfg_nodelist[i].osc = 0;
+		if (!parse_json_num(obj, "osc", &nodelist[i].osc, 1))
+			nodelist[i].osc = 0;
 
-		if (!parse_json_str(obj, "desc", cfg_nodelist[i].desc, 32, 0)) {
+		if (!parse_json_str(obj, "desc", nodelist[i].desc, 32, 0)) {
 			error("Label <desc> not found in fabric configuration file");
 			goto out2;
 		}
 
 		if (parse_json_num(obj, "sync-only", &val, 1))
-			cfg_nodelist[i].sync_only = val;
+			nodelist[i].sync_only = val;
 		else
-			cfg_nodelist[i].sync_only = 0;
+			nodelist[i].sync_only = 0;
 	}
 
 	if (name_matching)
@@ -206,23 +206,23 @@ bool Config::parse_json(json_t *root)
 
 	if (!(list && list->child && list->child->type == JSON_ARRAY)) {
 		error("Label <partitions> not found in fabric configuration file");
-		free(cfg_nodelist);
+		free(nodelist);
 		return 0;
 	}
 
-	for (cfg_partitions = 0, obj = list->child->child; obj; obj = obj->next)
-		cfg_partitions++;
+	for (partitions = 0, obj = list->child->child; obj; obj = obj->next)
+		partitions++;
 
-	cfg_partlist = (part_info *)malloc(cfg_partitions * sizeof(*cfg_partlist));
-	assert(cfg_partlist);
+	partlist = (part_info *)malloc(partitions * sizeof(*partlist));
+	assert(partlist);
 
 	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
-		if (!parse_json_num(obj, "master", &cfg_partlist[i].master, 0)) {
+		if (!parse_json_num(obj, "master", &partlist[i].master, 0)) {
 			error("Label <master> not found in fabric configuration file");
 			goto out3;
 		}
 
-		if (!parse_json_num(obj, "builder", &cfg_partlist[i].builder, 0)) {
+		if (!parse_json_num(obj, "builder", &partlist[i].builder, 0)) {
 			error("Label <builder> not found in fabric configuration file");
 			goto out3;
 		}
@@ -230,68 +230,63 @@ bool Config::parse_json(json_t *root)
 
 	return 1;
 out3:
-	free(cfg_nodelist);
+	free(nodelist);
 out2:
-	free(cfg_partlist);
+	free(partlist);
 out1:
 	return 0;
 }
 
-bool Config::parse_config_file(char *data)
+void Config::parse_config_file(const char *data)
 {
 	json_t *root = NULL;
 	enum json_error err;
 	int i;
 
-	if (options->verbose > 2)
+	if (options->debug.config)
 		printf("Fabric configuration file:\n%s", data);
 
 	err = json_parse_document(&root, data);
 	if (err != JSON_OK)
 		fatal("%s when parsing fabric configuration", json_errors[err]);
 
-	if (!parse_json(root)) {
-		error("Parsing fabric configuration root failed");
-		json_free_value(&root);
-		return 0;
-	}
+	if (!parse_json(root))
+		fatal("Parsing fabric configuration root failed");
 
 	printf("Fabric dimensions: x: %d, y: %x, z: %d\n",
-	       cfg_fabric.x_size, cfg_fabric.y_size, cfg_fabric.z_size);
+	       fabric.x_size, fabric.y_size, fabric.z_size);
 
-	for (i = 0; i < cfg_nodes; i++)
+	for (i = 0; i < nodes; i++)
 		printf("Node %d: <%s> uuid: %08X, sciid: 0x%03x, partition: %d, osc: %d, sync-only: %d\n",
-		       i, cfg_nodelist[i].desc, cfg_nodelist[i].uuid,
-		       cfg_nodelist[i].sci, cfg_nodelist[i].partition,
-		       cfg_nodelist[i].osc, cfg_nodelist[i].sync_only);
+		       i, nodelist[i].desc, nodelist[i].uuid,
+		       nodelist[i].sci, nodelist[i].partition,
+		       nodelist[i].osc, nodelist[i].sync_only);
 
-	for (i = 0; i < cfg_partitions; i++)
+	for (i = 0; i < partitions; i++)
 		printf("Partition %d: master: 0x%03x, builder: 0x%03x\n",
-		       i, cfg_partlist[i].master, cfg_partlist[i].builder);
-
-	return 1;
+		       i, partlist[i].master, partlist[i].builder);
 }
 
 void Config::make_singleton_config(void)
 {
-	cfg_fabric.x_size = 1;
-	cfg_fabric.y_size = 0;
-	cfg_fabric.z_size = 0;
-	cfg_nodes = 1;
-	cfg_nodelist = (node_info *)malloc(sizeof(*cfg_nodelist));
-	assert(cfg_nodelist);
+	fabric.x_size = 1;
+	fabric.y_size = 0;
+	fabric.z_size = 0;
+	nodes = 1;
+	nodelist = (node_info *)malloc(sizeof(*nodelist));
+	assert(nodelist);
 
-	cfg_nodelist[0].uuid = 0; /* FIXME: local_info->uuid; */
-	cfg_nodelist[0].sci = 0;
-	cfg_nodelist[0].osc = 0;
-	cfg_nodelist[0].partition = 0;
-	memcpy(cfg_nodelist[0].desc, "self", 5);
-	cfg_nodelist[0].sync_only = 1;
-	cfg_partitions = 1;
-	cfg_partlist = (part_info *)malloc(sizeof(*cfg_partlist));
-	assert(cfg_partlist);
-	cfg_partlist[0].master = 0;
-	cfg_partlist[0].builder = 0;
+	nodelist[0].uuid = 0; /* FIXME: local_info->uuid; */
+	nodelist[0].sci = 0;
+	nodelist[0].osc = 0;
+	nodelist[0].partition = 0;
+	memcpy(nodelist[0].desc, "self", 5);
+	nodelist[0].sync_only = 1;
+	partitions = 1;
+	partlist = (part_info *)malloc(sizeof(*partlist));
+	assert(partlist);
+	partlist[0].master = 0;
+	partlist[0].builder = 0;
 }
 
 int Config::config_local(const struct node_info *info, const uint32_t uuid)
@@ -302,3 +297,10 @@ int Config::config_local(const struct node_info *info, const uint32_t uuid)
 		return info->uuid == uuid;
 }
 
+Config::Config(void)
+{
+	int len;
+	const char *json = syslinux->read_file(options->config_filename, &len);
+	parse_config_file(json);
+	lfree((char *)json);
+}

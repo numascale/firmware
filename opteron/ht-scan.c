@@ -30,25 +30,21 @@
 #define HT_INIT_CONTROL		0x6C
 #define HTIC_BIOSR_Detect	(1<<5)
 
-enum reboot_mode {
-	REBOOT_WARM,
-	REBOOT_COLD,
-};
-
-static void reset_cf9(enum reboot_mode mode, int last)
+void Opteron::reset_cf9(const enum reboot_mode mode, int last)
 {
 	for (int i = 0; i <= last; i++) {
 		uint32_t val = cht_readl(i, FUNC0_HT, HT_INIT_CONTROL);
 		val &= ~HTIC_BIOSR_Detect;
 		cht_writel(i, FUNC0_HT, HT_INIT_CONTROL, val);
 	}
+
 	if (southbridge_id == VENDEV_SP5100) {
 		uint8_t pm_control = pmio_readb(0x42);
 		pm_control |= (1 << 1); /* Clear the DisableBootFailCpuRst bit */
 		printf("pm_control = %02x\n", pm_control);
 		pmio_writeb(0x42, pm_control | (1 << 3)); /* Set the RstCpuPGEn bit to toggle PWROK */
-		wait_key();
 	}
+
 	if (mode == REBOOT_COLD) {
 #if 0
 		if (southbridge_id == VENDEV_SP5100) {
@@ -86,10 +82,8 @@ static void reset_cf9(enum reboot_mode mode, int last)
 	}
 }
 
-static uint8_t smi_state;
-
 /* Mask southbridge SMI generation */
-static void disable_smi(void)
+void Opteron::disable_smi(void)
 {
 	if (southbridge_id == VENDEV_SP5100) {
 		smi_state = pmio_readb(0x53);
@@ -98,25 +92,26 @@ static void disable_smi(void)
 }
 
 /* Restore previous southbridge SMI mask */
-static void enable_smi(void)
+void Opteron::enable_smi(void)
 {
 	if (southbridge_id == VENDEV_SP5100) {
 		pmio_writeb(0x53, smi_state);
 	}
 }
 
-static void critical_enter(void)
+void Opteron::critical_enter(void)
 {
 	cli();
 	disable_smi();
 }
 
-static void critical_leave(void)
+void Opteron::critical_leave(void)
 {
 	enable_smi();
 	sti();
 }
-static uint32_t get_phy_register(int node, int link, int idx, int direct)
+
+uint32_t Opteron::get_phy_register(int node, int link, int idx, int direct)
 {
 	int base = 0x180 + link * 8;
 	int i;
@@ -134,7 +129,7 @@ static uint32_t get_phy_register(int node, int link, int idx, int direct)
 	return 0;
 }
 
-static void cht_print(int neigh, int link)
+void Opteron::cht_print(int neigh, int link)
 {
 	uint32_t val;
 	printf("HT#%d L%d Link Control       : 0x%08x\n", neigh, link,
@@ -147,7 +142,7 @@ static void cht_print(int neigh, int link)
 	printf("HT#%d L%d Link Phy Settings  : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
 
-static void ht_optimize_link(int nc, int neigh, int link)
+void Opteron::ht_optimize_link(int nc, int neigh, int link)
 {
 	bool reboot = false;
 	int ganged;
@@ -186,7 +181,8 @@ static void ht_optimize_link(int nc, int neigh, int link)
 	ganged = cht_readl(neigh, 0, 0x170 + link * 4) & 1;
 	printf("Found %s link to NC on HT#%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
-	cht_print(neigh, link);
+	if (options->debug.ht)
+		cht_print(neigh, link);
 
 	printf("Checking HT width/freq.");
 

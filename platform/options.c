@@ -90,6 +90,35 @@ void Options::parse_int64(const char *val, void *intp)
 		*int64 = 1;
 }
 
+void Options::parse_flags(const char *val, void *data)
+{
+	struct debug_flags *flags = (struct debug_flags *)data;
+	char options[512];
+	strncpy(options, val, sizeof(options));
+
+	const char *pos = strtok(options, ",");
+	while (pos) {
+		if (!strcmp(pos, "all"))
+			memset(flags, 0xff, sizeof(Options::debug));
+		else if (!strcmp(pos, "config"))
+			flags->config = 1;
+		else if (!strcmp(pos, "access"))
+			flags->access = 1;
+		else if (!strcmp(pos, "acpi"))
+			flags->acpi = 1;
+		else if (!strcmp(pos, "ht"))
+			flags->ht = 1;
+		else if (!strcmp(pos, "fabric"))
+			flags->fabric = 1;
+		else if (!strcmp(pos, "maps"))
+			flags->maps = 1;
+		else if (!strcmp(pos, "remote-io"))
+			flags->remote_io = 1;
+
+		pos = strtok(NULL, ",");
+	}
+}
+
 Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json")
 {
 	static const struct optargs list[] = {
@@ -98,9 +127,9 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		{"ht.200mhz-only",  &Options::parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"boot-wait",       &Options::parse_bool,   &boot_wait},
 		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
-		{"verbose",         &Options::parse_int,    &verbose},
 		{"config",          &Options::parse_string, &config_filename},
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
+		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 	};
 
 	int errors = 0;
@@ -132,7 +161,6 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		}
 	}
 	printf("\n");
-
 	assertf(!errors, "Invalid arguments specified");
 }
 

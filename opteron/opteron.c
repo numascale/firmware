@@ -22,13 +22,35 @@
 
 Opteron::Opteron(void)
 {
-	/* Enable CF8 extended access, we use it extensively */
-	uint64_t val = rdmsr(MSR_NB_CFG);
-	wrmsr(MSR_NB_CFG, val | (1ULL << 46));
+	/* Enable CF8 extended access */
+	uint64_t msr = rdmsr(MSR_NB_CFG);
+	wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
 
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
-	val = rdmsr(MSR_HWCR);
-	wrmsr(MSR_HWCR, val | (1ULL << 17));
+	msr = rdmsr(MSR_HWCR);
+	wrmsr(MSR_HWCR, msr | (1ULL << 17));
+
+	/* Detect processor model */
+	uint32_t val = cht_readl(0, FUNC3_MISC, 0xfc);
+	int fam = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
+	int model = ((val >> 12) & 0xf0) | ((val >> 4) & 0xf);
+	int stepping = val & 0xf;
+	family = (fam << 16) | (model << 8) | stepping;
+
+	if (family >= 0x15) {
+		uint32_t val = cht_readl(0, FUNC5_EXTD, 0x160);
+		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
+	} else {
+		uint32_t val = cht_readl(0, FUNC3_MISC, 0xd4);
+		uint64_t val6 = rdmsr(0xc0010071);
+		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
+	}
+
+	southbridge_id = extpci_readl(0, 0x14, 0, 0);
+	if (southbridge_id != VENDEV_SP5100)
+		warning("Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs", southbridge_id);
+
+	printf("Family %d Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 }
 
 Opteron::~Opteron(void)

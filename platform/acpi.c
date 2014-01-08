@@ -419,7 +419,7 @@ bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, co
 	table->len += extra_len;
 	table->checksum += checksum(table, table->len);
 
-	if (options->verbose > 2)
+	if (options->debug.acpi)
 		acpi_dump(table);
 
 	return 1;

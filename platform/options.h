@@ -19,10 +19,12 @@
 #define __OPTIONS_H
 
 class Options {
+	/* Static needed so we can pass the function address */
 	static void parse_string(const char *val, void *stringp);
 	static void parse_bool(const char *val, void *voidp);
 	static void parse_int(const char *val, void *intp);
 	static void parse_int64(const char *val, void *intp);
+	static void parse_flags(const char *val, void *flags);
 public:
 	const char *next_label;
 	const char *config_filename;
@@ -30,8 +32,10 @@ public:
 	int ht_8bit_only;
 	bool boot_wait;
 	bool handover_acpi;
-	int verbose;
 	bool reentrant;
+	struct debug_flags {
+		bool config, access, acpi, ht, fabric, maps, remote_io;
+	} debug;
 
 	Options(const int argc, const char *argv[]);
 };

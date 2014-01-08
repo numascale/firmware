@@ -46,15 +46,16 @@ class Config {
 	bool parse_json_num(json_t *obj, const char *label, uint32_t *val, int opt);
 	bool parse_json_str(json_t *obj, const char *label, char *val, int len, int opt);
 	bool parse_json(json_t *root);
+	void parse_config_file(const char *data);
 public:
-	struct fabric_info cfg_fabric;
-	struct node_info *cfg_nodelist;
-	struct part_info *cfg_partlist;
-	int cfg_nodes, cfg_partitions;
+	struct fabric_info fabric;
+	struct node_info *nodelist;
+	struct part_info *partlist;
+	int nodes, partitions;
 	bool name_matching;
 	char *hostname;
 
-	bool parse_config_file(char *data);
+	Config(void);
 	void make_singleton_config(void);
 	int config_local(const struct node_info *info, const uint32_t uuid);
 };

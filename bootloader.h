@@ -29,11 +29,6 @@
 #include "numachip2/numachip.h"
 
 /* Global constants found in initialization */
-extern int family;
-extern uint32_t southbridge_id;
-extern uint32_t tsc_mhz;
-extern struct in_addr myip;
-extern char *hostname;
 extern Syslinux *syslinux;
 extern Options *options;
 extern Config *config;

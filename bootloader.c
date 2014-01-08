@@ -36,44 +36,11 @@ extern "C" {
 #include "platform/config.h"
 #include "numachip2/numachip.h"
 
-/* Global constants found in initialization */
-int family = 0;
-uint32_t southbridge_id = -1;
-uint32_t tsc_mhz = 0;
-
 Syslinux *syslinux;
 Options *options;
 Config *config;
 Opteron *opteron;
 Numachip2 *numachip;
-
-static void constants(void)
-{
-	uint32_t val;
-	int fam, model, stepping;
-
-	val = cht_readl(0, FUNC3_MISC, 0xfc);
-	fam = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
-	model = ((val >> 12) & 0xf0) | ((val >> 4) & 0xf);
-	stepping = val & 0xf;
-	family = (fam << 16) | (model << 8) | stepping;
-
-	if (family >= 0x15) {
-		uint32_t val = cht_readl(0, FUNC5_EXTD, 0x160);
-		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
-	} else {
-		uint32_t val = cht_readl(0, FUNC3_MISC, 0xd4);
-		uint64_t val6 = rdmsr(0xc0010071);
-		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
-	}
-
-	printf("NB/TSC frequency is %dMHz\n", tsc_mhz);
-
-	southbridge_id = extpci_readl(0, 0x14, 0, 0);
-
-	if (southbridge_id != VENDEV_SP5100)
-		warning("Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs", southbridge_id);
-}
 
 static void stop_acpi(void)
 {
@@ -141,7 +108,7 @@ static void platform_quirks(void)
 
 void udelay(const uint32_t usecs)
 {
-	uint64_t limit = rdtscll() + (uint64_t)usecs * tsc_mhz;
+	uint64_t limit = rdtscll() + (uint64_t)usecs * opteron->tsc_mhz;
 
 	while (rdtscll() < limit)
 		cpu_relax();
@@ -167,16 +134,14 @@ int main(const int argc, const char *argv[])
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
 
 	options = new Options(argc, argv);
-	opteron = new Opteron();
-
-	constants();
 	platform_quirks();
-
 	/* SMI often assumes HT nodes are Northbridges, so handover early */
 	if (options->handover_acpi)
 		stop_acpi();
 
+	opteron = new Opteron(); /* Needed before any config access */
 	numachip = new Numachip2();
+	config = new Config();
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)
