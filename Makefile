@@ -12,6 +12,10 @@ DIRS := platform/ opteron/ numachip2/ library/ ./
 .PHONY: all
 all: bootloader.c32
 
+.PHONY: check
+check:
+	cppcheck --enable=all $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
+
 .PHONY: clean
 clean:
 	rm -f $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) version.h bootloader.c32 bootloader.elf

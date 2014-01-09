@@ -131,7 +131,7 @@ int main(const int argc, const char *argv[])
 	syslinux = new Syslinux(); /* Needed first for console access */
 
 	printf(BANNER "NumaConnect unification " VER " on %s/%s at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
-	  inet_ntoa(syslinux->myip), syslinux->hostname ? syslinux->hostname : "<none",
+	  inet_ntoa(syslinux->myip), syslinux->hostname ? syslinux->hostname : "<none>",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
 
@@ -150,6 +150,10 @@ int main(const int argc, const char *argv[])
 		config = new Config(options->config_filename);
 
 	numachip->set_sci(config->node->sci);
+
+	if (!config->node->sync_only) {
+
+	}
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

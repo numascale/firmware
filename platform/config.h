@@ -20,20 +20,20 @@
 
 #include "../json-1.5/src/json.h"
 
-struct node {
-	uint32_t uuid;
-	uint32_t sci;
-	uint32_t partition;
-	char hostname[32];
-	bool sync_only;
-};
-
-struct partition {
-	uint32_t master;
-	uint32_t builder;
-};
-
 class Config {
+	struct node {
+		uint32_t uuid;
+		uint32_t sci;
+		uint32_t partition;
+		char hostname[32];
+		bool sync_only;
+	};
+
+	struct partition {
+		uint32_t master;
+		uint32_t builder;
+	};
+
 	bool name_matching;
 
 	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt);
@@ -45,9 +45,8 @@ public:
 	uint32_t x_size, y_size, z_size;
 	uint32_t strict;
 	int nnodes, npartitions;
-	struct node *nodes;
-	struct partition *partitions;
-	struct node *node;
+	struct node *node, *nodes;
+	struct partition *partition, *partitions;
 
 	Config(void);
 	Config(const char *filename);

@@ -27,7 +27,7 @@ class Opteron {
 	void reset(const enum reset mode, const int last);
 public:
 	int family;
-	uint32_t southbridge_id;
+	uint32_t ioh_vendev;
 	uint32_t tsc_mhz;
 
 	Opteron(void);

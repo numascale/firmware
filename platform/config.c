@@ -221,6 +221,29 @@ bool Config::local(const struct node *info)
 		return info->uuid == numachip->uuid;
 }
 
+Config::Config(void)
+{
+	x_size = 1;
+	y_size = 0;
+	z_size = 0;
+	nnodes = 1;
+	nodes = (struct node *)malloc(sizeof(*nodes));
+	assert(nodes);
+
+	nodes->uuid = numachip->uuid;
+	nodes->sci = 0;
+	nodes->partition = 0;
+	strcpy(nodes->hostname, "self");
+	nodes->sync_only = 1;
+	npartitions = 1;
+	partitions = (struct partition *)malloc(sizeof(*partitions));
+	assert(partitions);
+	partitions->master = 0;
+	partitions->builder = 0;
+
+	node = nodes;
+	partition = partitions;
+}
 Config::Config(const char *filename)
 {
 	int len;
@@ -256,28 +279,7 @@ Config::Config(const char *filename)
 		}
 	}
 
-	fatal("Failed to find node config (hostname %s)", syslinux->hostname ? syslinux->hostname : "<none>");
+	assertf(node, "Failed to find node config (hostname %s)", syslinux->hostname ? syslinux->hostname : "<none>");
+	partition = &partitions[node->partition];
 }
 
-Config::Config(void)
-{
-	x_size = 1;
-	y_size = 0;
-	z_size = 0;
-	nnodes = 1;
-	nodes = (struct node *)malloc(sizeof(*nodes));
-	assert(nodes);
-
-	nodes->uuid = numachip->uuid;
-	nodes->sci = 0;
-	nodes->partition = 0;
-	strcpy(nodes->hostname, "self");
-	nodes->sync_only = 1;
-	npartitions = 1;
-	partitions = (struct partition *)malloc(sizeof(*partitions));
-	assert(partitions);
-	partitions->master = 0;
-	partitions->builder = 0;
-
-	node = nodes;
-}

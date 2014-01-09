@@ -46,11 +46,11 @@ Opteron::Opteron(void)
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
 
-	southbridge_id = extpci_readl(0, 0x14, 0, 0);
-	if (southbridge_id != VENDEV_SP5100)
-		warning("Unable to disable SMI due to unknown southbridge 0x%08x; this may cause hangs", southbridge_id);
-
 	printf("Family %d Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
+
+	/* If not bus 0, device 20, try */
+	ioh_vendev = extpci_readl(0, 0, 0, 0);
+	assert(ioh_vendev != 0xffffffff);
 }
 
 Opteron::~Opteron(void)
