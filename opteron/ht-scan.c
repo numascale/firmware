@@ -52,7 +52,10 @@ void Opteron::reset(const enum reset mode, const int last)
 /* Mask southbridge SMI generation */
 void Opteron::disable_smi(void)
 {
-	if (southbridge_id == VENDEV_SP5100) {
+	switch (ioh_vendev) {
+	case VENDEV_SR5690:
+	case VENDEV_SR5670:
+	case VENDEV_SR5650:
 		smi_state = pmio_readb(0x53);
 		pmio_writeb(0x53, smi_state | (1 << 3));
 	}
@@ -61,7 +64,10 @@ void Opteron::disable_smi(void)
 /* Restore previous southbridge SMI mask */
 void Opteron::enable_smi(void)
 {
-	if (southbridge_id == VENDEV_SP5100) {
+	switch (ioh_vendev) {
+	case VENDEV_SR5690:
+	case VENDEV_SR5670:
+	case VENDEV_SR5650:
 		pmio_writeb(0x53, smi_state);
 	}
 }

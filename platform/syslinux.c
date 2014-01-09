@@ -25,18 +25,14 @@ extern "C" {
 }
 
 #include "syslinux.h"
+#include "../bootloader.h"
 #include "../library/base.h"
 
 void Syslinux::get_hostname(void)
 {
-	int sts;
 	char *dhcpdata;
 	size_t dhcplen;
-
-	if ((sts = pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen)) != 0) {
-		printf("pxe_get_cached_info() returned status : %d\n", sts);
-		return;
-	}
+	assert(pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen) == 0);
 
 	/* Save MyIP for later (in udp_open) */
 	myip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
@@ -50,7 +46,7 @@ void Syslinux::get_hostname(void)
 
 		/* Sanity-check length */
 		if (len == 0)
-			return;
+			break;
 
 		/* Skip non-hostname options */
 		if (code != 12) {
@@ -65,13 +61,11 @@ void Syslinux::get_hostname(void)
 		/* Create a private copy */
 		hostname = strndup(&dhcpdata[offset + 2], len);
 		assert(hostname);
-		return;
+		break;
 	}
-
-	hostname = NULL;
 }
 
-Syslinux::Syslinux(void)
+Syslinux::Syslinux(void): hostname(0)
 {
 	openconsole(&dev_rawcon_r, &dev_stdcon_w);
 	get_hostname();
@@ -80,8 +74,6 @@ Syslinux::Syslinux(void)
 char *Syslinux::read_file(const char *filename, int *const len)
 {
 	static com32sys_t inargs, outargs;
-	int fd, bsize;
-
 	char *buf = (char *)lmalloc(strlen(filename) + 1);
 	strcpy(buf, filename);
 
@@ -93,9 +85,9 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	__intcall(0x22, &inargs, &outargs);
 	lfree(buf);
 
-	fd = outargs.esi.w[0];
+	int fd = outargs.esi.w[0];
 	*len = outargs.eax.l;
-	bsize = outargs.ecx.w[0];
+	int bsize = outargs.ecx.w[0];
 
 	if (!fd || *len < 0) {
 		*len = 0;

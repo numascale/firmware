@@ -26,8 +26,16 @@ class Numachip2 {
 	uint32_t chip_rev;
 	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 
+	void i2c_master_init(void);
+	uint8_t i2c_master_irqwait(void);
+	void i2c_master_busywait(void);
 	void i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
-	int spi_master_read(const uint16_t addr, const int len, uint8_t *data);
+
+	void spi_master_enable(void);
+	void spi_master_disable(void);
+	uint8_t spi_master_read_fifo(void);
+	void spi_master_read(const uint16_t addr, const int len, uint8_t *data);
+
 	void read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd);
 public:
 	uint32_t uuid;

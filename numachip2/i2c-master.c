@@ -24,36 +24,45 @@
 #include "../bootloader.h"
 #include "../opteron/defs.h"
 
-#define I2C_MASTER_CR_START (1<<7)
-#define I2C_MASTER_CR_STOP  (1<<6)
-#define I2C_MASTER_CR_READ  (1<<5)
-#define I2C_MASTER_CR_WRITE (1<<4)
-#define I2C_MASTER_CR_NACK  (1<<3)
-#define I2C_MASTER_CR_IACK  (1<<0)
+#define I2C_MASTER_CR_START (1 << 7)
+#define I2C_MASTER_CR_STOP  (1 << 6)
+#define I2C_MASTER_CR_READ  (1 << 5)
+#define I2C_MASTER_CR_WRITE (1 << 4)
+#define I2C_MASTER_CR_NACK  (1 << 3)
+#define I2C_MASTER_CR_IACK  (1 << 0)
 
-#define I2C_MASTER_SR_RXACK (1<<7)
-#define I2C_MASTER_SR_BUSY  (1<<6)
-#define I2C_MASTER_SR_AL    (1<<5)
-#define I2C_MASTER_SR_TIP   (1<<1)
-#define I2C_MASTER_SR_IRQ   (1<<0)
+#define I2C_MASTER_SR_RXACK (1 << 7)
+#define I2C_MASTER_SR_BUSY  (1 << 6)
+#define I2C_MASTER_SR_AL    (1 << 5)
+#define I2C_MASTER_SR_TIP   (1 << 1)
+#define I2C_MASTER_SR_IRQ   (1 << 0)
 
-static void _i2c_master_init(void)
+void Numachip2::i2c_master_init(void)
 {
 	const uint16_t prescale_cnt = 199; /* 199 = 100 kHz, 49 = 400 kHz, 19 = 1MHz */
-	cht_writel(numachip->ht, 2, 0x40, (1<<23) | prescale_cnt);
+	cht_writel(numachip->ht, 2, 0x40, (1 << 23) | prescale_cnt);
 }
 
-static uint8_t _i2c_master_irqwait(void)
+uint8_t Numachip2::i2c_master_irqwait(void)
 {
 	uint8_t val;
-	do { val = cht_readb(numachip->ht, 2, 0x44); cpu_relax(); } while (!(val & I2C_MASTER_SR_IRQ)); /* Wait for completion */
+
+	do {
+		cpu_relax();
+		val = cht_readb(numachip->ht, 2, 0x44);
+	} while (!(val & I2C_MASTER_SR_IRQ)); /* Wait for completion */
+
 	return val;
 }
 
-static void _i2c_master_busywait(void)
+void Numachip2::i2c_master_busywait(void)
 {
 	uint8_t val;
-	do { val = cht_readb(numachip->ht, 2, 0x44); cpu_relax(); } while (val & I2C_MASTER_SR_BUSY); /* Wait for busy to de-assert */
+
+	do {
+		cpu_relax();
+		val = cht_readb(numachip->ht, 2, 0x44);
+	} while (val & I2C_MASTER_SR_BUSY); /* Wait for busy to de-assert */
 }
 
 void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data)
@@ -62,7 +71,7 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 
 	/* If I2C master isn't initialized yet, do so now */
 	if (cht_readb(numachip->ht, 2, 0x42) != 0x80)
-		_i2c_master_init();
+		i2c_master_init();
 
 	if (cht_readb(numachip->ht, 2, 0x44) & I2C_MASTER_SR_BUSY)
 		fatal("Last I2C master transaction did not complete!");
@@ -72,7 +81,7 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 
 	/* Send start-condition + device addr + rw bit */
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_START | I2C_MASTER_CR_WRITE | I2C_MASTER_CR_NACK | I2C_MASTER_CR_IACK);
-	val = _i2c_master_irqwait();
+	val = i2c_master_irqwait();
 	if (val & I2C_MASTER_SR_RXACK)
 		fatal("Got I2C NACK on device address (%02X) : %04X %04X",
 		      device_adr, cht_readl(numachip->ht, 2, 0x40), cht_readl(numachip->ht, 2, 0x44));
@@ -82,7 +91,7 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 
 	/* Send start byte address */
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_WRITE | I2C_MASTER_CR_NACK | I2C_MASTER_CR_IACK);
-	val = _i2c_master_irqwait();
+	val = i2c_master_irqwait();
 	if (val & I2C_MASTER_SR_RXACK)
 		fatal("Got I2C NACK on byte address (%02X) : %04X %04X",
 		      byte_addr, cht_readl(numachip->ht, 2, 0x40), cht_readl(numachip->ht, 2, 0x44));
@@ -92,24 +101,24 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 
 	/* Send repeated-start-condition + device addr + rw bit */
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_START | I2C_MASTER_CR_WRITE | I2C_MASTER_CR_NACK | I2C_MASTER_CR_IACK);
-	val = _i2c_master_irqwait();
+	val = i2c_master_irqwait();
 	if (val & I2C_MASTER_SR_RXACK)
 		fatal("Got I2C NACK on device address (repeated start) (%02X) : %04X %04X",
 		      device_adr, cht_readl(numachip->ht, 2, 0x40), cht_readl(numachip->ht, 2, 0x44));
 
 	/* read + ack */
 	for (int i = 0; i < len; i++) {
-		uint8_t nack = (i == len-1) ? I2C_MASTER_CR_NACK : 0;
+		uint8_t nack = (i == len - 1) ? I2C_MASTER_CR_NACK : 0;
 		cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_READ | nack | I2C_MASTER_CR_IACK);
-		val = _i2c_master_irqwait();
+		val = i2c_master_irqwait();
 		data[i] = cht_readb(numachip->ht, 2, 0x43);
 	}
 
 	/* Stop condition */
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_STOP | I2C_MASTER_CR_NACK | I2C_MASTER_CR_IACK);
-	(void)_i2c_master_irqwait();
+	(void)i2c_master_irqwait();
 
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_IACK); /* Ack last interrupt */
-	_i2c_master_busywait();
+	i2c_master_busywait();
 }
 

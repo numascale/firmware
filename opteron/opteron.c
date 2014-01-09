@@ -30,25 +30,21 @@ Opteron::Opteron(void)
 	msr = rdmsr(MSR_HWCR);
 	wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
-	/* Detect processor model */
+	/* Detect processor family */
 	uint32_t val = cht_readl(0, FUNC3_MISC, 0xfc);
-	int fam = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
-	int model = ((val >> 12) & 0xf0) | ((val >> 4) & 0xf);
-	int stepping = val & 0xf;
-	family = (fam << 16) | (model << 8) | stepping;
-
+	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 	if (family >= 0x15) {
 		uint32_t val = cht_readl(0, FUNC5_EXTD, 0x160);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
 		uint32_t val = cht_readl(0, FUNC3_MISC, 0xd4);
-		uint64_t val6 = rdmsr(0xc0010071);
+		uint64_t val6 = rdmsr(MSR_COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
 
-	printf("Family %d Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
+	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
-	/* If not bus 0, device 20, try */
+	/* Detect IOH */
 	ioh_vendev = extpci_readl(0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
 }
