@@ -16,9 +16,12 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "numachip.h"
+#include "registers.h"
 #include "../bootloader.h"
+#include "../library/access.h"
 
 void Numachip2::read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd)
 {
@@ -30,31 +33,28 @@ void Numachip2::read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd)
 	printf("DIMM%d is a %s module\n", spd_no, nc2_ddr3_module_type(spd->module_type));
 }
 
-uint32_t Numachip2::identify_eeprom(char p_type[16])
-{
-	uint8_t p_uuid[4];
-
-	/* Read print type */
-	(void)spi_master_read(0xffc0, 16, (uint8_t *)p_type);
-	p_type[15] = '\0';
-
-	/* Read UUID */
-	(void)spi_master_read(0xfffc, 4, p_uuid);
-	return *((uint32_t *)p_uuid);
-}
-
 Numachip2::Numachip2(void)
 {
 	ht = opteron->ht_fabric_fixup(&chip_rev);
 	assertf(ht, "NumaChip-II not found");
 
-	printf("NumaChip-II incorporated as HT node %d\n", ht);
-
-	uuid = identify_eeprom(card_type);
-	printf("UUID: %08X, TYPE: %s\n", uuid, card_type);
+	memset(card_type, 0, sizeof(card_type));
+	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
+	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
+	printf("NumaChip-II type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 
 	/* Read the SPD info from our DIMMs to see if they are supported */
 	for (int i = 0; i < 2; i++)
 		read_spd_info(i, &spd_eeproms[i]);
+}
+
+void Numachip2::csr_write(const uint32_t reg, const uint32_t val)
+{
+	cht_writel(ht, reg >> 16, reg & 0xff, val);
+}
+
+void Numachip2::set_sci(const sci_t sci)
+{
+	csr_write(NC2_NODEID, sci);
 }
 

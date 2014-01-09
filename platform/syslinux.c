@@ -40,7 +40,6 @@ void Syslinux::get_hostname(void)
 
 	/* Save MyIP for later (in udp_open) */
 	myip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
-	printf("My IP address is %s\n", inet_ntoa(myip));
 
 	/* Skip standard fields, as hostname is an option */
 	unsigned int offset = 4 + offsetof(pxe_bootp_t, vendor.d);
@@ -66,7 +65,6 @@ void Syslinux::get_hostname(void)
 		/* Create a private copy */
 		hostname = strndup(&dhcpdata[offset + 2], len);
 		assert(hostname);
-		printf("Hostname is %s\n", hostname);
 		return;
 	}
 

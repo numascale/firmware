@@ -33,6 +33,7 @@ public:
 	bool boot_wait;
 	bool handover_acpi;
 	bool reentrant;
+	bool singleton;
 	struct debug_flags {
 		bool config, access, acpi, ht, fabric, maps, remote_io;
 	} debug;

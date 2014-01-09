@@ -79,7 +79,7 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 
 	/* Write start byte address in transmit register */
 	cht_writeb(numachip->ht, 2, 0x43, byte_addr);
-	
+
 	/* Send start byte address */
 	cht_writeb(numachip->ht, 2, 0x44, I2C_MASTER_CR_WRITE | I2C_MASTER_CR_NACK | I2C_MASTER_CR_IACK);
 	val = _i2c_master_irqwait();

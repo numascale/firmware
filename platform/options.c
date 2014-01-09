@@ -130,6 +130,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		{"config",          &Options::parse_string, &config_filename},
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
+		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
 	};
 
 	int errors = 0;

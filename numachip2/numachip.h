@@ -19,21 +19,23 @@
 #define __NUMACHIP_H
 
 #include "spd.h"
+#include "../library/base.h"
 
 class Numachip2 {
 	char card_type[16];
-	uint32_t uuid;
 	uint32_t chip_rev;
 	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 
 	void i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
 	int spi_master_read(const uint16_t addr, const int len, uint8_t *data);
 	void read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd);
-	uint32_t identify_eeprom(char p_type[16]);
 public:
+	uint32_t uuid;
 	int ht;
 
 	Numachip2(void);
+	void csr_write(const uint32_t reg, const uint32_t val);
+	void set_sci(const sci_t sci);
 };
 
 #endif

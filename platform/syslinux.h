@@ -22,10 +22,9 @@
 
 class Syslinux
 {
-	struct in_addr myip;
-
 	void get_hostname(void);
 public:
+	struct in_addr myip;
 	const char *hostname;
 
 	Syslinux(void);

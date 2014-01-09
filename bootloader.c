@@ -41,6 +41,7 @@ Options *options;
 Config *config;
 Opteron *opteron;
 Numachip2 *numachip;
+Nodes *nodes;
 
 static void stop_acpi(void)
 {
@@ -129,7 +130,8 @@ int main(const int argc, const char *argv[])
 {
 	syslinux = new Syslinux(); /* Needed first for console access */
 
-	printf(CLEAR BANNER "NumaConnect system unification module " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
+	printf(BANNER "NumaConnect unification " VER " on %s/%s at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
+	  inet_ntoa(syslinux->myip), syslinux->hostname ? syslinux->hostname : "<none",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
 
@@ -141,7 +143,13 @@ int main(const int argc, const char *argv[])
 
 	opteron = new Opteron(); /* Needed before any config access */
 	numachip = new Numachip2();
-	config = new Config();
+
+	if (options->singleton)
+		config = new Config();
+	else
+		config = new Config(options->config_filename);
+
+	numachip->set_sci(config->node->sci);
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

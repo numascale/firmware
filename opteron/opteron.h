@@ -21,16 +21,17 @@
 #include "../library/base.h"
 
 class Opteron {
+	enum reset {Warm, Cold};
 	uint8_t smi_state;
+
+	void reset(const enum reset mode, const int last);
 public:
-	enum reboot_mode {REBOOT_WARM, REBOOT_COLD};
 	int family;
 	uint32_t southbridge_id;
 	uint32_t tsc_mhz;
 
 	Opteron(void);
 	~Opteron(void);
-	void reset_cf9(const enum reboot_mode mode, int last);
 	void disable_smi(void);
 	void enable_smi(void);
 	void critical_enter(void);

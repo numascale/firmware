@@ -27,59 +27,26 @@
 #include "../platform/options.h"
 #include "../library/access.h"
 
-#define HT_INIT_CONTROL		0x6C
-#define HTIC_BIOSR_Detect	(1<<5)
+#define HT_INIT_CONTROL		0x6c
+#define HTIC_BIOSR_Detect	(1 << 5)
 
-void Opteron::reset_cf9(const enum reboot_mode mode, int last)
+void Opteron::reset(const enum reset mode, const int last)
 {
+	/* Prevent some BIOSs reprogramming the link back to 200MHz */
 	for (int i = 0; i <= last; i++) {
 		uint32_t val = cht_readl(i, FUNC0_HT, HT_INIT_CONTROL);
 		val &= ~HTIC_BIOSR_Detect;
 		cht_writel(i, FUNC0_HT, HT_INIT_CONTROL, val);
 	}
 
-	if (southbridge_id == VENDEV_SP5100) {
-		uint8_t pm_control = pmio_readb(0x42);
-		pm_control |= (1 << 1); /* Clear the DisableBootFailCpuRst bit */
-		printf("pm_control = %02x\n", pm_control);
-		pmio_writeb(0x42, pm_control | (1 << 3)); /* Set the RstCpuPGEn bit to toggle PWROK */
-	}
-
-	if (mode == REBOOT_COLD) {
-#if 0
-		if (southbridge_id == VENDEV_SP5100) {
-			uint8_t pm_reg_04 = pmio_readb(0x04);
-			printf("pm_reg_04 = %02x\n", pm_reg_04);
-			pmio_writeb(0x04, pm_reg_04 | (1 << 7)); /* Enable SMI# on sleep command */
-
-			uint8_t pm_reg_41 = pmio_readb(0x41);
-			printf("pm_reg_41 = %02x\n", pm_reg_41);
-			pmio_writeb(0x41, pm_reg_41 | (1 << 3)); /* Deassert PWROK when entering S3 */
-
-			uint8_t pm_reg_8d = pmio_readb(0x8d);
-			printf("pm_reg_8d = %02x\n", pm_reg_8d);
-			pmio_writeb(0x8d, pm_reg_8d | (1 << 5)); /* Extend SLP_S3# */
-
-			uint16_t AcpiPm1CntBlk = ((uint16_t)pmio_readb(0x23) << 8) | (uint16_t)pmio_readb(0x22);
-			printf("AcpiPm1CntBlk = %04x\n", AcpiPm1CntBlk);
-			uint16_t pm_control = inw(AcpiPm1CntBlk);
-			printf("pm_control = %04x\n", pm_control);
-
-			wait_key();
-			fflush(stdout);
-			fflush(stderr);
-			udelay(2500000);
-			outw(pm_control | (3 << 10) | (1 << 13), AcpiPm1CntBlk); /* Enter S3 state */
-			pm_control = inw(AcpiPm1CntBlk);
-			printf("pm_control = %04x\n", pm_control);
-		}
-#endif
-		outb((1 << 3) | (0 << 2) | (1 << 1), 0xcf9);
-		outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
-	} else {
+	if (mode == Warm) {
 		outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);
 		outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 	}
+
+	/* Cold reset */
+	outb((1 << 3) | (0 << 2) | (1 << 1), 0xcf9);
+	outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 }
 
 /* Mask southbridge SMI generation */
@@ -256,7 +223,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		fflush(stdout);
 		fflush(stderr);
 		udelay(2500000);
-		reset_cf9(REBOOT_WARM, nc - 1);
+		reset(Warm, nc - 1);
 		/* Does not return */
 	}
 }
@@ -280,7 +247,7 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
 		int neigh, link = 0, rt, i;
-		bool use = true;
+		bool use = 1;
 
 		for (neigh = 0; neigh <= nodes; neigh++) {
 			uint32_t aggr = cht_readl(neigh, FUNC0_HT, 0x164);
@@ -288,11 +255,12 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 			for (link = 0; link < 4; link++) {
 				val = cht_readl(neigh, FUNC0_HT, 0x98 + link * 0x20);
 				uint32_t val2 = cht_readl(neigh, FUNC0_HT, 0x84 + link * 0x20);
-				printf("HT%d.%d LinkControl = %08x\n", neigh, link, val2);
+				if (options->debug.ht)
+					printf("HT%d.%d LinkControl = 0x%08x\n", neigh, link, val2);
 				if ((val & 0x1f) != 0x3)
 					continue; /* Not coherent */
 
-				use = false;
+				use = 0;
 
 				if (aggr & (0x10000 << link))
 					use = true;
@@ -301,7 +269,7 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 					val = cht_readl(neigh, FUNC0_HT, 0x40 + rt * 4);
 
 					if (val & (2 << link))
-						use = true; /* Routing entry "rt" uses link "link" */
+						use = 1; /* Routing entry "rt" uses link "link" */
 				}
 
 				if (!use)
@@ -318,7 +286,7 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 			fflush(stdout);
 			fflush(stderr);
 			udelay(2500000);
-			reset_cf9(REBOOT_COLD, nodes);
+			reset(Cold, nodes);
 			/* Does not return */
 		}
 

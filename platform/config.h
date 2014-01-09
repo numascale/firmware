@@ -20,45 +20,37 @@
 
 #include "../json-1.5/src/json.h"
 
-struct fabric_info {
-	uint32_t x_size;
-	uint32_t y_size;
-	uint32_t z_size;
-	uint32_t strict;
-};
-
-struct node_info {
+struct node {
 	uint32_t uuid;
 	uint32_t sci;
 	uint32_t partition;
-	uint32_t osc;
-	char desc[32];
+	char hostname[32];
 	bool sync_only;
 };
 
-struct part_info {
+struct partition {
 	uint32_t master;
 	uint32_t builder;
 };
 
 class Config {
-	bool parse_json_bool(json_t *obj, const char *label, uint32_t *val, bool opt);
-	bool parse_json_num(json_t *obj, const char *label, uint32_t *val, int opt);
-	bool parse_json_str(json_t *obj, const char *label, char *val, int len, int opt);
-	bool parse_json(json_t *root);
-	void parse_config_file(const char *data);
-public:
-	struct fabric_info fabric;
-	struct node_info *nodelist;
-	struct part_info *partlist;
-	int nodes, partitions;
 	bool name_matching;
-	char *hostname;
+
+	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt);
+	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt);
+	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt);
+	void parse_json(json_t *root);
+	bool local(const struct node *info);
+public:
+	uint32_t x_size, y_size, z_size;
+	uint32_t strict;
+	int nnodes, npartitions;
+	struct node *nodes;
+	struct partition *partitions;
+	struct node *node;
 
 	Config(void);
-	void make_singleton_config(void);
-	int config_local(const struct node_info *info, const uint32_t uuid);
+	Config(const char *filename);
 };
 
 #endif
-
