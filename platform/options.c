@@ -93,10 +93,10 @@ void Options::parse_int64(const char *val, void *intp)
 void Options::parse_flags(const char *val, void *data)
 {
 	struct debug_flags *flags = (struct debug_flags *)data;
-	char options[512];
-	strncpy(options, val, sizeof(options));
+	char params[512];
+	strncpy(params, val, sizeof(params));
 
-	const char *pos = strtok(options, ",");
+	const char *pos = strtok(params, ",");
 	while (pos) {
 		if (!strcmp(pos, "all"))
 			memset(flags, 0xff, sizeof(Options::debug));

@@ -19,6 +19,7 @@
 #define __NUMACHIP_H
 
 #include "spd.h"
+#include "lc5.h"
 #include "../library/base.h"
 
 class Numachip2 {
@@ -26,6 +27,7 @@ class Numachip2 {
 	int ht;
 	uint32_t chip_rev;
 	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
+	LC5 *lc[6];
 
 	void i2c_master_init(void);
 	uint8_t i2c_master_irqwait(void);
@@ -38,12 +40,14 @@ class Numachip2 {
 	void spi_master_read(const uint16_t addr, const int len, uint8_t *data);
 
 	void read_spd(const int spd_no, const ddr3_spd_eeprom_t *spd);
-	void csr_write(const uint32_t reg, const uint32_t val);
 public:
 	uint32_t uuid;
 
+	uint32_t csr_read(const uint32_t reg);
+	void csr_write(const uint32_t reg, const uint32_t val);
 	Numachip2(void);
 	void set_sci(const sci_t sci);
+	void start_fabric(void);
 };
 
 #endif

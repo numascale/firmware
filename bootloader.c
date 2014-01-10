@@ -152,7 +152,7 @@ int main(const int argc, const char *argv[])
 	numachip->set_sci(config->node->sci);
 
 	if (!config->node->sync_only) {
-
+		numachip->start_fabric();
 	}
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);

@@ -20,6 +20,7 @@
 
 #define NC2_LC_BASE        ((2 << 16) | 0x800)
 #define NC2_LC_SIZE        ((2 << 16) | 0x100)
+#define NC2_LC_LINKSTAT    ((2 << 16) | 0x0c4)
 #define NC2_HSS_PLLCTL     ((2 << 16) | 0xf00)
 #define NC2_NODEID         ((2 << 16) | 0x2c4)
 

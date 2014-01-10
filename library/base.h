@@ -87,22 +87,22 @@ typedef uint16_t sci_t;
 
 inline void *operator new(const size_t size)
 {
-    return malloc(size);
+	return zalloc(size);
 }
 
 inline void *operator new[](const size_t size)
 {
-    return malloc(size);
+	return zalloc(size);
 }
 
 inline void operator delete(void *const p)
 {
-    free(p);
+	free(p);
 }
 
 inline void operator delete[](void *const p)
 {
-    free(p);
+	free(p);
 }
 
 template<class T> class Vector {

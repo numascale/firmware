@@ -34,13 +34,10 @@ class Config {
 		uint32_t builder;
 	};
 
-	bool name_matching;
-
 	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt);
 	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt);
 	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt);
 	void parse_json(json_t *root);
-	bool local(const struct node *info);
 public:
 	uint32_t x_size, y_size, z_size;
 	uint32_t strict;

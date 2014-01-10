@@ -48,6 +48,11 @@ Numachip2::Numachip2(void)
 		read_spd(i, &spd_eeproms[i]);
 }
 
+uint32_t Numachip2::csr_read(const uint32_t reg)
+{
+	return cht_readl(ht, reg >> 16, reg & 0xff);
+}
+
 void Numachip2::csr_write(const uint32_t reg, const uint32_t val)
 {
 	cht_writel(ht, reg >> 16, reg & 0xff, val);
@@ -56,4 +61,10 @@ void Numachip2::csr_write(const uint32_t reg, const uint32_t val)
 void Numachip2::set_sci(const sci_t sci)
 {
 	csr_write(NC2_NODEID, sci);
+}
+
+void Numachip2::start_fabric(void)
+{
+	for (uint16_t i = 0; i < 6; i++)
+		lc[i] = new LC5(NC2_LC_BASE + i * NC2_LC_SIZE);
 }

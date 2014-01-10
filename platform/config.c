@@ -182,9 +182,6 @@ void Config::parse_json(json_t *root)
 			nodes[i].sync_only = 0;
 	}
 
-	if (name_matching)
-		printf("UUIDs omitted - matching hostname entries\n");
-
 	list = json_find_first_label(fab->child, "partitions");
 	if (!(list && list->child && list->child->type == JSON_ARRAY)) {
 		error("Label <partitions> not found in fabric configuration file");
@@ -211,14 +208,6 @@ void Config::parse_json(json_t *root)
 
 	if (errors)
 		fatal("%d errors found in fabric configuration file", errors);
-}
-
-bool Config::local(const struct node *info)
-{
-	if (name_matching && syslinux->hostname) {
-		return strcmp(info->hostname, syslinux->hostname) == 0;
-	} else
-		return info->uuid == numachip->uuid;
 }
 
 Config::Config(void)
@@ -264,23 +253,24 @@ Config::Config(const char *filename)
 		printf("Fabric dimensions: x %d, y %x, z %d\n", x_size, y_size, z_size);
 
 		for (int i = 0; i < nnodes; i++)
-			printf("Node %d: hostname <%s>, uuid %08X, SCI%03x, partition %d, sync-only %d\n",
+			printf("Node %d: hostname %s, UUID %08X, SCI%03x, partition %d, sync-only %d\n",
 		      i, nodes[i].hostname, nodes[i].uuid, nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
 
 		for (int i = 0; i < npartitions; i++)
-			printf("Partition %d: master SCI%03x, builder: SCI%03x\n",
+			printf("Partition %d: master SCI%03x, builder SCI%03x\n",
 		      i, partitions[i].master, partitions[i].builder);
 	}
 
 	/* Locate UUID or hostname */
 	for (int i = 0; i < nnodes; i++) {
-		if (local(&nodes[i])) {
+		if (numachip->uuid == nodes[i].uuid || !strcmp(syslinux->hostname, nodes[i].hostname)) {
+			if (options->debug.config) printf("Matched node %d\n", i);
 			node = &nodes[i];
 			break;
 		}
 	}
 
-	assertf(node, "Failed to find node config (hostname %s)", syslinux->hostname ? syslinux->hostname : "<none>");
+	assertf(node, "Failed to find entry matching this node with UUID %08X or hostname %s", numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
 	partition = &partitions[node->partition];
 }
 
