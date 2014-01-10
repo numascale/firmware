@@ -23,6 +23,7 @@
 
 class Numachip2 {
 	char card_type[16];
+	int ht;
 	uint32_t chip_rev;
 	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
 
@@ -36,13 +37,12 @@ class Numachip2 {
 	uint8_t spi_master_read_fifo(void);
 	void spi_master_read(const uint16_t addr, const int len, uint8_t *data);
 
-	void read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd);
+	void read_spd(const int spd_no, const ddr3_spd_eeprom_t *spd);
+	void csr_write(const uint32_t reg, const uint32_t val);
 public:
 	uint32_t uuid;
-	int ht;
 
 	Numachip2(void);
-	void csr_write(const uint32_t reg, const uint32_t val);
 	void set_sci(const sci_t sci);
 };
 

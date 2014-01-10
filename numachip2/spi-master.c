@@ -61,15 +61,15 @@ void Numachip2::spi_master_enable(void)
 	const uint8_t espr = 4;
 
 	/* Set extended control register first */
-	cht_writeb(numachip->ht, 2, 0x4b, (espr & 0xc) >> 2);
+	cht_writeb(ht, 2, 0x4b, (espr & 0xC) >> 2);
 
 	/* Set clock prescaler, chip enable etc. */
-	cht_writeb(numachip->ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
+	cht_writeb(ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
 }
 
 void Numachip2::spi_master_disable(void)
 {
-	cht_writeb(numachip->ht, 2, 0x48, 0);
+	cht_writeb(ht, 2, 0x48, 0);
 }
 
 uint8_t Numachip2::spi_master_read_fifo(void)
@@ -77,11 +77,11 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 	uint8_t val;
 
 	do {
+		val = cht_readb(ht, 2, 0x49);
 		cpu_relax();
-		val = cht_readb(numachip->ht, 2, 0x49);
-	} while (val & SPI_MASTER_SR_RFEMPTY); /* Wait for read-fifo non-empty */
+	} while (val & SPI_MASTER_SR_RFEMPTY);  /* Wait for read-fifo non-empty */
 
-	return cht_readb(numachip->ht, 2, 0x4a);
+	return cht_readb(ht, 2, 0x4a);
 }
 
 void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
@@ -90,20 +90,20 @@ void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *dat
 	spi_master_enable();
 
 	/* Write SPI Read instruction to the transmit fifo */
-	cht_writeb(numachip->ht, 2, 0x4a, SPI_INSTR_READ);
+	cht_writeb(ht, 2, 0x4a, SPI_INSTR_READ);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte1 (most significant 8 bit) to the transmit fifo */
-	cht_writeb(numachip->ht, 2, 0x4a, (addr >> 8) & 0xff);
+	cht_writeb(ht, 2, 0x4a, (addr >> 8) & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte2 (least significant 8 bit) to the transmit fifo */
-	cht_writeb(numachip->ht, 2, 0x4a, addr & 0xff);
+	cht_writeb(ht, 2, 0x4a, addr & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Read SPI data */
 	for (int i = 0; i < len; i++) {
-		cht_writeb(numachip->ht, 2, 0x4a, 0); /* Dummy write */
+		cht_writeb(ht, 2, 0x4a, 0); /* Dummy write */
 		data[i] = spi_master_read_fifo();
 	}
 

@@ -244,6 +244,7 @@ Config::Config(void)
 	node = nodes;
 	partition = partitions;
 }
+
 Config::Config(const char *filename)
 {
 	int len;
@@ -254,7 +255,7 @@ Config::Config(const char *filename)
 
 	json_t *root = NULL;
 	enum json_error err = json_parse_document(&root, data);
-	assertf(err != JSON_OK, "Fabric configuration file malformed (%s)", json_errors[err]);
+	assertf(err == JSON_OK, "Fabric configuration file malformed (%s)", json_errors[err]);
 
 	parse_json(root);
 	lfree((char *)data);

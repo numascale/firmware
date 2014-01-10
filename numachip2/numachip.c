@@ -20,10 +20,10 @@
 
 #include "numachip.h"
 #include "registers.h"
-#include "../bootloader.h"
 #include "../library/access.h"
+#include "../bootloader.h"
 
-void Numachip2::read_spd_info(const int spd_no, const ddr3_spd_eeprom_t *spd)
+void Numachip2::read_spd(const int spd_no, const ddr3_spd_eeprom_t *spd)
 {
 	const uint8_t spd_device_adr = 0x50 + spd_no;
 
@@ -45,7 +45,7 @@ Numachip2::Numachip2(void)
 
 	/* Read the SPD info from our DIMMs to see if they are supported */
 	for (int i = 0; i < 2; i++)
-		read_spd_info(i, &spd_eeproms[i]);
+		read_spd(i, &spd_eeproms[i]);
 }
 
 void Numachip2::csr_write(const uint32_t reg, const uint32_t val)
@@ -57,4 +57,3 @@ void Numachip2::set_sci(const sci_t sci)
 {
 	csr_write(NC2_NODEID, sci);
 }
-
