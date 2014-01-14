@@ -141,13 +141,13 @@ int main(const int argc, const char *argv[])
 	if (options->handover_acpi)
 		stop_acpi();
 
-	opteron = new Opteron(); /* Needed before any config access */
-	numachip = new Numachip2();
-
 	if (options->singleton)
 		config = new Config();
 	else
 		config = new Config(options->config_filename);
+
+	opteron = new Opteron(config->node->sci); /* Needed before any config access */
+	numachip = new Numachip2();
 
 	numachip->set_sci(config->node->sci);
 

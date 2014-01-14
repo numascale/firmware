@@ -20,7 +20,7 @@
 #include "../library/access.h"
 #include "defs.h"
 
-Opteron::Opteron(void)
+Opteron::Opteron(const sci_t _sci): sci(_sci)
 {
 	/* Enable CF8 extended access */
 	uint64_t msr = rdmsr(MSR_NB_CFG);

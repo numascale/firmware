@@ -25,10 +25,21 @@
 #define PCI_CONF_SEL 0xcf8
 #define PCI_CONF_DATA 0xcfc
 #define PMIO_PORT 0xcd6
+#define NC_MCFG_BASE 0x3f0000000000ULL
 
 #define PCI_EXT_CONF(bus, devfn, reg)                           \
 	(0x80000000 | (((reg) & 0xF00) << 16) | ((bus) << 16)	\
 	 | ((devfn) << 8) | ((reg) & 0xFC))
+#define PCI_MMIO_CONF(bus, device, func, reg)                   \
+    (((bus) << 20) | ((device) << 15) | ((func) << 12) | (reg))
+/* Since we use FS to access these areas, the address needs to be in canonical form (sign extended from bit47) */
+#define canonicalize(a) (((a) & (1ULL << 47)) ? ((a) | (0xffffULL << 48)) : (a))
+#define setup_fs(addr) do {                                             \
+        asm volatile("mov %%ds, %%ax\n\tmov %%ax, %%fs" ::: "eax");     \
+        asm volatile("wrmsr"                                            \
+                     : /* No output */                                  \
+                     : "A"(canonicalize(addr)), "c"(MSR_FS_BASE));      \
+    } while(0)
 
 int lirq_nest = 0;
 
@@ -73,6 +84,18 @@ uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	return ret;
 }
 
+uint32_t extpci_readl(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+{
+	uint32_t ret;
+	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+	cli();
+	setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+	asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
+	sti();
+	DEBUG("%08x\n", ret);
+	return ret;
+}
+
 uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 {
 	uint8_t ret;
@@ -91,6 +114,16 @@ void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_
 	cli();
 	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 	outl(val, PCI_CONF_DATA + (reg & 3));
+	sti();
+	DEBUG("\n");
+}
+
+void extpci_writel(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+{
+	DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+	cli();
+	setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+	asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 	sti();
 	DEBUG("\n");
 }

@@ -20,17 +20,54 @@
 
 #include "../library/base.h"
 
+#define FUNC1_MAPS 1
+
+struct reg {
+	uint16_t base, limit, high;
+};
+
+class Opteron;
+
+class MmioMap {
+	const Opteron &opteron;
+	const int ranges;
+
+	struct reg setup(const int range);
+	int unused(void);
+public:
+	MmioMap(const Opteron &_opteron);
+	void remove(const ht_t range);
+	bool read(const int range, uint64_t *base, uint64_t *limit, int *dest, int *link, bool *lock);
+	void add(const uint64_t base, const uint64_t limit, const ht_t dest, const int link);
+};
+
+class DramMap {
+	const Opteron &opteron;
+	const int ranges;
+
+	int unused(void);
+public:
+	DramMap(const Opteron &_opteron);
+	void remove(const int range);
+	bool read(const int range, uint64_t *base, uint64_t *limit, int *dest);
+	void print(const int range);
+	void add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest);
+};
+
 class Opteron {
 	enum reset {Warm, Cold};
 	uint8_t smi_state;
 
 	void reset(const enum reset mode, const int last);
 public:
+	ht_t nb_ht_min, nb_ht_max;
 	int family;
 	uint32_t ioh_vendev;
 	uint32_t tsc_mhz;
+	MmioMap *mmio_Map;
+	const sci_t sci;
 
-	Opteron(void);
+	Opteron(const sci_t _sci);
 	~Opteron(void);
 	void disable_smi(void);
 	void enable_smi(void);
