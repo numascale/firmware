@@ -46,25 +46,37 @@ Numachip2::Numachip2(void)
 	/* Read the SPD info from our DIMMs to see if they are supported */
 	for (int i = 0; i < 2; i++)
 		read_spd(i, &spd_eeproms[i]);
+
+	selftest();
 }
 
-uint32_t Numachip2::csr_read(const uint32_t reg)
+uint32_t Numachip2::read32(const uint16_t reg)
 {
-	return cht_readl(ht, reg >> 16, reg & 0xff);
+	return cht_readl(ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::csr_write(const uint32_t reg, const uint32_t val)
+void Numachip2::write32(const uint16_t reg, const uint32_t val)
 {
-	cht_writel(ht, reg >> 16, reg & 0xff, val);
+	cht_writel(ht, reg >> 12, reg & 0xfff, val);
+}
+
+uint8_t Numachip2::read8(const uint16_t reg)
+{
+	return cht_readl(ht, reg >> 12, reg & 0xfff);
+}
+
+void Numachip2::write8(const uint16_t reg, const uint8_t val)
+{
+	cht_writeb(ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Numachip2::set_sci(const sci_t sci)
 {
-	csr_write(NC2_NODEID, sci);
+	write32(SIU_NODEID, sci);
 }
 
 void Numachip2::start_fabric(void)
 {
 	for (uint16_t i = 0; i < 6; i++)
-		lc[i] = new LC5(NC2_LC_BASE + i * NC2_LC_SIZE);
+		lc[i] = new LC5(LC_BASE + i * LC_SIZE);
 }

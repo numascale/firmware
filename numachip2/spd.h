@@ -171,24 +171,22 @@ typedef struct ddr3_spd_eeprom_s {
 
 static inline const char *nc2_ddr3_module_type(const uint8_t module_type)
 {
-	static char type[64];
 	switch (module_type & DDR3_SPD_MODULETYPE_MASK) {
-		case DDR3_SPD_MODULETYPE_RDIMM:         snprintf(type, sizeof(type), "RDIMM"); break;
-		case DDR3_SPD_MODULETYPE_UDIMM:         snprintf(type, sizeof(type), "UDIMM"); break;
-		case DDR3_SPD_MODULETYPE_SO_DIMM:       snprintf(type, sizeof(type), "SO-DIMM"); break;
-		case DDR3_SPD_MODULETYPE_MICRO_DIMM:    snprintf(type, sizeof(type), "Micro-DIMM"); break;
-		case DDR3_SPD_MODULETYPE_MINI_RDIMM:    snprintf(type, sizeof(type), "Mini-RDIMM"); break;
-		case DDR3_SPD_MODULETYPE_MINI_UDIMM:    snprintf(type, sizeof(type), "Mini-UDIMM"); break;
-		case DDR3_SPD_MODULETYPE_MINI_CDIMM:    snprintf(type, sizeof(type), "Mini-CDIMM"); break;
-		case DDR3_SPD_MODULETYPE_72B_SO_UDIMM:  snprintf(type, sizeof(type), "72b-SO-UDIMM"); break;
-		case DDR3_SPD_MODULETYPE_72B_SO_RDIMM:  snprintf(type, sizeof(type), "72b-SO-RDIMM"); break;
-		case DDR3_SPD_MODULETYPE_72B_SO_CDIMM:  snprintf(type, sizeof(type), "72b-SO-CDIMM"); break;
-		case DDR3_SPD_MODULETYPE_LRDIMM:        snprintf(type, sizeof(type), "LRDIMM"); break;
-		case DDR3_SPD_MODULETYPE_16B_SO_DIMM:   snprintf(type, sizeof(type), "16b-SO-DIMM"); break;
-		case DDR3_SPD_MODULETYPE_32B_SO_DIMM:   snprintf(type, sizeof(type), "32b-SO-DIMM"); break;
-		default: snprintf(type, sizeof(type), "Unknown (%x)", module_type); break;
+		case DDR3_SPD_MODULETYPE_RDIMM:         return "RDIMM";
+		case DDR3_SPD_MODULETYPE_UDIMM:         return "UDIMM";
+		case DDR3_SPD_MODULETYPE_SO_DIMM:       return "SO-DIMM";
+		case DDR3_SPD_MODULETYPE_MICRO_DIMM:    return "Micro-DIMM";
+		case DDR3_SPD_MODULETYPE_MINI_RDIMM:    return "Mini-RDIMM";
+		case DDR3_SPD_MODULETYPE_MINI_UDIMM:    return "Mini-UDIMM";
+		case DDR3_SPD_MODULETYPE_MINI_CDIMM:    return "Mini-CDIMM";
+		case DDR3_SPD_MODULETYPE_72B_SO_UDIMM:  return "72b-SO-UDIMM";
+		case DDR3_SPD_MODULETYPE_72B_SO_RDIMM:  return "72b-SO-RDIMM";
+		case DDR3_SPD_MODULETYPE_72B_SO_CDIMM:  return "72b-SO-CDIMM";
+		case DDR3_SPD_MODULETYPE_LRDIMM:        return "LRDIMM";
+		case DDR3_SPD_MODULETYPE_16B_SO_DIMM:   return "16b-SO-DIMM";
+		case DDR3_SPD_MODULETYPE_32B_SO_DIMM:   return "32b-SO-DIMM";
+		default: return "unknown";
 	}
-	return (const char *)type;
 }
 
 extern void ddr3_spd_check(const ddr3_spd_eeprom_t *spd);
