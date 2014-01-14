@@ -21,9 +21,7 @@
 
 uint32_t LC5::link_status(void)
 {
-/* FIXME: uncomment when implemented:
-	return numachip->csr_read(addr + NC2_LC_LINKSTAT); */
-	return 0x00000000;
+	return numachip->read32(addr + LC_LINKSTAT);
 }
 
 LC5::LC5(uint16_t _addr): addr(_addr)

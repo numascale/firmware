@@ -18,6 +18,9 @@
 #ifndef __REGISTERS_H
 #define __REGISTERS_H
 
+#define SIU_ATT_RANGE 2 /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
+#define SIU_ATT_SHIFT (24 + SIU_ATT_RANGE * 4)
+
 /* Function in bits 15:12 */
 #define LC_BASE         0x2800
 #define LC_SIZE         0x0100
