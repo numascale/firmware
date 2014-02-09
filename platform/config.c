@@ -215,6 +215,8 @@ Config::Config(void)
 	x_size = 1;
 	y_size = 0;
 	z_size = 0;
+	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
+
 	nnodes = 1;
 	nodes = (struct node *)malloc(sizeof(*nodes));
 	assert(nodes);
@@ -248,6 +250,8 @@ Config::Config(const char *filename)
 
 	parse_json(root);
 	lfree((char *)data);
+
+	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
 
 	if (options->debug.config) {
 		printf("Fabric dimensions: x %d, y %x, z %d\n", x_size, y_size, z_size);

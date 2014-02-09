@@ -41,6 +41,8 @@ class Config {
 public:
 	uint32_t x_size, y_size, z_size;
 	uint32_t strict;
+
+	int ringmask : 6;
 	int nnodes, npartitions;
 	struct node *node, *nodes;
 	struct partition *partition, *partitions;

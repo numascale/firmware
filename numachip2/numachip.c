@@ -23,16 +23,6 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-void Numachip2::read_spd(const int spd_no, const ddr3_spd_eeprom_t *spd)
-{
-	const uint8_t spd_device_adr = 0x50 + spd_no;
-
-	i2c_master_seq_read(spd_device_adr, 0x00, sizeof(ddr3_spd_eeprom_t), (uint8_t *)spd);
-	ddr3_spd_check(spd);
-
-	printf("DIMM%d is a %s module\n", spd_no, nc2_ddr3_module_type(spd->module_type));
-}
-
 Numachip2::Numachip2(void)
 {
 	ht = opteron->ht_fabric_fixup(&chip_rev);
@@ -43,11 +33,10 @@ Numachip2::Numachip2(void)
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
 	printf("NumaChip-II type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 
-	/* Read the SPD info from our DIMMs to see if they are supported */
-	for (int i = 0; i < 2; i++)
-		read_spd(i, &spd_eeproms[i]);
-
 	selftest();
+
+	fabric_init();
+	dram_init();
 }
 
 uint32_t Numachip2::read32(const uint16_t reg)
@@ -78,5 +67,5 @@ void Numachip2::set_sci(const sci_t sci)
 void Numachip2::start_fabric(void)
 {
 	for (uint16_t i = 0; i < 6; i++)
-		lc[i] = new LC5(LC_BASE + i * LC_SIZE);
+		lcs[i] = new LC5(LC_BASE + i * LC_SIZE);
 }

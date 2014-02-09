@@ -15,4 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "numachip.h"
+#include "registers.h"
+#include "../platform/config.h"
+#include "../bootloader.h"
 
+void Numachip2::fabric_init(void)
+{
+	const char *ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
+
+	printf("Fabric connected:");
+
+	for (int lc = 0; lc < 6; lc++) {
+		if (!(config->ringmask & (1 << lc)))
+			continue;
+
+		printf(" %s", ringnames[lc]);
+		while (!(read32(LC_BASE + lc * LC_SIZE + LC_LINKSTAT) & (1 << 31)))
+			cpu_relax();
+	}
+
+	printf("\n");
+}

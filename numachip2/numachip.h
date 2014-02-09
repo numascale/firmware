@@ -26,8 +26,8 @@ class Numachip2 {
 	char card_type[16];
 	int ht;
 	uint32_t chip_rev;
-	ddr3_spd_eeprom_t spd_eeproms[2]; /* 0 - MCTag, 1 - CData */
-	LC5 *lc[6];
+	struct ddr3_spd_eeprom spd_eeprom;
+	LC5 *lcs[6];
 
 	/* i2c-master.c */
 	void i2c_master_init(void);
@@ -44,7 +44,11 @@ class Numachip2 {
 	/* selftest.c */
 	void selftest(void);
 
-	void read_spd(const int spd_no, const ddr3_spd_eeprom_t *spd);
+	/* dram.c */
+	void dram_init(void);
+
+	/* fabric.h */
+	void fabric_init(void);
 public:
 	uint32_t uuid;
 

@@ -38,7 +38,7 @@ static int crc16(char *ptr, int count)
 	return crc & 0xffff;
 }
 
-void ddr3_spd_check(const ddr3_spd_eeprom_t *spd)
+void ddr3_spd_check(const struct ddr3_spd_eeprom *spd)
 {
 	char *p = (char *)spd;
 	int csum16, len;

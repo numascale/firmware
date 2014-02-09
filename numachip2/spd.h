@@ -60,7 +60,7 @@
 #define DDR3_SPD_MODULETYPE_16B_SO_DIMM   0x0c
 #define DDR3_SPD_MODULETYPE_32B_SO_DIMM   0x0d
 
-typedef struct ddr3_spd_eeprom_s {
+struct ddr3_spd_eeprom {
         /* General Section: Bytes 0-59 */
         uint8_t info_size_crc;   /*  0 # bytes written into serial memory,
                                              CRC coverage */
@@ -167,7 +167,7 @@ typedef struct ddr3_spd_eeprom_s {
 
         uint8_t msd[26];         /* 150-175 Mfg's Specific Data */
         uint8_t cust[80];        /* 176-255 Open for Customer Use */
-} ddr3_spd_eeprom_t;
+};
 
 static inline const char *nc2_ddr3_module_type(const uint8_t module_type)
 {
@@ -189,7 +189,7 @@ static inline const char *nc2_ddr3_module_type(const uint8_t module_type)
 	}
 }
 
-extern void ddr3_spd_check(const ddr3_spd_eeprom_t *spd);
+extern void ddr3_spd_check(const struct ddr3_spd_eeprom *spd);
 
 #endif
 

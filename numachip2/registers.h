@@ -32,10 +32,16 @@
 #define SPI_REG1        0x204c
 
 #define MTAG_BASE       0x2080
-#define CTAG_BASE       0x2080
-#define TAG_CTRL        0x0000
+#define CTAG_BASE       0x20a0
+#define NUMACACHE_BASE  0x20c0
+#define MCTL_SIZE       0x20
 
-#define CACHE_CTRL      0x20c0
+#define TAG_CTRL        0x00
+#define TAG_ADDR_MASK   0x04
+#define TAG_MCTR_OFFSET 0x08
+#define TAG_MCTR_MASK   0x0c
+#define TAG_CPU_ADDR    0x10
+#define TAG_CPU_DATA    0x18
 
 #define SIU_XBAR_ROUTE  0x2200
 #define SIU_XBAR_CHUNK  0x22c0

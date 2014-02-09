@@ -34,6 +34,7 @@ public:
 	bool handover_acpi;
 	bool reentrant;
 	bool singleton;
+	bool fast;
 	struct debug_flags {
 		bool config, access, acpi, ht, fabric, maps, remote_io;
 	} debug;
