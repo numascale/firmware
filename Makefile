@@ -8,6 +8,7 @@ mjson_dir        := json-$(mjson_version)
 
 COM32DEPS := $(syslinux_dir)/com32/libutil/libutil_com.a $(syslinux_dir)/com32/lib/libcom32.a
 DIRS := platform/ opteron/ numachip2/ library/ ./
+MAKEFLAGS += -j $(shell getconf _NPROCESSORS_ONLN)
 
 .PHONY: all
 all: bootloader.c32
@@ -79,7 +80,7 @@ $(mjson_dir)/src/json.o: $(mjson_dir)/src/json.c
 version.h: opteron/defs.h library/access.h platform/acpi.h bootloader.h library/access.c bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
-bootloader.elf: bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o platform/syslinux.o $(mjson_dir)/src/json.o $(COM32DEPS)
+bootloader.elf: bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o platform/syslinux.o platform/e820.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
 bootloader.o: $(mjson_dir)/src/json.h bootloader.c opteron/defs.h bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
@@ -92,6 +93,7 @@ platform/acpi.o: platform/acpi.c platform/acpi.h
 platform/smbios.o: platform/smbios.c bootloader.h
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
 platform/config.o: platform/config.c platform/config.h
+platform/e820.o: platform/e820.c platform/e820.h
 
 library/access.o: library/access.c opteron/defs.h library/access.h
 

@@ -93,6 +93,12 @@ void Options::parse_int64(const char *val, void *intp)
 void Options::parse_flags(const char *val, void *data)
 {
 	struct debug_flags *flags = (struct debug_flags *)data;
+
+	if (!val) {
+		memset(flags, 0xff, sizeof(Options::debug));
+		return;
+	}
+
 	char params[512];
 	strncpy(params, val, sizeof(params));
 
@@ -114,6 +120,8 @@ void Options::parse_flags(const char *val, void *data)
 			flags->maps = 1;
 		else if (!strcmp(pos, "remote-io"))
 			flags->remote_io = 1;
+		else if (!strcmp(pos, "e820"))
+			flags->e820 = 1;
 
 		pos = strtok(NULL, ",");
 	}
@@ -123,14 +131,13 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 {
 	static const struct optargs list[] = {
 		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
-		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
-		{"ht.200mhz-only",  &Options::parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"boot-wait",       &Options::parse_bool,   &boot_wait},
 		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
 		{"config",          &Options::parse_string, &config_filename},
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
+		{"fast",            &Options::parse_bool,   &fast},            /* Skip slow phases */
 	};
 
 	int errors = 0;

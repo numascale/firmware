@@ -130,10 +130,14 @@ int main(const int argc, const char *argv[])
 {
 	syslinux = new Syslinux(); /* Needed first for console access */
 
-	printf(CLEAR BANNER "NumaConnect unification " VER " on %s/%s at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
-	  inet_ntoa(syslinux->myip), syslinux->hostname ? syslinux->hostname : "<none>",
+	printf(CLEAR BANNER "NumaConnect unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
 	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
+
+	printf("Host MAC %02x:%02x:%02x:%02x:%02x:%02x, IP %s, hostname %s\n",
+		syslinux->mac[0], syslinux->mac[1], syslinux->mac[2],
+		syslinux->mac[3], syslinux->mac[4], syslinux->mac[5],
+		inet_ntoa(syslinux->ip), syslinux->hostname ? syslinux->hostname : "<none>");
 
 	options = new Options(argc, argv);
 	platform_quirks();

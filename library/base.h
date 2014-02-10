@@ -38,6 +38,9 @@
 #define CLEAR         "\033\143"
 #define BANNER        "\033[1m"
 
+#define STR_DW_N(a) (uint32_t)((a[0] << 24) + (a[1] << 16) + (a[2] << 8) + a[3])
+#define STR_DW_H(a) (uint32_t)(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
+
 #define lassert(cond) do { if (!(cond)) { \
         printf("Error: assertion '%s' failed in %s at %s:%d\n", \
             #cond, __FUNCTION__, __FILE__, __LINE__); while (1); \

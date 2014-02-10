@@ -35,7 +35,8 @@ void Syslinux::get_hostname(void)
 	assert(pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen) == 0);
 
 	/* Save MyIP for later (in udp_open) */
-	myip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
+	ip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
+	memcpy(mac, ((pxe_bootp_t *)dhcpdata)->CAddr, sizeof(mac));
 
 	/* Skip standard fields, as hostname is an option */
 	unsigned int offset = 4 + offsetof(pxe_bootp_t, vendor.d);
@@ -65,7 +66,7 @@ void Syslinux::get_hostname(void)
 	}
 }
 
-Syslinux::Syslinux(void): hostname(0)
+Syslinux::Syslinux(void)
 {
 	openconsole(&dev_rawcon_r, &dev_stdcon_w);
 	get_hostname();
@@ -73,7 +74,7 @@ Syslinux::Syslinux(void): hostname(0)
 
 char *Syslinux::read_file(const char *filename, int *const len)
 {
-	static com32sys_t inargs, outargs;
+	com32sys_t inargs, outargs;
 	char *buf = (char *)lmalloc(strlen(filename) + 1);
 	strcpy(buf, filename);
 
@@ -118,7 +119,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 
 void Syslinux::exec(const char *label)
 {
-	static com32sys_t rm;
+	com32sys_t rm;
 
 	strcpy((char *)__com32.cs_bounce, label);
 	rm.eax.w[0] = 0x0003;

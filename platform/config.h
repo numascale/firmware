@@ -26,6 +26,7 @@ class Config {
 		uint32_t sci;
 		uint32_t partition;
 		char hostname[32];
+		uint8_t mac[6];
 		bool sync_only;
 	};
 

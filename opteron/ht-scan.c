@@ -174,7 +174,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	val = cht_readl(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
 	printf(".");
 
-	if (!options->ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
+	if ((ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			cht_writel(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
@@ -193,37 +193,35 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 
 	/* Optimize link frequency, if option to disable this is not set */
-	if (!options->ht_200mhz_only) {
-		uint8_t max_supported = 0;
+	uint8_t max_supported = 0;
 
-		printf("+");
-		val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
-		printf(".");
+	printf("+");
+	val = cht_readl(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
+	printf(".");
 
-		/* Find maximum supported frequency */
-		for (int i = 0; i < 16; i++)
-			if (val >> (16+i) & 1) max_supported = i;
+	/* Find maximum supported frequency */
+	for (int i = 0; i < 16; i++)
+		if (val >> (16+i) & 1) max_supported = i;
 
-		if (((val >> 8) & 0xf) != max_supported) {
-			printf("<NC freq=%d>",max_supported);
-			cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (max_supported << 8));
-			reboot = true;
-		}
+	if (((val >> 8) & 0xf) != max_supported) {
+		printf("<NC freq=%d>",max_supported);
+		cht_writel(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (max_supported << 8));
+		reboot = true;
+	}
 
-		printf(".");
-		val = cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20);
-		printf(".");
+	printf(".");
+	val = cht_readl(neigh, FUNC0_HT, 0x88 + link * 0x20);
+	printf(".");
 
-		if (((val >> 8) & 0xf) != max_supported) {
-			printf("<CPU freq=%d>",max_supported);
-			cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (max_supported << 8));
-			reboot = true;
-		}
+	if (((val >> 8) & 0xf) != max_supported) {
+		printf("<CPU freq=%d>",max_supported);
+		cht_writel(neigh, FUNC0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (max_supported << 8));
+		reboot = true;
 	}
 
 	printf("done\n");
 
-	if (reboot) {
+	if (!options->fast && reboot) {
 		printf("Rebooting to make new link settings effective...\n");
 		/* Ensure last lines were sent from management controller */
 		fflush(stdout);

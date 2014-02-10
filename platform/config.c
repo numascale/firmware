@@ -175,6 +175,18 @@ void Config::parse_json(json_t *root)
 			errors++;
 		}
 
+		/* Optional MAC address */
+		char mac[18];
+		if (parse_json_str(obj, "mac", mac, sizeof(mac), 1)) {
+			unsigned j = 0;
+
+			char *token = strtok(mac, ":");
+			while (token && j < sizeof(nodes[i].mac)) {
+				nodes[i].mac[j++] = strtoul(token, NULL, 16);
+				token = strtok(NULL, ":");
+			}
+		}
+
 		uint32_t val;
 		if (parse_json_num(obj, "sync-only", &val, 1))
 			nodes[i].sync_only = val;
@@ -241,8 +253,10 @@ Config::Config(const char *filename)
 	int len;
 	const char *data = syslinux->read_file(filename, &len);
 
+#ifdef DEBUG
 	if (options->debug.config)
 		printf("Fabric configuration file:\n%s", data);
+#endif
 
 	json_t *root = NULL;
 	enum json_error err = json_parse_document(&root, data);
@@ -254,11 +268,13 @@ Config::Config(const char *filename)
 	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
 
 	if (options->debug.config) {
-		printf("Fabric dimensions: x %d, y %x, z %d\n", x_size, y_size, z_size);
+		printf("Fabric configuration:: x %d, y %x, z %d\n", x_size, y_size, z_size);
 
 		for (int i = 0; i < nnodes; i++)
-			printf("Node %d: hostname %s, UUID %08X, SCI%03x, partition %d, sync-only %d\n",
-		      i, nodes[i].hostname, nodes[i].uuid, nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
+			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, UUID %08X, SCI%03x, partition %d, sync-only %d\n",
+		      i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
+		      nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5], nodes[i].uuid,
+		      nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
 
 		for (int i = 0; i < npartitions; i++)
 			printf("Partition %d: master SCI%03x, builder SCI%03x\n",
@@ -267,8 +283,10 @@ Config::Config(const char *filename)
 
 	/* Locate UUID or hostname */
 	for (int i = 0; i < nnodes; i++) {
-		if (numachip->uuid == nodes[i].uuid || !strcmp(syslinux->hostname, nodes[i].hostname)) {
-			if (options->debug.config) printf("Matched node %d\n", i);
+		if (numachip->uuid == nodes[i].uuid ||
+		  !memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac)) ||
+		  !strcmp(syslinux->hostname, nodes[i].hostname)) {
+			if (options->debug.config) printf("Matched %d\n", i);
 			node = &nodes[i];
 			break;
 		}

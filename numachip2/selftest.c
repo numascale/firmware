@@ -17,9 +17,13 @@
 
 #include "numachip.h"
 #include "registers.h"
+#include "../bootloader.h"
 
 void Numachip2::selftest(void)
 {
+	if (options->fast)
+		return;
+
 	int errors = 0;
 
 	printf("Selftest SIU-ATT");

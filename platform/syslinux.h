@@ -24,8 +24,9 @@ class Syslinux
 {
 	void get_hostname(void);
 public:
-	struct in_addr myip;
+	struct in_addr ip;
 	const char *hostname;
+	uint8_t mac[6];
 
 	Syslinux(void);
 	char *read_file(const char *filename, int *const len);
