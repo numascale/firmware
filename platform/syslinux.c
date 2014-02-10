@@ -20,8 +20,9 @@
 #include <console.h>
 
 extern "C" {
-	#include <com32.h>
+//	#include <com32.h>
 	#include <syslinux/pxe.h>
+	#include <consoles.h>
 }
 
 #include "syslinux.h"
@@ -68,7 +69,7 @@ void Syslinux::get_hostname(void)
 
 Syslinux::Syslinux(void)
 {
-	openconsole(&dev_rawcon_r, &dev_stdcon_w);
+	console_ansi_std();
 	get_hostname();
 }
 

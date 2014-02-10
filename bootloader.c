@@ -33,6 +33,7 @@ extern "C" {
 #include "platform/acpi.h"
 #include "platform/options.h"
 #include "platform/syslinux.h"
+#include "platform/e820.h"
 #include "platform/config.h"
 #include "numachip2/numachip.h"
 
@@ -42,6 +43,7 @@ Config *config;
 Opteron *opteron;
 Numachip2 *numachip;
 Nodes *nodes;
+E820 *e820;
 
 static void stop_acpi(void)
 {
@@ -145,6 +147,8 @@ int main(const int argc, const char *argv[])
 	if (options->handover_acpi)
 		stop_acpi();
 
+	e820 = new E820();
+
 	if (options->singleton)
 		config = new Config();
 	else
@@ -155,9 +159,8 @@ int main(const int argc, const char *argv[])
 
 	numachip->set_sci(config->node->sci);
 
-	if (!config->node->sync_only) {
+	if (!config->node->sync_only)
 		numachip->start_fabric();
-	}
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)
