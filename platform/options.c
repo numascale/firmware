@@ -131,6 +131,8 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 {
 	static const struct optargs list[] = {
 		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
+		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
+		{"ht.200mhz-only",  &Options::parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"boot-wait",       &Options::parse_bool,   &boot_wait},
 		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
 		{"config",          &Options::parse_string, &config_filename},

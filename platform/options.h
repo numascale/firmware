@@ -28,6 +28,7 @@ class Options {
 public:
 	const char *next_label;
 	const char *config_filename;
+	bool ht_200mhz_only, ht_8bit_only;
 	bool boot_wait;
 	bool handover_acpi;
 	bool reentrant;
