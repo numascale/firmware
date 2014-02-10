@@ -39,6 +39,9 @@ void Opteron::reset(const enum reset mode, const int last)
 		cht_writel(i, FUNC0_HT, HT_INIT_CONTROL, val);
 	}
 
+	/* Ensure console drains */
+	udelay(1500000);
+
 	if (mode == Warm) {
 		outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);
 		outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
@@ -221,12 +224,8 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 	printf("done\n");
 
-	if (!options->fast && reboot) {
+	if (reboot) {
 		printf("Rebooting to make new link settings effective...\n");
-		/* Ensure last lines were sent from management controller */
-		fflush(stdout);
-		fflush(stderr);
-		udelay(2500000);
 		reset(Warm, nc - 1);
 		/* Does not return */
 	}
@@ -286,10 +285,6 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 
 		if (use) {
 			printf("Error: No unrouted coherent links found, issuing COLD reboot\n");
-			/* Ensure last lines were sent from management controller */
-			fflush(stdout);
-			fflush(stderr);
-			udelay(2500000);
 			reset(Cold, nnodes);
 			/* Does not return */
 		}

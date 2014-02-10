@@ -20,6 +20,9 @@
 #include "../library/access.h"
 #include "defs.h"
 
+/* Approximation before probing */
+uint32_t Opteron::tsc_mhz = 2200;
+
 Opteron::Opteron(const sci_t _sci): sci(_sci)
 {
 	/* Enable CF8 extended access */

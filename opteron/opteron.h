@@ -63,7 +63,7 @@ public:
 	ht_t nb_ht_min, nb_ht_max;
 	int family;
 	uint32_t ioh_vendev;
-	uint32_t tsc_mhz;
+	static uint32_t tsc_mhz;
 	MmioMap *mmio_Map;
 	const sci_t sci;
 

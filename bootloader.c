@@ -111,7 +111,7 @@ static void platform_quirks(void)
 
 void udelay(const uint32_t usecs)
 {
-	uint64_t limit = rdtscll() + (uint64_t)usecs * opteron->tsc_mhz;
+	uint64_t limit = rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
 
 	while (rdtscll() < limit)
 		cpu_relax();
@@ -147,8 +147,6 @@ int main(const int argc, const char *argv[])
 	if (options->handover_acpi)
 		stop_acpi();
 
-	e820 = new E820();
-
 	if (options->singleton)
 		config = new Config();
 	else
@@ -156,6 +154,8 @@ int main(const int argc, const char *argv[])
 
 	opteron = new Opteron(config->node->sci); /* Needed before any config access */
 	numachip = new Numachip2();
+
+	e820 = new E820();
 
 	numachip->set_sci(config->node->sci);
 
