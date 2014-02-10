@@ -35,7 +35,8 @@ Numachip2::Numachip2(void)
 
 	selftest();
 
-	fabric_init();
+	if (!config->node->sync_only)
+		fabric_init();
 	dram_init();
 }
 
@@ -64,8 +65,3 @@ void Numachip2::set_sci(const sci_t sci)
 	write32(SIU_NODEID, sci);
 }
 
-void Numachip2::start_fabric(void)
-{
-	for (uint16_t i = 0; i < 6; i++)
-		lcs[i] = new LC5(LC_BASE + i * LC_SIZE);
-}

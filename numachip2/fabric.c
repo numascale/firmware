@@ -31,8 +31,7 @@ void Numachip2::fabric_init(void)
 			continue;
 
 		printf(" %s", ringnames[lc]);
-		while (!(read32(LC_BASE + lc * LC_SIZE + LC_LINKSTAT) & (1 << 31)))
-			cpu_relax();
+		lcs[lc] = new LC5(LC_BASE + lc * LC_SIZE);
 	}
 
 	printf("\n");

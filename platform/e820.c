@@ -27,10 +27,13 @@ extern "C" {
 
 void E820::dump(void)
 {
+	const char *name[] = {"usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
+
 	uint64_t last_base = map->base, last_length = map->length;
 
 	for (int i = 0; i < *used; i++) {
-		printf(" %011llx:%011llx (%011llx) [%x]\n", map[i].base, map[i].base + map[i].length, map[i].length, map[i].type);
+		printf(" %011llx:%011llx (%011llx) %s\n",
+		  map[i].base, map[i].base + map[i].length, map[i].length, name[map[i].type]);
 
 		if (i) {
 			assert(map[i].base >= (last_base + last_length));
@@ -63,9 +66,10 @@ void E820::insert(struct e820entry *pos)
 
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
+#ifdef UNUSED
 	if (options->debug.e820)
 		printf("Adding e820 %011llx:%011llx (%011llx) [%d]\n", base, base + length, length, type);
-
+#endif
 	struct e820entry *end = map + *used;
 	struct e820entry *pos = position(base);
 

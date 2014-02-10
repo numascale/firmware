@@ -35,15 +35,19 @@ void Numachip2::dram_init(void)
 
 	for (int port = 0; port < 3; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
-		  ((spd_eeprom.density_banks + 1) << 3) | (1 << 2) | 1);
+		  ((spd_eeprom.density_banks - 2) << 3) | (1 << 2) | 1);
 
 	const char *mctls[] = {"MTag", "CTag", "NCache"};
 
-	for (int port = 0; port < 3; port++) {
+	/* FIXME: add NCache back in when implemented */
+	for (int port = 0; port < 2; port++) {
 		printf(" %s", mctls[port]);
 
-		while ((read32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL) & 0x42) != 0x42)
+		uint32_t val;
+		do {
 			cpu_relax();
+			val = read32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL);
+		} while ((val & 0x42) != 0x42);
 	}
 
 	printf("\n");

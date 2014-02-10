@@ -58,7 +58,6 @@ public:
 	void write8(const uint16_t reg, const uint8_t val);
 	Numachip2(void);
 	void set_sci(const sci_t sci);
-	void start_fabric(void);
 };
 
 #endif

@@ -26,6 +26,13 @@ uint32_t LC5::link_status(void)
 
 LC5::LC5(uint16_t _addr): addr(_addr)
 {
-	printf("LC5 @ 0x%x has link status %08x\n", addr, link_status());
+	uint64_t count = 0;
+	while (!(numachip->read32(addr + LC_LINKSTAT) & (1 << 31))) {
+		if (count++ % 5000000 == 0) {
+			printf("<status=%x> reset", numachip->read32(addr + LC_LINKSTAT));
+			numachip->write32(HSS_PLLCTL, 1 << 31);
+		}
+		cpu_relax();
+	}
 }
 
