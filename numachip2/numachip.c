@@ -26,12 +26,12 @@
 Numachip2::Numachip2(void)
 {
 	ht = opteron->ht_fabric_fixup(&chip_rev);
-	assertf(ht, "NumaChip-II not found");
+	assertf(ht, "NumaChip2 not found");
 
 	memset(card_type, 0, sizeof(card_type));
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
-	printf("NumaChip-II type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
+	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 
 	selftest();
 
