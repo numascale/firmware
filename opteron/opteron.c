@@ -22,6 +22,9 @@
 
 /* Approximation before probing */
 uint32_t Opteron::tsc_mhz = 2200;
+uint8_t Opteron::smi_state;
+uint32_t Opteron::ioh_vendev;
+int Opteron::family;
 
 Opteron::Opteron(const sci_t _sci): sci(_sci), mmiomap(*this), drammap(*this)
 {

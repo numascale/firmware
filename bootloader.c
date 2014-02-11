@@ -40,10 +40,9 @@ extern "C" {
 Syslinux *syslinux;
 Options *options;
 Config *config;
-Opteron *opteron;
-Numachip2 *numachip;
-Nodes *nodes;
 E820 *e820;
+Node *local_node;
+Node **nodes;
 
 static void stop_acpi(void)
 {
@@ -128,6 +127,15 @@ void wait_key(void)
 	printf("\n");
 }
 
+Node::Node(const sci_t _sci): sci(_sci)
+{
+	uint32_t rev;
+	const ht_t ht = Opteron::ht_fabric_fixup(Numachip2::vendev, &rev);
+	assertf(ht, "NumaChip2 not found");
+
+	numachip = new Numachip2(ht, rev);
+}
+
 int main(const int argc, const char *argv[])
 {
 	syslinux = new Syslinux(); /* Needed first for console access */
@@ -152,13 +160,14 @@ int main(const int argc, const char *argv[])
 	else
 		config = new Config(options->config_filename);
 
-	opteron = new Opteron(config->node->sci); /* Needed before any config access */
-	numachip = new Numachip2();
+	local_node = new Node(config->node->sci);
 
 	e820 = new E820();
 
-	numachip->set_sci(config->node->sci);
-	opteron->mmiomap.add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, numachip->ht, 0);
+	local_node->numachip->set_sci(config->node->sci);
+
+	for (int i = 0; i < local_node->nopterons; i++)
+		local_node->opterons[i]->mmiomap.add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

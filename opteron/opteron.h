@@ -54,9 +54,9 @@ public:
 
 class Opteron {
 	enum reset {Warm, Cold};
-	uint8_t smi_state;
+	static uint8_t smi_state;
 
-	void reset(const enum reset mode, const int last);
+	static void reset(const enum reset mode, const int last);
 protected:
 	static const int F0_HT   = 0;
 	static const int F1_MAPS = 1;
@@ -66,8 +66,8 @@ protected:
 	static const int F5_EXTD = 5;
 public:
 	ht_t nb_ht_min, nb_ht_max;
-	int family;
-	uint32_t ioh_vendev;
+	static int family;
+	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
 	const sci_t sci;
 	MmioMap mmiomap;
@@ -77,14 +77,14 @@ public:
 
 	Opteron(const sci_t _sci);
 	~Opteron(void);
-	void disable_smi(void);
-	void enable_smi(void);
-	void critical_enter(void);
-	void critical_leave(void);
-	void cht_print(int neigh, int link);
-	uint32_t get_phy_register(int node, int link, int idx, int direct);
-	void ht_optimize_link(int nc, int neigh, int link);
-	int ht_fabric_fixup(uint32_t *p_chip_rev);
+	static void disable_smi(void);
+	static void enable_smi(void);
+	static void critical_enter(void);
+	static void critical_leave(void);
+	static void cht_print(int neigh, int link);
+	static uint32_t get_phy_register(int node, int link, int idx, int direct);
+	static void ht_optimize_link(int nc, int neigh, int link);
+	static ht_t ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev);
 };
 
 #endif

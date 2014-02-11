@@ -19,12 +19,13 @@
 #define __NUMACHIP_H
 
 #include "spd.h"
-#include "lc5.h"
 #include "../library/base.h"
+
+class LC5;
 
 class Numachip2 {
 	char card_type[16];
-	uint32_t chip_rev;
+	const uint32_t rev;
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
 
@@ -51,15 +52,16 @@ class Numachip2 {
 public:
 	static const uint64_t MCFG_BASE = 0x3f0000000000;
 	static const uint64_t MCFG_LIM  = 0x3ffeffffffff;
+	static const uint32_t vendev = 0x07001b47;
 
-	int ht;
+	const ht_t ht;
 	uint32_t uuid;
 
 	uint32_t read32(const uint16_t reg);
 	void write32(const uint16_t reg, const uint32_t val);
 	uint8_t read8(const uint16_t reg);
 	void write8(const uint16_t reg, const uint8_t val);
-	Numachip2(void);
+	Numachip2(const ht_t _ht, const uint32_t _rev);
 	void set_sci(const sci_t sci);
 };
 

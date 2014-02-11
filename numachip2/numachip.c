@@ -23,12 +23,8 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-Numachip2::Numachip2(void)
+Numachip2::Numachip2(const ht_t _ht, const uint32_t _rev): rev(_rev), ht(_ht)
 {
-	ht = opteron->ht_fabric_fixup(&chip_rev);
-	assertf(ht, "NumaChip2 not found");
-
-	memset(card_type, 0, sizeof(card_type));
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);

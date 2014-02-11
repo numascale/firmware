@@ -18,7 +18,6 @@
 #ifndef __DEFS_H
 #define __DEFS_H
 
-#define VENDEV_NC2      0x07001b47
 #define VENDEV_SR5690	0x5a101002
 #define VENDEV_SR5670	0x5a121002
 #define VENDEV_SR5650	0x5a131002

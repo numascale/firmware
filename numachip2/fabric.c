@@ -17,6 +17,7 @@
 
 #include "numachip.h"
 #include "registers.h"
+#include "lc5.h"
 #include "../platform/config.h"
 #include "../bootloader.h"
 
@@ -31,7 +32,7 @@ void Numachip2::fabric_init(void)
 			continue;
 
 		printf(" %s", ringnames[lc]);
-		lcs[lc] = new LC5(LC_BASE + lc * LC_SIZE);
+		lcs[lc] = new LC5(*this, LC_BASE + lc * LC_SIZE);
 	}
 
 	printf("\n");

@@ -19,13 +19,15 @@
 #define __LC5_H
 
 #include "../library/base.h"
+#include "numachip.h"
 
 class LC5 {
+	Numachip2& numachip;
 	uint16_t addr;
 
 	uint32_t link_status(void);
 public:
-	LC5(uint16_t _addr);
+	LC5(Numachip2& _numachip, uint16_t _addr);
 };
 
 #endif

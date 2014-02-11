@@ -233,17 +233,15 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
-int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
+ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 {
-	int nc = -1;
-	uint32_t val;
-
-	val = lib::cht_read32(0, F0_HT, 0x60);
-	int nnodes = (val >> 4) & 7;
+	ht_t nc;
+	uint32_t val = lib::cht_read32(0, F0_HT, 0x60);
+	ht_t nnodes = (val >> 4) & 7;
 
 	/* Check the last cHT node for our VID/DID incase it's already been included in the cHT fabric */
 	val = lib::cht_read32(nnodes, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
-	if (val == VENDEV_NC2) {
+	if (val == vendev) {
 		nc = nnodes;
 		*p_chip_rev = lib::cht_read32(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
 		printf("NumaChip2 rev %d already at HT%d\n", *p_chip_rev, nc);
@@ -312,15 +310,7 @@ int Opteron::ht_fabric_fixup(uint32_t *p_chip_rev)
 		}
 
 		val = lib::cht_read32(nc, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
-		if (val != VENDEV_NC2) {
-			printf("Error: Unrouted coherent device %08x is not NumaChip2\n", val);
-			for (i = 0; i <= nnodes; i++) {
-				/* Reassert LimitCldtCfg */
-				val = lib::cht_read32(i, F0_HT, 0x68);
-				lib::cht_write32(i, F0_HT, 0x68, val | (1 << 15));
-			}
-			return -1;
-		}
+		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 
 		*p_chip_rev = lib::cht_read32(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
 		printf("NumaChip2 rev %d found at HT%d.%d\n", *p_chip_rev, neigh, link);

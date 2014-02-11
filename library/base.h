@@ -85,7 +85,8 @@
 #define REL32(sym) ((uint32_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
 #define REL64(sym) ((uint64_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
 
-typedef uint8_t ht_t;
+typedef enum {_la,_lb,_lc,_ld} link_t;
+typedef enum {_ha,_hb,_hc,_hd,_he,_hf,_hg,_hh} ht_t;
 typedef uint16_t sci_t;
 
 inline void *operator new(const size_t size)

@@ -233,7 +233,7 @@ Config::Config(void)
 	nodes = (struct node *)malloc(sizeof(*nodes));
 	assert(nodes);
 
-	nodes->uuid = numachip->uuid;
+	nodes->uuid = local_node->numachip->uuid;
 	nodes->sci = 0;
 	nodes->partition = 0;
 	strcpy(nodes->hostname, "self");
@@ -283,7 +283,7 @@ Config::Config(const char *filename)
 
 	/* Locate UUID or hostname */
 	for (int i = 0; i < nnodes; i++) {
-		if (numachip->uuid == nodes[i].uuid ||
+		if (local_node->numachip->uuid == nodes[i].uuid ||
 		  !memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac)) ||
 		  !strcmp(syslinux->hostname, nodes[i].hostname)) {
 			if (options->debug.config) printf("Matched %d\n", i);
@@ -292,7 +292,7 @@ Config::Config(const char *filename)
 		}
 	}
 
-	assertf(node, "Failed to find entry matching this node with UUID %08X or hostname %s", numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
+	assertf(node, "Failed to find entry matching this node with UUID %08X or hostname %s", local_node->numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
 	partition = &partitions[node->partition];
 }
 
