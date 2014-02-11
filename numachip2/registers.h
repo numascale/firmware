@@ -18,9 +18,6 @@
 #ifndef __REGISTERS_H
 #define __REGISTERS_H
 
-#define MCFG_BASE 0x3f0000000000ULL
-#define MCFG_LIM  0x3ffeffffffffULL
-
 #define SIU_ATT_RANGE 2 /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
 #define SIU_ATT_SHIFT (24 + SIU_ATT_RANGE * 4)
 

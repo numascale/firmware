@@ -158,6 +158,7 @@ int main(const int argc, const char *argv[])
 	e820 = new E820();
 
 	numachip->set_sci(config->node->sci);
+	opteron->mmiomap.add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, numachip->ht, 0);
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

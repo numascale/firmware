@@ -24,7 +24,6 @@
 
 class Numachip2 {
 	char card_type[16];
-	int ht;
 	uint32_t chip_rev;
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
@@ -50,6 +49,10 @@ class Numachip2 {
 	/* fabric.h */
 	void fabric_init(void);
 public:
+	static const uint64_t MCFG_BASE = 0x3f0000000000;
+	static const uint64_t MCFG_LIM  = 0x3ffeffffffff;
+
+	int ht;
 	uint32_t uuid;
 
 	uint32_t read32(const uint16_t reg);

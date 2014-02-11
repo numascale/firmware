@@ -20,13 +20,6 @@
 
 #include "../library/base.h"
 
-#define FUNC0_HT    0
-#define FUNC1_MAPS  1
-#define FUNC2_DRAM  2
-#define FUNC3_MISC  3
-#define FUNC4_LINK  4
-#define FUNC5_EXTD  5
-
 struct reg {
 	uint16_t base, limit, high;
 };
@@ -34,25 +27,25 @@ struct reg {
 class Opteron;
 
 class MmioMap {
-	const Opteron &opteron;
+	Opteron &opteron;
 	const int ranges;
 
 	struct reg setup(const int range);
 	int unused(void);
 public:
-	MmioMap(const Opteron &_opteron);
+	MmioMap(Opteron &_opteron);
 	void remove(const ht_t range);
 	bool read(const int range, uint64_t *base, uint64_t *limit, int *dest, int *link, bool *lock);
 	void add(const uint64_t base, const uint64_t limit, const ht_t dest, const int link);
 };
 
 class DramMap {
-	const Opteron &opteron;
+	Opteron &opteron;
 	const int ranges;
 
 	int unused(void);
 public:
-	DramMap(const Opteron &_opteron);
+	DramMap(Opteron &_opteron);
 	void remove(const int range);
 	bool read(const int range, uint64_t *base, uint64_t *limit, int *dest);
 	void print(const int range);
@@ -64,12 +57,23 @@ class Opteron {
 	uint8_t smi_state;
 
 	void reset(const enum reset mode, const int last);
+protected:
+	static const int F0_HT   = 0;
+	static const int F1_MAPS = 1;
+	static const int F2_DRAM = 2;
+	static const int F3_MISC = 3;
+	static const int F4_LINK = 4;
+	static const int F5_EXTD = 5;
 public:
 	ht_t nb_ht_min, nb_ht_max;
 	int family;
 	uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
 	const sci_t sci;
+	MmioMap mmiomap;
+	DramMap drammap;
+	friend class MmioMap;
+	friend class DramMap;
 
 	Opteron(const sci_t _sci);
 	~Opteron(void);

@@ -24,13 +24,6 @@
 #define VENDEV_SR5650	0x5a131002
 #define VENDEV_MCP55	0x036910de
 
-#define FUNC0_HT    0
-#define FUNC1_MAPS  1
-#define FUNC2_DRAM  2
-#define FUNC3_MISC  3
-#define FUNC4_LINK  4
-#define FUNC5_EXTD  5
-
 #define MSR_APIC_BAR    0x0000001b
 #define MSR_FS_BASE     0xc0000100
 #define MSR_SYSCFG      0xc0010010

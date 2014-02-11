@@ -23,7 +23,7 @@
 /* Approximation before probing */
 uint32_t Opteron::tsc_mhz = 2200;
 
-Opteron::Opteron(const sci_t _sci): sci(_sci)
+Opteron::Opteron(const sci_t _sci): sci(_sci), mmiomap(*this), drammap(*this)
 {
 	/* Enable CF8 extended access */
 	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
@@ -34,13 +34,13 @@ Opteron::Opteron(const sci_t _sci): sci(_sci)
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
 	/* Detect processor family */
-	uint32_t val = lib::cht_read32(0, FUNC3_MISC, 0xfc);
+	uint32_t val = lib::cht_read32(0, F3_MISC, 0xfc);
 	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 	if (family >= 0x15) {
-		val = lib::cht_read32(0, FUNC5_EXTD, 0x160);
+		val = lib::cht_read32(0, F5_EXTD, 0x160);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
-		val = lib::cht_read32(0, FUNC3_MISC, 0xd4);
+		val = lib::cht_read32(0, F3_MISC, 0xd4);
 		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
