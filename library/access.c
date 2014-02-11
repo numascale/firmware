@@ -41,119 +41,120 @@
                      : "A"(canonicalize(addr)), "c"(MSR_FS_BASE));      \
     } while(0)
 
-int lirq_nest = 0;
-
 /* #define DEBUG(...) printf(__VA_ARGS__) */
 #define DEBUG(...) do { } while (0)
 
-uint8_t rtc_read(const int addr)
+namespace lib
 {
-	outb(addr, 0x70);
-	uint8_t val = inb(0x71);
+	uint8_t rtc_read(const int addr)
+	{
+		outb(addr, 0x70);
+		uint8_t val = inb(0x71);
 
-	/* Convert from BCD if needed */
-	outb(RTC_SETTINGS, 0x70);
-	uint8_t settings = inb(0x71);
-	if (!(settings & 4))
-		return (val & 0xf) + (val / 16) * 10;
+		/* Convert from BCD if needed */
+		outb(RTC_SETTINGS, 0x70);
+		uint8_t settings = inb(0x71);
+		if (!(settings & 4))
+			return (val & 0xf) + (val / 16) * 10;
 
-	return val;
-}
+		return val;
+	}
 
-uint8_t pmio_readb(const uint16_t offset)
-{
-	outb(offset, PMIO_PORT /* PMIO index */);
-	return inb(PMIO_PORT + 1 /* PMIO data */);
-}
+	uint8_t pmio_read8(const uint16_t offset)
+	{
+		outb(offset, PMIO_PORT /* PMIO index */);
+		return inb(PMIO_PORT + 1 /* PMIO data */);
+	}
 
-void pmio_writeb(const uint16_t offset, const uint8_t val)
-{
-	/* Write offset and value in single 16-bit write */
-	outw(offset | val << 8, PMIO_PORT);
-}
+	void pmio_write8(const uint16_t offset, const uint8_t val)
+	{
+		/* Write offset and value in single 16-bit write */
+		outw(offset | val << 8, PMIO_PORT);
+	}
 
-uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
-{
-	uint32_t ret;
-	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
-	cli();
-	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	ret = inl(PCI_CONF_DATA + (reg & 3));
-	sti();
-	DEBUG("%08x\n", ret);
-	return ret;
-}
+	uint32_t extpci_read32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	{
+		uint32_t ret;
+		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		cli();
+		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+		ret = inl(PCI_CONF_DATA + (reg & 3));
+		sti();
+		DEBUG("%08x\n", ret);
+		return ret;
+	}
 
-uint32_t extpci_readl(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
-{
-	uint32_t ret;
-	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
-	cli();
-	setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-	asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
-	sti();
-	DEBUG("%08x\n", ret);
-	return ret;
-}
+	uint32_t extpci_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	{
+		uint32_t ret;
+		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		cli();
+		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
+		sti();
+		DEBUG("%08x\n", ret);
+		return ret;
+	}
 
-uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
-{
-	uint8_t ret;
-	DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
-	cli();
-	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	ret = inb(PCI_CONF_DATA + (reg & 3));
-	sti();
-	DEBUG("%02x\n", ret);
-	return ret;
-}
+	uint8_t extpci_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	{
+		uint8_t ret;
+		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		cli();
+		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+		ret = inb(PCI_CONF_DATA + (reg & 3));
+		sti();
+		DEBUG("%02x\n", ret);
+		return ret;
+	}
 
-void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
-{
-	DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
-	cli();
-	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	outl(val, PCI_CONF_DATA + (reg & 3));
-	sti();
-	DEBUG("\n");
-}
+	void extpci_write32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	{
+		DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+		cli();
+		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+		outl(val, PCI_CONF_DATA + (reg & 3));
+		sti();
+		DEBUG("\n");
+	}
 
-void extpci_writel(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
-{
-	DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
-	cli();
-	setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-	asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
-	sti();
-	DEBUG("\n");
-}
+	void extpci_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	{
+		DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+		cli();
+		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
+		sti();
+		DEBUG("\n");
+	}
 
-void extpci_writeb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
-{
-	DEBUG("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
-	cli();
-	outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-	outb(val, PCI_CONF_DATA + (reg & 3));
-	sti();
-	DEBUG("\n");
-}
+	void extpci_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
+	{
+		DEBUG("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
+		cli();
+		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
+		outb(val, PCI_CONF_DATA + (reg & 3));
+		sti();
+		DEBUG("\n");
+	}
 
-uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg)
-{
-	return extpci_readl(0, 24 + node, func, reg);
-}
+	uint32_t cht_read32(uint8_t node, uint8_t func, uint16_t reg)
+	{
+		return extpci_read32(0, 24 + node, func, reg);
+	}
 
-uint8_t cht_readb(uint8_t node, uint8_t func, uint16_t reg)
-{
-	return extpci_readb(0, 24 + node, func, reg);
-}
+	uint8_t cht_read8(uint8_t node, uint8_t func, uint16_t reg)
+	{
+		return extpci_read8(0, 24 + node, func, reg);
+	}
 
-void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
-{
-	extpci_writel(0, 24 + node, func, reg, val);
-}
+	void cht_write32(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
+	{
+		extpci_write32(0, 24 + node, func, reg, val);
+	}
 
-void cht_writeb(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
-{
-	extpci_writeb(0, 24 + node, func, reg, val);
+	void cht_write8(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
+	{
+		extpci_write8(0, 24 + node, func, reg, val);
+	}
 }

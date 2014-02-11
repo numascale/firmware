@@ -23,9 +23,8 @@
 
 #include "base.h"
 
-extern int lirq_nest;
-#define cli() if (lirq_nest++ == 0) { asm volatile("cli"); }
-#define sti() if (--lirq_nest == 0) { asm volatile("sti"); }
+#define cli() { asm volatile("cli"); }
+#define sti() { asm volatile("sti"); }
 
 #define cpu_relax() asm volatile("pause" ::: "memory")
 
@@ -53,53 +52,55 @@ extern int lirq_nest;
 #define RTC_YEAR        9
 #define RTC_SETTINGS    11
 
-static inline uint64_t rdtscll(void)
+namespace lib
 {
-	uint64_t val;
-	/* rdtscp doesn't work on Fam10h, so use mfence to serialise */
-	asm volatile("mfence; rdtsc" : "=A"(val));
-	return val;
+	static inline uint64_t rdtscll(void)
+	{
+		uint64_t val;
+		/* rdtscp doesn't work on Fam10h, so use mfence to serialise */
+		asm volatile("mfence; rdtsc" : "=A"(val));
+		return val;
+	}
+
+	static inline uint32_t uint32_tbswap(uint32_t val)
+	{
+		asm volatile("bswap %0" : "+r"(val));
+		return val;
+	}
+
+	static inline uint64_t rdmsr(uint32_t msr)
+	{
+		union {
+			uint32_t dw[2];
+			uint64_t qw;
+		} val;
+		asm volatile("rdmsr" : "=d"(val.dw[1]), "=a"(val.dw[0]) : "c"(msr));
+		return val.qw;
+	}
+
+
+	static inline void wrmsr(uint32_t msr, uint64_t v)
+	{
+		union {
+			uint32_t dw[2];
+			uint64_t qw;
+		} val;
+		val.qw = v;
+		asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
+	}
+
+	checked uint8_t rtc_read(const int addr);
+	uint8_t pmio_read8(const uint16_t offset);
+	void pmio_write8(const uint16_t offset, const uint8_t val);
+	uint32_t extpci_read32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+	uint32_t extpci_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+	uint8_t extpci_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+	void extpci_write32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+	void extpci_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+	void extpci_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
+	uint32_t cht_read32(uint8_t node, uint8_t func, uint16_t reg);
+	uint8_t cht_read8(uint8_t node, uint8_t func, uint16_t reg);
+	void cht_write32(uint8_t node, uint8_t func, uint16_t reg, uint32_t val);
+	void cht_write8(uint8_t node, uint8_t func, uint16_t reg, uint8_t val);
 }
-
-static inline uint32_t uint32_tbswap(uint32_t val)
-{
-	asm volatile("bswap %0" : "+r"(val));
-	return val;
-}
-
-static inline uint64_t rdmsr(uint32_t msr)
-{
-	union {
-		uint32_t dw[2];
-		uint64_t qw;
-	} val;
-	asm volatile("rdmsr" : "=d"(val.dw[1]), "=a"(val.dw[0]) : "c"(msr));
-	return val.qw;
-}
-
-
-static inline void wrmsr(uint32_t msr, uint64_t v)
-{
-	union {
-		uint32_t dw[2];
-		uint64_t qw;
-	} val;
-	val.qw = v;
-	asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
-}
-
-checked uint8_t rtc_read(const int addr);
-uint8_t pmio_readb(const uint16_t offset);
-void pmio_writeb(const uint16_t offset, const uint8_t val);
-uint32_t extpci_readl(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-uint32_t extpci_readl(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-uint8_t extpci_readb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-void extpci_writel(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
-void extpci_writel(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
-void extpci_writeb(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
-uint32_t cht_readl(uint8_t node, uint8_t func, uint16_t reg);
-uint8_t cht_readb(uint8_t node, uint8_t func, uint16_t reg);
-void cht_writel(uint8_t node, uint8_t func, uint16_t reg, uint32_t val);
-void cht_writeb(uint8_t node, uint8_t func, uint16_t reg, uint8_t val);
-
 #endif

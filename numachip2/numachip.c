@@ -42,22 +42,22 @@ Numachip2::Numachip2(void)
 
 uint32_t Numachip2::read32(const uint16_t reg)
 {
-	return cht_readl(ht, reg >> 12, reg & 0xfff);
+	return lib::cht_read32(ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const uint16_t reg, const uint32_t val)
 {
-	cht_writel(ht, reg >> 12, reg & 0xfff, val);
+	lib::cht_write32(ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const uint16_t reg)
 {
-	return cht_readl(ht, reg >> 12, reg & 0xfff);
+	return lib::cht_read32(ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const uint16_t reg, const uint8_t val)
 {
-	cht_writeb(ht, reg >> 12, reg & 0xfff, val);
+	lib::cht_write8(ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Numachip2::set_sci(const sci_t sci)

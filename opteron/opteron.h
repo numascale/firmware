@@ -20,7 +20,12 @@
 
 #include "../library/base.h"
 
-#define FUNC1_MAPS 1
+#define FUNC0_HT    0
+#define FUNC1_MAPS  1
+#define FUNC2_DRAM  2
+#define FUNC3_MISC  3
+#define FUNC4_LINK  4
+#define FUNC5_EXTD  5
 
 struct reg {
 	uint16_t base, limit, high;
@@ -64,7 +69,6 @@ public:
 	int family;
 	uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
-	MmioMap *mmio_Map;
 	const sci_t sci;
 
 	Opteron(const sci_t _sci);

@@ -26,35 +26,35 @@ uint32_t Opteron::tsc_mhz = 2200;
 Opteron::Opteron(const sci_t _sci): sci(_sci)
 {
 	/* Enable CF8 extended access */
-	uint64_t msr = rdmsr(MSR_NB_CFG);
-	wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
+	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
+	lib::wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
 
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
-	msr = rdmsr(MSR_HWCR);
-	wrmsr(MSR_HWCR, msr | (1ULL << 17));
+	msr = lib::rdmsr(MSR_HWCR);
+	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
 	/* Detect processor family */
-	uint32_t val = cht_readl(0, FUNC3_MISC, 0xfc);
+	uint32_t val = lib::cht_read32(0, FUNC3_MISC, 0xfc);
 	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 	if (family >= 0x15) {
-		val = cht_readl(0, FUNC5_EXTD, 0x160);
+		val = lib::cht_read32(0, FUNC5_EXTD, 0x160);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
-		val = cht_readl(0, FUNC3_MISC, 0xd4);
-		uint64_t val6 = rdmsr(MSR_COFVID_STAT);
+		val = lib::cht_read32(0, FUNC3_MISC, 0xd4);
+		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
 
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
 	/* Detect IOH */
-	ioh_vendev = extpci_readl(0, 0, 0, 0);
+	ioh_vendev = lib::extpci_read32(0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
 }
 
 Opteron::~Opteron(void)
 {
 	/* Restore 32-bit only access */
-	uint64_t val = rdmsr(MSR_HWCR);
-	wrmsr(MSR_HWCR, val & ~(1ULL << 17));
+	uint64_t val = lib::rdmsr(MSR_HWCR);
+	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 }

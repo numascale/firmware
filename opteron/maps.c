@@ -55,9 +55,9 @@ void MmioMap::remove(const ht_t range)
 	struct reg reg = setup(range);
 
 	for (ht_t ht = opteron.nb_ht_min; ht < opteron.nb_ht_max; ht++) {
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base, 0);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.limit, 0);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.limit, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high, 0);
 	}
 }
 
@@ -66,9 +66,9 @@ bool MmioMap::read(int range, uint64_t *base, uint64_t *limit, int *dest, int *l
 	struct reg reg = setup(range);
 
 	/* Skip disabled ranges */
-	uint32_t a = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.base);
-	uint32_t b = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.limit);
-	uint32_t c = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.high);
+	uint32_t a = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.base);
+	uint32_t b = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.limit);
+	uint32_t c = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, reg.high);
 
 	*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
 	*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
@@ -109,7 +109,7 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const uint8_t dest,
 	assert(range < ranges);
 
 	for (ht_t ht = opteron.nb_ht_min; ht < opteron.nb_ht_max; ht++) {
-		uint32_t val = extpci_readl(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base);
+		uint32_t val = lib::extpci_read32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base);
 		if (val & 3) {
 			uint64_t base2, limit2;
 			int dest2, link2;
@@ -124,8 +124,8 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const uint8_t dest,
 
 		/* Check if locked */
 		if ((val & 8) && ((val2 != (val & ~8))
-		  || (val3 != extpci_readl(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base))
-		  || (val4 != extpci_readl(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high)))) {
+		  || (val3 != lib::extpci_read32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base))
+		  || (val4 != lib::extpci_read32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high)))) {
 			uint64_t old_base, old_limit;
 			int old_dest, old_link;
 			bool old_lock;
@@ -136,9 +136,9 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const uint8_t dest,
 			return;
 		}
 
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high, val4);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.limit, val3);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base, val2);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.high, val4);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.limit, val3);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, reg.base, val2);
 	}
 }
 
@@ -153,10 +153,10 @@ void DramMap::remove(const int range)
 		printf("Deleting DRAM range %d on SCI%03x\n", range, opteron.sci);
 
 	for (ht_t ht = opteron.nb_ht_min; ht < opteron.nb_ht_max; ht++) {
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x144 + range * 8, 0);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x44 + range * 8, 0);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x140 + range * 8, 0);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x40 + range * 8, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x144 + range * 8, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x44 + range * 8, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x140 + range * 8, 0);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x40 + range * 8, 0);
 	}
 }
 
@@ -164,10 +164,10 @@ bool DramMap::read(const int range, uint64_t *base, uint64_t *limit, int *dest)
 {
 	assert(range < ranges);
 
-	uint32_t base_l = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x40 + range * 8);
-	uint32_t limit_l = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x44 + range * 8);
-	uint32_t base_h = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x140 + range * 8);
-	uint32_t limit_h = extpci_readl(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x144 + range * 8);
+	uint32_t base_l = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x40 + range * 8);
+	uint32_t limit_l = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x44 + range * 8);
+	uint32_t base_h = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x140 + range * 8);
+	uint32_t limit_h = lib::extpci_read32(opteron.sci, 0, 24 + opteron.nb_ht_min, FUNC1_MAPS, 0x144 + range * 8);
 
 	*base = ((uint64_t)(base_l & ~0xffff) << (24 - 16)) | ((uint64_t)(base_h & 0xff) << 40);
 	*limit = ((uint64_t)(limit_l & ~0xffff) << (24 - 16)) | ((uint64_t)(limit_h & 0xff) << 40);
@@ -216,9 +216,9 @@ void DramMap::add(const int range, const uint64_t base, const uint64_t limit, co
 	assert((limit & 0xffffff) == 0xffffff);
 
 	for (ht_t ht = opteron.nb_ht_min; ht < opteron.nb_ht_max; ht++) {
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x144 + range * 8, limit >> 40);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x44 + range * 8, ((limit >> 8) & ~0xffff) | dest);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x140 + range * 8, base >> 40);
-		extpci_writel(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x40 + range * 8, (base >> 8) | 3);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x144 + range * 8, limit >> 40);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x44 + range * 8, ((limit >> 8) & ~0xffff) | dest);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x140 + range * 8, base >> 40);
+		lib::extpci_write32(opteron.sci, 0, 24 + ht, FUNC1_MAPS, 0x40 + range * 8, (base >> 8) | 3);
 	}
 }

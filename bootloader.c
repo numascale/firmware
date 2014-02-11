@@ -111,9 +111,9 @@ static void platform_quirks(void)
 
 void udelay(const uint32_t usecs)
 {
-	uint64_t limit = rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
+	uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
 
-	while (rdtscll() < limit)
+	while (lib::rdtscll() < limit)
 		cpu_relax();
 }
 
@@ -133,8 +133,8 @@ int main(const int argc, const char *argv[])
 	syslinux = new Syslinux(); /* Needed first for console access */
 
 	printf(CLEAR BANNER "NumaConnect unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
-	  rtc_read(RTC_YEAR), rtc_read(RTC_MONTH), rtc_read(RTC_DAY),
-	  rtc_read(RTC_HOURS), rtc_read(RTC_MINUTES), rtc_read(RTC_SECONDS));
+	  lib::rtc_read(RTC_YEAR), lib::rtc_read(RTC_MONTH), lib::rtc_read(RTC_DAY),
+	  lib::rtc_read(RTC_HOURS), lib::rtc_read(RTC_MINUTES), lib::rtc_read(RTC_SECONDS));
 
 	printf("Host MAC %02x:%02x:%02x:%02x:%02x:%02x, IP %s, hostname %s\n",
 		syslinux->mac[0], syslinux->mac[1], syslinux->mac[2],
