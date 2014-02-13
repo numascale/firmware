@@ -26,7 +26,7 @@ MmioMap::MmioMap(Opteron &_opteron): opteron(_opteron)
 	if (Opteron::family >= 0x15)
 		ranges = 12;
 	else
-		ranges = 8;
+		ranges = 8 + 16;
 }
 
 /* Setup register offsets */
@@ -58,19 +58,82 @@ void MmioMap::remove(const int range)
 
 	struct reg reg = setup(range);
 
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.base, 0);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.limit, 0);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.high, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.base, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.limit, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.high, 0);
 }
 
-bool MmioMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
+bool MmioMap::read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
 {
-	struct reg reg = setup(range);
+	if (Opteron::family >= 0x15) {
+		assert(range < 12);
 
+		int loff = 0, hoff = 0;
+		if (range > 7) {
+			loff = 0xe0;
+			hoff = 0x20;
+		}
+
+		/* Skip disabled ranges */
+		uint32_t a = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x80 + loff + range * 8);
+		uint32_t b = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x84 + loff + range * 8);
+		uint32_t c = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x180 + hoff + range * 4);
+
+		*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
+		*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
+		*dest = b & 7;
+		*link = (b >> 4) & 3;
+
+		/* Ensure read and write bits are consistent */
+		assert(!(a & 1) == !(a & 2));
+		*lock = a & 8;
+		return a & 3;
+	}
+
+	/* Family 10h */
+	if (range < 8) {
+		/* Skip disabled ranges */
+		uint32_t a = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x80 + range * 8);
+		uint32_t b = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x84 + range * 8);
+
+		*base = (uint64_t)(a & ~0xff) << 8;
+		*limit = ((uint64_t)(b & ~0xff) << 8) | 0xffff;
+		*dest = b & 7;
+		*link = (b >> 4) & 3;
+		*lock = a & 8;
+		return a & 3;
+	}
+
+	assert(range < 12);
+	range -= 8;
+
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x110, (2 << 28) | range);
+	uint32_t a = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x114);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x110, (3 << 28) | range);
+	uint32_t b = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x114);
+
+	/* 128MB granularity is setup earlier */
+	*base = (a & ~0xe00000ff) << (27 - 8);
+	*limit = (~((b >> 8) & 0x1fffff)) << 20;
+	*lock = 0;
+	if (a & (1 << 6)) {
+		*dest = 0;
+		*link = a & 3;
+		/* Assert sublink is zero as we ignore it */
+		assert((a & 4) == 0);
+	} else {
+		*dest = a & 7;
+		*link = 0;
+	}
+
+	return b & 1;
+
+#ifdef NEWWORLD
+	struct reg reg = setup(range);
 	/* Skip disabled ranges */
-	uint32_t a = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.base);
-	uint32_t b = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.limit);
-	uint32_t c = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.high);
+	uint32_t a = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.base);
+	uint32_t b = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.limit);
+	uint32_t c = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.high);
 
 	*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
 	*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
@@ -81,6 +144,7 @@ bool MmioMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest,
 	assert(!(a & 1) == !(a & 2));
 	*lock = a & 8;
 	return a & 3;
+#endif
 }
 
 void MmioMap::print(const int range)
@@ -114,9 +178,117 @@ int MmioMap::unused(void)
 	fatal("No free MMIO ranges");
 }
 
-void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
+void MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
 {
-	const int range = unused();
+	const bool ovw = 1;
+
+	if (options->debug.maps)
+		printf("Adding MMIO range %d on SCI%03x#%x: 0x%08llx:0x%08llx to %d.%d\n",
+			range, opteron.sci, opteron.ht, base, limit, dest, link);
+
+	assert(limit > base);
+	assert((base & 0xffff) == 0);
+	assert((limit & 0xffff) == 0xffff);
+
+	if (Opteron::family >= 0x15) {
+		assert(range < 12);
+
+		int loff = 0, hoff = 0;
+		if (range > 7) {
+			loff = 0xe0;
+			hoff = 0x20;
+		}
+
+		uint32_t val = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + loff + range * 8);
+		if ((val & 3) && !ovw) {
+			uint64_t base2, limit2;
+			ht_t dest2;
+			link_t link2;
+			bool lock2;
+			read(range, &base2, &limit2, &dest2, &link2, &lock2);
+			fatal("Overwriting SCI%03x#%d MMIO range %d on 0x%08llx:0x%08llx to %d.%d%s", opteron.sci, opteron.ht, range, base2, limit2, dest2, link2, lock2 ? " locked" : "");
+		}
+
+		uint32_t val2 = ((base >> 16) << 8) | 3;
+		uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
+		uint32_t val4 = ((limit >> 40) << 16) | (base >> 40);
+
+		/* Check if locked */
+		if ((val & 8) && ((val2 != (val & ~8))
+		  || (val3 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + range * 8))
+		  || (val4 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x180 + hoff + range * 4)))) {
+			uint64_t old_base, old_limit;
+			ht_t old_dest;
+			link_t old_link;
+			bool old_lock;
+
+			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
+			warning("Unable to overwrite locked MMIO range %d on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
+			return;
+		}
+
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x180 + hoff + range * 4, val4);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + loff + range * 8, val3);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + loff + range * 8, val2);
+		return;
+	}
+
+	/* Family 10h */
+	if (range < 8) {
+		assert(limit < (1ULL << 40));
+		uint32_t val = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + range * 8);
+		if ((val & 3) && !ovw) {
+			uint64_t base2, limit2;
+			ht_t dest2;
+			link_t link2;
+			bool lock2;
+			read(range, &base2, &limit2, &dest2, &link2, &lock2);
+			fatal("Overwriting SCI%03x#%d MMIO range %d on 0x%08llx:0x%08llx to %d.%d%s", opteron.sci, opteron.ht, range, base2, limit2, dest2, link2, lock2 ? " locked" : "");
+		}
+
+		uint32_t val2 = ((base >> 16) << 8) | 3;
+		uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
+
+		/* Check if locked */
+		if ((val & 8) && ((val2 != (val & ~8))
+		  || (val3 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + range * 8)))) {
+			uint64_t old_base, old_limit;
+			ht_t old_dest;
+			link_t old_link;
+			bool old_lock;
+
+			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
+			warning("Unable to overwrite locked MMIO range %d on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
+			return;
+		}
+
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + range * 8, val3);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + range * 8, val2);
+		return;
+	}
+
+	assert(range < 24);
+	assert((base & 0xffffffff) == 0);
+	assert((limit & 0xffffffff) == 0xffffffff);
+	range -= 8;
+
+	/* Reading an uninitialised extended MMIO ranges results in MCE, so can't assert */
+
+	uint64_t mask = 0;
+	base  >>= 27;
+	limit >>= 27;
+
+	while ((base | mask) != (limit | mask))
+		mask = (mask << 1) | 1;
+
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x110, (2 << 28) | range);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x114, (base << 8) | dest);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x110, (3 << 28) | range);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x114, (mask << 8) | 1);
+
+#ifdef NEWWORLD
 	struct reg reg = setup(range);
 
 	if (options->debug.maps)
@@ -128,7 +300,7 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, co
 	assert((limit & 0xffff) == 0xffff);
 	assert(range < ranges);
 
-	uint32_t val = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.base);
+	uint32_t val = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.base);
 	if (val & 3) {
 		uint64_t base2, limit2;
 		ht_t dest2;
@@ -144,8 +316,8 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, co
 
 	/* Check if locked */
 	if ((val & 8) && ((val2 != (val & ~8))
-	  || (val3 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.base))
-	  || (val4 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.high)))) {
+	  || (val3 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.base))
+	  || (val4 != lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.high)))) {
 		uint64_t old_base, old_limit;
 		ht_t old_dest;
 		link_t old_link;
@@ -157,35 +329,77 @@ void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, co
 		return;
 	}
 
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.high, val4);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.limit, val3);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, reg.base, val2);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.high, val4);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.limit, val3);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, reg.base, val2);
+#endif
+}
+
+void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
+{
+	const int range = unused();
+	add(range, base, limit, dest, link);
 }
 
 DramMap::DramMap(Opteron &_opteron): opteron(_opteron)
 {
 }
 
-void DramMap::remove(const int range)
+void DramMap::remove(int range)
 {
+	if (options->debug.maps)
+		printf("Deleting MMIO range %d on SCI%03x#%x\n", range, opteron.sci, opteron.ht);
+
+	if (Opteron::family >= 0x15) {
+		assert(range < 12);
+
+		int loff = 0, hoff = 0;
+		if (range > 7) {
+			loff = 0xe0;
+			hoff = 0x20;
+		}
+
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + loff + range * 8, 0);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + loff + range * 8, 0);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x180 + hoff + range * 4, 0);
+		return;
+	}
+
+	/* Family 10h */
+	if (range < 8) {
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x84 + range * 8, 0);
+		lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x80 + range * 8, 0);
+		return;
+	}
+
+	assert(range < 12);
+	range -= 8;
+
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x110, (2 << 28) | range);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x114, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x110, (3 << 28) | range);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x114, 0);
+
+#ifdef NEWWORLD
 	assert(range < ranges);
 	if (options->debug.maps)
 		printf("Deleting DRAM range %d on SCI%03x\n", range, opteron.sci);
 
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x144 + range * 8, 0);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x44 + range * 8, 0);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x140 + range * 8, 0);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x40 + range * 8, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x144 + range * 8, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x44 + range * 8, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x140 + range * 8, 0);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x40 + range * 8, 0);
+#endif
 }
 
 bool DramMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest)
 {
 	assert(range < ranges);
 
-	uint32_t base_l = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x40 + range * 8);
-	uint32_t limit_l = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x44 + range * 8);
-	uint32_t base_h = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x140 + range * 8);
-	uint32_t limit_h = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x144 + range * 8);
+	uint32_t base_l = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x40 + range * 8);
+	uint32_t limit_l = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x44 + range * 8);
+	uint32_t base_h = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x140 + range * 8);
+	uint32_t limit_h = lib::mcfg_read32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x144 + range * 8);
 
 	*base = ((uint64_t)(base_l & ~0xffff) << (24 - 16)) | ((uint64_t)(base_h & 0xff) << 40);
 	*limit = ((uint64_t)(limit_l & ~0xffff) << (24 - 16)) | ((uint64_t)(limit_h & 0xff) << 40);
@@ -233,8 +447,8 @@ void DramMap::add(const int range, const uint64_t base, const uint64_t limit, co
 	assert((base & 0xffffff) == 0);
 	assert((limit & 0xffffff) == 0xffffff);
 
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x144 + range * 8, limit >> 40);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x44 + range * 8, ((limit >> 8) & ~0xffff) | dest);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x140 + range * 8, base >> 40);
-	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::F1_MAPS, 0x40 + range * 8, (base >> 8) | 3);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x144 + range * 8, limit >> 40);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x44 + range * 8, ((limit >> 8) & ~0xffff) | dest);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x140 + range * 8, base >> 40);
+	lib::mcfg_write32(opteron.sci, 0, 24 + opteron.ht, Opteron::Opteron::F1_MAPS, 0x40 + range * 8, (base >> 8) | 3);
 }

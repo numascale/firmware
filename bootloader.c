@@ -169,6 +169,10 @@ int main(const int argc, const char *argv[])
 
 	local_node = new Node(config->node->sci);
 
+	/* Add global MCFG maps */
+	for (int i = 0; i < local_node->nopterons; i++)
+		local_node->opterons[i]->mmiomap.add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
+
 	e820 = new E820();
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);

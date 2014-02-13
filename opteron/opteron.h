@@ -35,8 +35,9 @@ class MmioMap {
 	int unused(void);
 public:
 	MmioMap(Opteron &_opteron);
-	void remove(const int range);
-	bool read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+	void remove(int range);
+	bool read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+	void add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
 	void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 };
 
