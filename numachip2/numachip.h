@@ -54,6 +54,7 @@ public:
 	static const uint64_t MCFG_LIM  = 0x3ffeffffffff;
 	static const uint32_t vendev = 0x07001b47;
 
+	const sci_t sci;
 	const ht_t ht;
 	uint32_t uuid;
 
@@ -61,8 +62,7 @@ public:
 	void write32(const uint16_t reg, const uint32_t val);
 	uint8_t read8(const uint16_t reg);
 	void write8(const uint16_t reg, const uint8_t val);
-	Numachip2(const ht_t _ht, const uint32_t _rev);
-	void set_sci(const sci_t sci);
+	Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev);
 };
 
 #endif

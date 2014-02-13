@@ -23,8 +23,10 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-Numachip2::Numachip2(const ht_t _ht, const uint32_t _rev): rev(_rev), ht(_ht)
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev):rev(_rev),  sci(_sci), ht(_ht)
 {
+	write32(SIU_NODEID, sci);
+
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
@@ -54,10 +56,5 @@ uint8_t Numachip2::read8(const uint16_t reg)
 void Numachip2::write8(const uint16_t reg, const uint8_t val)
 {
 	lib::cht_write8(ht, reg >> 12, reg & 0xfff, val);
-}
-
-void Numachip2::set_sci(const sci_t sci)
-{
-	write32(SIU_NODEID, sci);
 }
 

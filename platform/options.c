@@ -94,8 +94,10 @@ void Options::parse_flags(const char *val, void *data)
 {
 	struct debug_flags *flags = (struct debug_flags *)data;
 
+	/* If no args, assume reasonable default */
 	if (!val) {
 		memset(flags, 0xff, sizeof(Options::debug));
+		flags->access = 0;
 		return;
 	}
 

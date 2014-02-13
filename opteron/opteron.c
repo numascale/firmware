@@ -22,11 +22,10 @@
 
 /* Approximation before probing */
 uint32_t Opteron::tsc_mhz = 2200;
-uint8_t Opteron::smi_state;
 uint32_t Opteron::ioh_vendev;
 int Opteron::family;
 
-Opteron::Opteron(const sci_t _sci): sci(_sci), mmiomap(*this), drammap(*this)
+void Opteron::prepare(void)
 {
 	/* Enable CF8 extended access */
 	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
@@ -51,8 +50,38 @@ Opteron::Opteron(const sci_t _sci): sci(_sci), mmiomap(*this), drammap(*this)
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
 	/* Detect IOH */
-	ioh_vendev = lib::extpci_read32(0, 0, 0, 0);
+	ioh_vendev = lib::cf8_read32(0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
+}
+
+Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
+{
+	/* Enable CF8 extended access; Linux needs this later */
+	uint32_t val = lib::cht_read32(ht, F3_MISC, 0x8c);
+	lib::cht_write32(ht, F3_MISC, 0x8c, val | (1 << (46 - 32)));
+
+	val = lib::cht_read32(ht, F0_HT, 0x68);
+	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
+		lib::cht_write32(ht, F0_HT, 0x68, val | (1 << 25) | (1 << 18) | (1 << 17));
+
+	/* Enable 128MB-granularity on extended MMIO maps */
+	if (Opteron::family < 0x15) {
+		val = lib::cht_read32(ht, F0_HT, 0x168);
+		if ((val & 0x300) != 0x200)
+			lib::cht_write32(ht, F0_HT, 0x168, (val & ~0x300) | 0x200);
+	}
+
+	/* Enable Addr64BitEn on IO links */
+	for (int i = 0; i < 4; i++) {
+		/* Skip coherent/disabled links */
+		val = lib::cht_read32(ht, F0_HT, 0x98 + i * 0x20);
+		if (!(val & (1 << 2)))
+			continue;
+
+		val = lib::cht_read32(ht, F0_HT, 0x84 + i * 0x20);
+		if (!(val & (1 << 15)))
+			lib::cht_write32(ht, F0_HT, 0x84 + i * 0x20, val | (1 << 15));
+	}
 }
 
 Opteron::~Opteron(void)

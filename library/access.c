@@ -41,9 +41,6 @@
                      : "A"(canonicalize(addr)), "c"(MSR_FS_BASE));      \
     } while(0)
 
-/* #define DEBUG(...) printf(__VA_ARGS__) */
-#define DEBUG(...) do { } while (0)
-
 namespace lib
 {
 	uint8_t rtc_read(const int addr)
@@ -72,89 +69,109 @@ namespace lib
 		outw(offset | val << 8, PMIO_PORT);
 	}
 
-	uint32_t extpci_read32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
 		uint32_t ret;
-		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		ret = inl(PCI_CONF_DATA + (reg & 3));
 		sti();
-		DEBUG("%08x\n", ret);
+		if (options->debug.access)
+			printf("%08x\n", ret);
 		return ret;
 	}
 
-	uint32_t extpci_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	{
+		if (sci == 0xfff0)
+			return cf8_read32(bus, dev, func, reg);
+
 		uint32_t ret;
-		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 		cli();
 		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
 		sti();
-		DEBUG("%08x\n", ret);
+		if (options->debug.access)
+			printf("%08x\n", ret);
 		return ret;
 	}
 
-	uint8_t extpci_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint8_t cf8_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	{
 		uint8_t ret;
-		DEBUG("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		ret = inb(PCI_CONF_DATA + (reg & 3));
 		sti();
-		DEBUG("%02x\n", ret);
+		if (options->debug.access)
+			printf("%02x\n", ret);
 		return ret;
 	}
 
-	void extpci_write32(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	void cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
 	{
-		DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		outl(val, PCI_CONF_DATA + (reg & 3));
 		sti();
-		DEBUG("\n");
+		if (options->debug.access)
+			printf("\n");
 	}
 
-	void extpci_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	void mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 	{
-		DEBUG("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+		if (sci == 0xfff0) {
+			cf8_write32(bus, dev, func, reg, val);
+			return;
+		}
+
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
 		cli();
 		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
-		DEBUG("\n");
+		if (options->debug.access)
+			printf("\n");
 	}
 
-	void extpci_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
+	void cf8_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
 	{
-		DEBUG("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
+		if (options->debug.access)
+			printf("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		outb(val, PCI_CONF_DATA + (reg & 3));
 		sti();
-		DEBUG("\n");
+		if (options->debug.access)
+			printf("\n");
 	}
 
-	uint32_t cht_read32(uint8_t node, uint8_t func, uint16_t reg)
+	uint32_t cht_read32(ht_t ht, uint8_t func, uint16_t reg)
 	{
-		return extpci_read32(0, 24 + node, func, reg);
+		return cf8_read32(0, 24 + ht, func, reg);
 	}
 
-	uint8_t cht_read8(uint8_t node, uint8_t func, uint16_t reg)
+	void cht_write32(ht_t ht, uint8_t func, uint16_t reg, uint32_t val)
 	{
-		return extpci_read8(0, 24 + node, func, reg);
-	}
-
-	void cht_write32(uint8_t node, uint8_t func, uint16_t reg, uint32_t val)
-	{
-		extpci_write32(0, 24 + node, func, reg, val);
+		cf8_write32(0, 24 + ht, func, reg, val);
 	}
 
 	void cht_write8(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
 	{
-		extpci_write8(0, 24 + node, func, reg, val);
+		cf8_write8(0, 24 + node, func, reg, val);
+	}
+
+	uint8_t cht_read8(uint8_t node, uint8_t func, uint16_t reg)
+	{
+		return cf8_read8(0, 24 + node, func, reg);
 	}
 }

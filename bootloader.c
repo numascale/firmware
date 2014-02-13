@@ -130,10 +130,15 @@ void wait_key(void)
 Node::Node(const sci_t _sci): sci(_sci)
 {
 	uint32_t rev;
-	const ht_t ht = Opteron::ht_fabric_fixup(Numachip2::vendev, &rev);
-	assertf(ht, "NumaChip2 not found");
+	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::vendev, &rev);
+	assertf(nc, "NumaChip2 not found");
+	numachip = new Numachip2(sci, nc, rev);
 
-	numachip = new Numachip2(ht, rev);
+	nopterons = nc;
+
+	/* Opterons are on all HT IDs before Numachip */
+	for (ht_t nb = 0; nb < nopterons; nb++)
+		opterons[nb] = new Opteron(0xfff0, nb);
 }
 
 int main(const int argc, const char *argv[])
@@ -149,6 +154,8 @@ int main(const int argc, const char *argv[])
 		syslinux->mac[3], syslinux->mac[4], syslinux->mac[5],
 		inet_ntoa(syslinux->ip), syslinux->hostname ? syslinux->hostname : "<none>");
 
+	Opteron::prepare();
+
 	options = new Options(argc, argv);
 	platform_quirks();
 	/* SMI often assumes HT nodes are Northbridges, so handover early */
@@ -163,11 +170,6 @@ int main(const int argc, const char *argv[])
 	local_node = new Node(config->node->sci);
 
 	e820 = new E820();
-
-	local_node->numachip->set_sci(config->node->sci);
-
-	for (int i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

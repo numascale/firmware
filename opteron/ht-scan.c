@@ -59,8 +59,8 @@ void Opteron::disable_smi(void)
 	case VENDEV_SR5690:
 	case VENDEV_SR5670:
 	case VENDEV_SR5650:
-		smi_state = lib::pmio_read8(0x53);
-		lib::pmio_write8(0x53, smi_state | (1 << 3));
+		const uint8_t state = lib::pmio_read8(0x53);
+		lib::pmio_write8(0x53, state | (1 << 3));
 	}
 }
 
@@ -71,7 +71,8 @@ void Opteron::enable_smi(void)
 	case VENDEV_SR5690:
 	case VENDEV_SR5670:
 	case VENDEV_SR5650:
-		lib::pmio_write8(0x53, smi_state);
+		const uint8_t state = lib::pmio_read8(0x53);
+		lib::pmio_write8(0x53, state & ~(1 << 3));
 	}
 }
 
@@ -87,21 +88,20 @@ void Opteron::critical_leave(void)
 	sti();
 }
 
-uint32_t Opteron::get_phy_register(int node, int link, int idx, int direct)
+uint32_t Opteron::get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct)
 {
-	int base = 0x180 + link * 8;
-	int i;
+	const int base = 0x180 + link * 8;
 	uint32_t reg;
-	lib::cht_write32(node, F4_LINK, base, idx | (direct << 29));
+	lib::cht_write32(ht, F4_LINK, base, idx | (direct << 29));
 
-	for (i = 0; i < 1000; i++) {
-		reg = lib::cht_read32(node, F4_LINK, base);
+	for (int i = 0; i < 1000; i++) {
+		reg = lib::cht_read32(ht, F4_LINK, base);
 		if (reg & 0x80000000)
-			return lib::cht_read32(node, F4_LINK, base + 4);
+			return lib::cht_read32(ht, F4_LINK, base + 4);
+		cpu_relax();
 	}
 
-	printf("Read from phy register HT#%d F4x%x idx %x did not complete\n",
-	       node, base, idx);
+	printf("Read from phy register HT#%d F4x%x idx %x did not complete\n", ht, base, idx);
 	return 0;
 }
 
