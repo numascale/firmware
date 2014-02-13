@@ -87,6 +87,8 @@ public:
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
 	static ht_t ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev);
-};
 
+	uint32_t read32(const uint8_t func, const uint16_t reg);
+	void write32(const uint8_t func, const uint16_t reg, const uint32_t val);
+};
 #endif

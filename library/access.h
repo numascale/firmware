@@ -23,6 +23,9 @@
 
 #include "base.h"
 
+#define MCFG_BASE 0x3f0000000000ULL
+#define MCFG_LIM  0x3ffeffffffffULL
+
 #define cli() { asm volatile("cli"); }
 #define sti() { asm volatile("sti"); }
 

@@ -171,7 +171,11 @@ int main(const int argc, const char *argv[])
 
 	/* Add global MCFG maps */
 	for (int i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap.add(8, MCFG_BASE, MCFG_LIM, local_node->numachip->ht, 0);
+
+	printf("reading from SCI%03x\n", config->node->sci);
+	uint32_t val = lib::mcfg_read32(config->node->sci, 0, 0x18, 0, 0);
+	printf("local vendev %08x\n", val);
 
 	e820 = new E820();
 

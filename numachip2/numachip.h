@@ -50,8 +50,6 @@ class Numachip2 {
 	/* fabric.h */
 	void fabric_init(void);
 public:
-	static const uint64_t MCFG_BASE = 0x3f0000000000;
-	static const uint64_t MCFG_LIM  = 0x3ffeffffffff;
 	static const uint32_t vendev = 0x07001b47;
 
 	const sci_t sci;

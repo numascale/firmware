@@ -60,9 +60,9 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(
 	uint32_t val = lib::cht_read32(ht, F3_MISC, 0x8c);
 	lib::cht_write32(ht, F3_MISC, 0x8c, val | (1 << (46 - 32)));
 
+	/* Set CHtExtAddrEn, ApicExtId, ApicExtBrdCst */
 	val = lib::cht_read32(ht, F0_HT, 0x68);
-	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
-		lib::cht_write32(ht, F0_HT, 0x68, val | (1 << 25) | (1 << 18) | (1 << 17));
+	lib::cht_write32(ht, F0_HT, 0x68, val | (1 << 25) | (1 << 18) | (1 << 17));
 
 	/* Enable 128MB-granularity on extended MMIO maps */
 	if (Opteron::family < 0x15) {
@@ -89,4 +89,14 @@ Opteron::~Opteron(void)
 	/* Restore 32-bit only access */
 	uint64_t val = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
+}
+
+uint32_t Opteron::read32(const uint8_t func, const uint16_t reg)
+{
+	return lib::mcfg_read32(sci, 0, 24 + ht, func, reg);
+}
+
+void Opteron::write32(const uint8_t func, const uint16_t reg, const uint32_t val)
+{
+	lib::mcfg_write32(sci, 0, 24 + ht, func, reg, val);
 }
