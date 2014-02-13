@@ -283,10 +283,23 @@ Config::Config(const char *filename)
 
 	/* Locate UUID or hostname */
 	for (int i = 0; i < nnodes; i++) {
-		if (local_node->numachip->uuid == nodes[i].uuid ||
-		  !memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac)) ||
-		  !strcmp(syslinux->hostname, nodes[i].hostname)) {
-			if (options->debug.config) printf("Matched %d\n", i);
+		if (local_node->numachip->uuid == nodes[i].uuid) {
+			if (options->debug.config)
+				printf("UUID matches %d\n", i);
+			node = &nodes[i];
+			break;
+		}
+
+		if (!memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac))) {
+			if (options->debug.config)
+				printf("MAC matches %d\n", i);
+			node = &nodes[i];
+			break;
+		}
+
+		if (!strcmp(syslinux->hostname, nodes[i].hostname)) {
+			if (options->debug.config)
+				printf("Hostname matches %d\n", i);
 			node = &nodes[i];
 			break;
 		}
