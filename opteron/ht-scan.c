@@ -313,7 +313,7 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 
 		*p_chip_rev = lib::cht_read32(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
-		printf("NumaChip2 rev %d found at HT%d.%d\n", *p_chip_rev, neigh, link);
+		printf("NumaChip2 rev %d found on HT%d.%d\n", *p_chip_rev, neigh, link);
 
 		/* Ramp up link speed and width before adding to coherent fabric */
 		ht_optimize_link(nc, neigh, link);

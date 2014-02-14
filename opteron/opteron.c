@@ -35,6 +35,10 @@ void Opteron::prepare(void)
 	msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
+	/* Enable 64-bit config access */
+	msr = lib::rdmsr(MSR_CU_CFG2);
+	lib::wrmsr(MSR_CU_CFG2, msr | (1ULL << 50));
+
 	/* Detect processor family */
 	uint32_t val = lib::cht_read32(0, F3_MISC, 0xfc);
 	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
@@ -52,6 +56,15 @@ void Opteron::prepare(void)
 	/* Detect IOH */
 	ioh_vendev = lib::cf8_read32(0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
+
+	switch (ioh_vendev) {
+	case VENDEV_SR5690:
+	case VENDEV_SR5670:
+	case VENDEV_SR5650:
+		/* Enable 52-bit PCIe address generation */
+		val = lib::cf8_read32(0, 0, 0, 0xc8);
+		lib::cf8_write32(0, 0, 0, 0xc8, val | (1 << 15));
+	}
 }
 
 Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)

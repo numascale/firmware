@@ -98,12 +98,14 @@ namespace lib
 	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
 	void     cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-	uint8_t  cf8_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+	uint8_t  cf8_read8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
+	uint8_t  mcfg_read8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
 	void     mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
-	void     cf8_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
-	uint32_t cht_read32(ht_t ht, uint8_t func, uint16_t reg);
-	void     cht_write32(ht_t ht, uint8_t func, uint16_t reg, uint32_t val);
-	void     cht_write8(uint8_t node, uint8_t func, uint16_t reg, uint8_t val);
-	uint8_t  cht_read8(uint8_t node, uint8_t func, uint16_t reg);
+	void     cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
+	void     mcfg_write8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+	uint32_t cht_read32(const ht_t ht, uint8_t func, uint16_t reg);
+	void     cht_write32(const ht_t ht, uint8_t func, uint16_t reg, uint32_t val);
+	void     cht_write8(const ht_t ht, uint8_t func, uint16_t reg, uint8_t val);
+	uint8_t  cht_read8(const ht_t ht, uint8_t func, uint16_t reg);
 }
 #endif

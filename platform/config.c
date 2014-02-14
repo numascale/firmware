@@ -283,23 +283,25 @@ Config::Config(const char *filename)
 
 	/* Locate UUID or hostname */
 	for (int i = 0; i < nnodes; i++) {
+#ifdef FIXME /* Uncomment when Numachip EEPROM has UUID */
 		if (local_node->numachip->uuid == nodes[i].uuid) {
 			if (options->debug.config)
-				printf("UUID matches %d\n", i);
+				printf("UUID matches node %d\n", i);
 			node = &nodes[i];
 			break;
 		}
+#endif
 
 		if (!memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac))) {
 			if (options->debug.config)
-				printf("MAC matches %d\n", i);
+				printf("MAC matches node %d\n", i);
 			node = &nodes[i];
 			break;
 		}
 
 		if (!strcmp(syslinux->hostname, nodes[i].hostname)) {
 			if (options->debug.config)
-				printf("Hostname matches %d\n", i);
+				printf("Hostname matches node %d\n", i);
 			node = &nodes[i];
 			break;
 		}

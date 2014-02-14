@@ -97,7 +97,7 @@ namespace lib
 		return ret;
 	}
 
-	uint8_t cf8_read8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint8_t cf8_read8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	{
 		uint8_t ret;
 		if (options->debug.access)
@@ -109,6 +109,14 @@ namespace lib
 		if (options->debug.access)
 			printf("%02x\n", ret);
 		return ret;
+	}
+
+	uint8_t mcfg_read8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	{
+		if (sci == 0xfff0)
+			return cf8_read8(bus, dev, func, reg);
+
+		assertf(0, "Unimplemented");
 	}
 
 	void cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
@@ -140,7 +148,7 @@ namespace lib
 			printf("\n");
 	}
 
-	void cf8_write8(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
+	void cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
 	{
 		if (options->debug.access)
 			printf("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
@@ -152,23 +160,33 @@ namespace lib
 			printf("\n");
 	}
 
-	uint32_t cht_read32(ht_t ht, uint8_t func, uint16_t reg)
+	void mcfg_write8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	{
+		if (sci == 0xfff0) {
+			cf8_write8(bus, dev, func, reg, val);
+			return;
+		}
+
+		assertf(0, "Unimplemented");
+	}
+
+	uint32_t cht_read32(const ht_t ht, uint8_t func, uint16_t reg)
 	{
 		return cf8_read32(0, 24 + ht, func, reg);
 	}
 
-	void cht_write32(ht_t ht, uint8_t func, uint16_t reg, uint32_t val)
+	void cht_write32(const ht_t ht, uint8_t func, uint16_t reg, uint32_t val)
 	{
 		cf8_write32(0, 24 + ht, func, reg, val);
 	}
 
-	void cht_write8(uint8_t node, uint8_t func, uint16_t reg, uint8_t val)
+	void cht_write8(const ht_t ht, uint8_t func, uint16_t reg, uint8_t val)
 	{
-		cf8_write8(0, 24 + node, func, reg, val);
+		cf8_write8(0, 24 + ht, func, reg, val);
 	}
 
-	uint8_t cht_read8(uint8_t node, uint8_t func, uint16_t reg)
+	uint8_t cht_read8(const ht_t ht, uint8_t func, uint16_t reg)
 	{
-		return cf8_read8(0, 24 + node, func, reg);
+		return cf8_read8(0, 24 + ht, func, reg);
 	}
 }

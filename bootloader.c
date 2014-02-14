@@ -116,13 +116,14 @@ void udelay(const uint32_t usecs)
 		cpu_relax();
 }
 
-void wait_key(void)
+void wait_key(const char *msg)
 {
+	puts(msg);
 	char ch;
-	printf("Press any key to continue");
 
-	while (fread(&ch, 1, 1, stdin) == 0)
-		;
+	do {
+		fread(&ch, 1, 1, stdin);
+	} while (ch != 0x0a); /* Enter */
 
 	printf("\n");
 }
@@ -132,6 +133,8 @@ Node::Node(const sci_t _sci): sci(_sci)
 	uint32_t rev;
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::vendev, &rev);
 	assertf(nc, "NumaChip2 not found");
+
+	/* Set SCI ID later once mapping is setup */
 	numachip = new Numachip2(sci, nc, rev);
 
 	nopterons = nc;
@@ -173,15 +176,34 @@ int main(const int argc, const char *argv[])
 	for (int i = 0; i < local_node->nopterons; i++)
 		local_node->opterons[i]->mmiomap.add(8, MCFG_BASE, MCFG_LIM, local_node->numachip->ht, 0);
 
-	printf("reading from SCI%03x\n", config->node->sci);
-	uint32_t val = lib::mcfg_read32(config->node->sci, 0, 0x18, 0, 0);
-	printf("local vendev %08x\n", val);
+	local_node->numachip->set_sci(config->node->sci);
+
+	uint64_t val6 = MCFG_BASE | ((uint64_t)config->node->sci << 28ULL) | 0x21ULL;
+	lib::wrmsr(MSR_MCFG_BASE, val6);
+
+	sci_t r;
+	uint32_t secret;
+	if (config->node->sci == 000) {
+		r = 0x001;
+		secret = 0x182d25a0;
+	} else {
+		r = 0x000;
+		secret = 0x8a2ce729;
+	}
+
+	printf("Writing secret %08x into local register\n", secret);
+	local_node->numachip->write32(0x0014, secret);
+
+	wait_key("Press enter when remote ready");
+
+	printf("Local secret is %08x\n", lib::mcfg_read32(config->node->sci, 0, 26, 0, 0x14));
+	printf("Remote secret is %08x\n", lib::mcfg_read32(r, 0, 26, 0, 0x14));
 
 	e820 = new E820();
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)
-		wait_key();
+		wait_key("Press enter to boot");
 
 	syslinux->exec(options->next_label);
 

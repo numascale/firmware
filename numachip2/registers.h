@@ -43,7 +43,9 @@
 #define TAG_CPU_ADDR    0x10
 #define TAG_CPU_DATA    0x18
 
-#define SIU_XBAR_ROUTE  0x2200
+#define SIU_XBAR_LOW    0x2200
+#define SIU_XBAR_MID    0x2240
+#define SIU_XBAR_HIGH   0x2280
 #define SIU_XBAR_CHUNK  0x22c0
 #define SIU_NODEID      0x22c4
 #define SIU_ATT_INDEX   0x2300
