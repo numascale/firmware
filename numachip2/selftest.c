@@ -48,27 +48,27 @@ void Numachip2::selftest(void)
 	for (unsigned i = 0; i < 16; i++) {
 		write32(SIU_XBAR_CHUNK, i);
 		for (unsigned j = 0; j < 0x40; j++) {
-			write32(SIU_XBAR_ROUTE + 0x00 + j, i + j);
-			write32(SIU_XBAR_ROUTE + 0x40 + j, i + j);
-			write32(SIU_XBAR_ROUTE + 0x80 + j, i + j);
+			write32(SIU_XBAR_LOW + j, i + j);
+			write32(SIU_XBAR_MID + j, i + j);
+			write32(SIU_XBAR_HIGH + j, i + j);
 		}
 	}
 
 	for (unsigned i = 0; i < 16; i++) {
 		write32(SIU_XBAR_CHUNK, i);
 		for (unsigned j = 0; j < 0x40; j++) {
-			if (read32(SIU_XBAR_ROUTE + 0x00 + j) != i + j) errors++;
-			if (read32(SIU_XBAR_ROUTE + 0x40 + j) != i + j) errors++;
-			if (read32(SIU_XBAR_ROUTE + 0x80 + j) != i + j) errors++;
+			if (read32(SIU_XBAR_LOW + j) != i + j) errors++;
+			if (read32(SIU_XBAR_MID + j) != i + j) errors++;
+			if (read32(SIU_XBAR_HIGH + 0x80 + j) != i + j) errors++;
 		}
 	}
 
 	for (unsigned i = 0; i < 16; i++) {
 		write32(SIU_XBAR_CHUNK, i);
 		for (unsigned j = 0; j < 0x40; j++) {
-			write32(SIU_XBAR_ROUTE + 0x00 + j, 0x000);
-			write32(SIU_XBAR_ROUTE + 0x40 + j, 0x000);
-			write32(SIU_XBAR_ROUTE + 0x80 + j, 0x000);
+			write32(SIU_XBAR_LOW + j, 0x000);
+			write32(SIU_XBAR_MID + j, 0x000);
+			write32(SIU_XBAR_HIGH + j, 0x000);
 		}
 	}
 

@@ -102,6 +102,6 @@ numachip2/numachip.o: numachip2/numachip.c numachip2/numachip.h
 numachip2/i2c-master.o: numachip2/i2c-master.c bootloader.h library/access.h
 numachip2/spi-master.o: numachip2/spi-master.c bootloader.h library/access.h
 numachip2/lc5.o: numachip2/lc5.c numachip2/lc5.h
-numachip2/selftest.o: numachip2/selftest.c
+numachip2/selftest.o: numachip2/selftest.c numachip2/registers.h
 numachip2/fabric.o: numachip2/fabric.c
 numachip2/dram.o: numachip2/dram.c
