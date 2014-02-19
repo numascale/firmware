@@ -24,6 +24,7 @@
 #include "platform/config.h"
 #include "platform/syslinux.h"
 #include "platform/options.h"
+#include "platform/e820.h"
 #include "library/access.h"
 #include "opteron/opteron.h"
 #include "numachip2/numachip.h"
@@ -46,6 +47,7 @@ extern Options *options;
 extern Config *config;
 extern Opteron *opteron;
 extern Numachip2 *numachip;
+extern E820 *e820;
 extern Node *local_node;
 
 void udelay(const uint32_t usecs);

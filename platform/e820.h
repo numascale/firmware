@@ -35,9 +35,16 @@ private:
 	struct e820entry *position(const uint64_t base);
 	void insert(struct e820entry *pos);
 public:
+	static const uint64_t RAM = 1;
+	static const uint64_t RESERVED = 2;
+	static const uint64_t ACPI = 3;
+	static const uint64_t NVS = 4;
+	static const uint64_t UNUSABLE = 5;
+
 	E820(void);
 	void dump(void);
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
+	uint64_t memlimit(void);
 };
 
 #endif

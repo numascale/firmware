@@ -17,31 +17,56 @@
 
 #include "numachip.h"
 #include "registers.h"
+#include "../bootloader.h"
 
 void Numachip2::dram_init(void)
 {
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
-	write32(CTAG_BASE + TAG_ADDR_MASK, 0x0);      /* 1GB nCache Tag comparison mask */
-	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     /* No Tag comparison mask for MTag */
-	write32(CTAG_BASE + TAG_MCTR_OFFSET, 0x800);  /* Start CTag @ 1024 MByte MCTR offset */
-	write32(CTAG_BASE + TAG_MCTR_MASK, 0xff);     /* Use 128 MByte DDR for CTag */
-	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x1000); /* Start MTag @ 2048 MByte MCTR offset */
-	write32(MTAG_BASE + TAG_MCTR_MASK, 0xfff);    /* Use 2048 MByte DDR for MTag */
+	const uint64_t total = 1 << (spd_eeprom.density_banks - 2 + 30); /* bytes */
+	const uint64_t hosttotal = e820->memlimit();
 
-	printf("%dGB %s ports:", 1 << (spd_eeprom.density_banks - 2),
-	  nc2_ddr3_module_type(spd_eeprom.module_type));
+	uint64_t ncache = 1 << 30; /* Minimum */
+	uint64_t ctag = ncache >> 3;
+	/* Round up to mask constraints to allow manipulation */
+	uint64_t mtag = roundup((hosttotal >> 5) + 1, 1 << 19);
+
+	/* Check if insufficient MTag */
+	if (mtag > total - ncache - ctag) {
+		/* Round down to mask constraint */
+		mtag = (total - ncache - ctag) & ~((1 << 19) - 1);
+		warning("Limiting local memory from %lluGB to %lluGB", hosttotal >> 30, mtag << (30 - 5));
+		if (total < (32ULL << 30)) /* FIXME: check */
+			warning("Please use larger NumaConnect adapters for full memory support");
+	} else {
+		/* Check if nCache can use more space */
+		while (ncache + ctag + mtag < total) {
+			ncache *= 2;
+			ctag = ncache >> 3;
+		}
+	}
+
+	/* nCache, then CTag, then MTag */
+	write32(CTAG_BASE + TAG_ADDR_MASK, (ncache >> 30) - 1);
+	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     /* No Tag comparison mask for MTag */
+	write32(CTAG_BASE + TAG_MCTR_OFFSET, ncache >> 19);
+	write32(CTAG_BASE + TAG_MCTR_MASK, (ctag >> 19) - 1);
+	write32(MTAG_BASE + TAG_MCTR_OFFSET, (ncache + ctag) >> 19);
+	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
+
+	printf("%lldGB %s partitions:", total >> 10, nc2_ddr3_module_type(spd_eeprom.module_type));
 
 	for (int port = 0; port < 3; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
 		  ((spd_eeprom.density_banks - 2) << 3) | (1 << 2) | 1);
 
 	const char *mctls[] = {"MTag", "CTag", "NCache"};
+	const uint64_t part[] = {mtag >> 20, ctag >> 20, ncache >> 20};
 
 	/* FIXME: add NCache back in when implemented */
 	for (int port = 0; port < 2; port++) {
-		printf(" %s", mctls[port]);
+		printf(" %lluMB %s", part[port], mctls[port]);
 
 		uint32_t val;
 		do {

@@ -151,3 +151,17 @@ E820::E820(void)
 	dump();
 }
 
+uint64_t E820::memlimit(void)
+{
+	assert(*used > 0);
+	struct e820entry *pos = map + *used - 1;
+
+	/* Assume some usable memory exists */
+	while (pos->type != RAM)
+		pos--;
+
+	const uint64_t limit = pos->base + pos->length;
+	printf("Memory limit at %lluGB\n", limit >> 30);
+
+	return limit;
+}

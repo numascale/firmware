@@ -33,7 +33,7 @@
 
 #define MTAG_BASE       0x2080
 #define CTAG_BASE       0x20a0
-#define NUMACACHE_BASE  0x20c0
+#define NCACHE_BASE     0x20c0
 #define MCTL_SIZE       0x20
 
 #define TAG_CTRL        0x00

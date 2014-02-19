@@ -124,8 +124,6 @@ void wait_key(const char *msg)
 	do {
 		fread(&ch, 1, 1, stdin);
 	} while (ch != 0x0a); /* Enter */
-
-	printf("\n");
 }
 
 Node::Node(const sci_t _sci): sci(_sci)
