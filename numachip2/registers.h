@@ -52,6 +52,14 @@
 #define SIU_ATT_ENTRY   0x2304
 #define SIU_STATUS      0x2308
 
+/* FIXME */
+#define MAP_INDEX       0x1000
+#define DRAM_BASE       0x1004
+#define DRAM_LIMIT      0x1008
+#define MMIO_BASE       0x100a
+#define MMIO_LIMIT      0x100c
+
+
 #define HSS_PLLCTL      0x2f00
 
 #endif

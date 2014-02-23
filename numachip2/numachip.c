@@ -97,7 +97,8 @@ void Numachip2::routing_init(void)
 	printf("\n");
 }
 
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev):rev(_rev), sci(_sci), ht(_ht)
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev):
+  rev(_rev), sci(_sci), ht(_ht), drammap(*this), mmiomap(*this)
 {
 	write32(SIU_NODEID, sci);
 

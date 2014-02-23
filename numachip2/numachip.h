@@ -24,10 +24,35 @@
 class LC5;
 
 class Numachip2 {
+	class MmioMap {
+		Numachip2 &numachip;
+	public:
+		MmioMap(Numachip2 &_numachip);
+		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
+		void del(const int range);
+		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht);
+		void print(const int range);
+	};
+
+	class DramMap {
+		Numachip2 &numachip;
+	public:
+		DramMap(Numachip2 &_numachip);
+		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
+		void del(const int range);
+		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht);
+		void print(const int range);
+	};
+
 	char card_type[16];
 	const uint32_t rev;
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
+
+	MmioMap mmiomap;
+	DramMap drammap;
+	friend class MmioMap;
+	friend class DramMap;
 
 	/* i2c-master.c */
 	void i2c_master_init(void);

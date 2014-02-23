@@ -24,37 +24,35 @@ struct reg {
 	uint16_t base, limit, high;
 };
 
-class Opteron;
-
-class MmioMap {
-	Opteron &opteron;
-	int ranges;
-
-	struct reg setup(const int range);
-	void print(const int range);
-	int unused(void);
-public:
-	MmioMap(Opteron &_opteron);
-	void remove(int range);
-	bool read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
-	void add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
-	void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
-};
-
-class DramMap {
-	Opteron &opteron;
-	static const int ranges = 8;
-
-	int unused(void);
-public:
-	DramMap(Opteron &_opteron);
-	void remove(const int range);
-	bool read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest);
-	void print(const int range);
-	void add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest);
-};
-
 class Opteron {
+	class MmioMap {
+		Opteron &opteron;
+		int ranges;
+
+		struct reg setup(const int range);
+		void print(const int range);
+		int unused(void);
+	public:
+		MmioMap(Opteron &_opteron);
+		void remove(int range);
+		bool read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		void add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
+	};
+
+	class DramMap {
+		Opteron &opteron;
+		static const int ranges = 8;
+
+		int unused(void);
+	public:
+		DramMap(Opteron &_opteron);
+		void remove(const int range);
+		bool read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest);
+		void print(const int range);
+		void add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest);
+	};
+
 	enum reset {Warm, Cold};
 
 	static void reset(const enum reset mode, const int last);

@@ -21,7 +21,7 @@
 
 /* Fam15h for now */
 
-MmioMap::MmioMap(Opteron &_opteron): opteron(_opteron)
+Opteron::MmioMap::MmioMap(Opteron &_opteron): opteron(_opteron)
 {
 	if (Opteron::family >= 0x15)
 		ranges = 12;
@@ -30,7 +30,7 @@ MmioMap::MmioMap(Opteron &_opteron): opteron(_opteron)
 }
 
 /* Setup register offsets */
-struct reg MmioMap::setup(const int range)
+struct reg Opteron::MmioMap::setup(const int range)
 {
 	struct reg reg;
 
@@ -51,7 +51,7 @@ struct reg MmioMap::setup(const int range)
 	fatal("Out of ranges");
 }
 
-void MmioMap::remove(const int range)
+void Opteron::MmioMap::remove(const int range)
 {
 	if (options->debug.maps)
 		printf("Deleting MMIO range %d on SCI%03x\n", range, opteron.sci);
@@ -63,7 +63,7 @@ void MmioMap::remove(const int range)
 	opteron.write32(Opteron::F1_MAPS, reg.high, 0);
 }
 
-bool MmioMap::read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
+bool Opteron::MmioMap::read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
 {
 	if (Opteron::family >= 0x15) {
 		assert(range < 12);
@@ -147,7 +147,7 @@ bool MmioMap::read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_
 #endif
 }
 
-void MmioMap::print(const int range)
+void Opteron::MmioMap::print(const int range)
 {
 	uint64_t base, limit;
 	ht_t dest;
@@ -160,7 +160,7 @@ void MmioMap::print(const int range)
 		printf("SCI%03x MMIO range %d: 0x%08llx:0x%08llx to %d.%d\n", opteron.sci, range, base, limit, dest, link);
 }
 
-int MmioMap::unused(void)
+int Opteron::MmioMap::unused(void)
 {
 	uint64_t base, limit;
 	ht_t dest;
@@ -178,7 +178,7 @@ int MmioMap::unused(void)
 	fatal("No free MMIO ranges");
 }
 
-void MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+void Opteron::MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
 {
 	const bool ovw = 1;
 
@@ -335,17 +335,17 @@ void MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t dest, con
 #endif
 }
 
-void MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
+void Opteron::MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
 {
 	const int range = unused();
 	add(range, base, limit, dest, link);
 }
 
-DramMap::DramMap(Opteron &_opteron): opteron(_opteron)
+Opteron::DramMap::DramMap(Opteron &_opteron): opteron(_opteron)
 {
 }
 
-void DramMap::remove(int range)
+void Opteron::DramMap::remove(int range)
 {
 	if (options->debug.maps)
 		printf("Deleting MMIO range %d on SCI%03x#%x\n", range, opteron.sci, opteron.ht);
@@ -392,7 +392,7 @@ void DramMap::remove(int range)
 #endif
 }
 
-bool DramMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest)
+bool Opteron::DramMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest)
 {
 	assert(range < ranges);
 
@@ -414,7 +414,7 @@ bool DramMap::read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest)
 	return en;
 }
 
-int DramMap::unused(void)
+int Opteron::DramMap::unused(void)
 {
 	uint64_t base, limit;
 	ht_t dest;
@@ -426,7 +426,7 @@ int DramMap::unused(void)
 	fatal("No free DRAM ranges on SCI%03x\n", opteron.sci);
 }
 
-void DramMap::print(const int range)
+void Opteron::DramMap::print(const int range)
 {
 	uint64_t base, limit;
 	ht_t dest;
@@ -437,7 +437,7 @@ void DramMap::print(const int range)
 		printf("SCI%03x DRAM range %d: 0x%012llx:0x%012llx to %d\n", opteron.sci, range, base, limit, dest);
 }
 
-void DramMap::add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest)
+void Opteron::DramMap::add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest)
 {
 	if (options->debug.maps)
 		printf("SCI%03x adding DRAM range %d: 0x%012llx:0x%012llx to %d\n", opteron.sci, range, base, limit, dest);
