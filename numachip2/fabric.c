@@ -20,6 +20,14 @@
 #include "../platform/config.h"
 #include "../bootloader.h"
 
+void Numachip2::fabric_status(void)
+{
+	printf("Link status:");
+	for (int lc = 0; lc < 6; lc++)
+		printf(" %08x", lcs[lc]->link_status());
+	printf("\n");
+}
+
 void Numachip2::fabric_init(void)
 {
 	const char *ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};

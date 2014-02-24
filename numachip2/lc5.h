@@ -25,8 +25,8 @@ class LC5 {
 	Numachip2& numachip;
 	uint16_t addr;
 
-	uint32_t link_status(void);
 public:
+	uint32_t link_status(void);
 	LC5(Numachip2& _numachip, uint16_t _addr);
 };
 

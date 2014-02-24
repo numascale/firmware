@@ -142,6 +142,7 @@ public:
 	void write8(const reg_t reg, const uint8_t val);
 	Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev);
 	void set_sci(const sci_t _sci);
+	void fabric_status(void);
 };
 
 #endif

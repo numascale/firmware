@@ -193,6 +193,7 @@ int main(const int argc, const char *argv[])
 	local_node->numachip->write32(0x0014, secret);
 
 	wait_key("Press enter when remote ready");
+	local_node->numachip->fabric_status();
 
 	printf("Local secret is %08x\n", lib::mcfg_read32(config->node->sci, 0, 26, 0, 0x14));
 	printf("Remote secret is %08x\n", lib::mcfg_read32(r, 0, 26, 0, 0x14));
