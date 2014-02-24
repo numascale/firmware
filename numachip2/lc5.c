@@ -16,7 +16,6 @@
  */
 
 #include "lc5.h"
-#include "registers.h"
 #include "../bootloader.h"
 
 uint32_t LC5::link_status(void)

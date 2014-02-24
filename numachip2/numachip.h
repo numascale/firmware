@@ -77,7 +77,7 @@ class Numachip2 {
 
 	void routing_init(void);
 public:
-	/* Function in bits 15:12 */
+	/* Registers; function in bits 15:12 */
 	static const reg_t DEVICE_VENDOR_ID        = 0x0000;
 	static const reg_t STATUS_COMMAND          = 0x0004;
 	static const reg_t CLASS_CODE_REVISION_ID  = 0x0008;
@@ -125,6 +125,10 @@ public:
 	static const reg_t MMIO_LIMIT     = 0x1054;
 	static const reg_t MMIO_EXTBASE   = 0x1058;
 	static const reg_t MMIO_EXTLIMIT  = 0x105c;
+
+
+	static const int SIU_ATT_RANGE = 2; /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
+	static const int SIU_ATT_SHIFT = 24 + SIU_ATT_RANGE * 4;
 
 	static const uint32_t vendev = 0x07001b47;
 

@@ -19,7 +19,6 @@
 #include <string.h>
 
 #include "numachip.h"
-#include "registers.h"
 #include "../library/access.h"
 #include "../bootloader.h"
 

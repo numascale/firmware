@@ -23,7 +23,6 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 #include "../opteron/defs.h"
-#include "registers.h"
 
 #define I2C_MASTER_CR_START (1 << 7)
 #define I2C_MASTER_CR_STOP  (1 << 6)

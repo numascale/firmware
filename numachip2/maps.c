@@ -16,7 +16,6 @@
  */
 
 #include "numachip.h"
-#include "registers.h"
 #include "../bootloader.h"
 
 Numachip2::MmioMap::MmioMap(Numachip2 &_numachip): numachip(_numachip)

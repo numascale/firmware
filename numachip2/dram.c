@@ -16,7 +16,6 @@
  */
 
 #include "numachip.h"
-#include "registers.h"
 #include "../bootloader.h"
 
 void Numachip2::dram_init(void)

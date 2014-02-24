@@ -16,7 +16,6 @@
  */
 
 #include "numachip.h"
-#include "registers.h"
 #include "lc5.h"
 #include "../platform/config.h"
 #include "../bootloader.h"
