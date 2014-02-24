@@ -22,25 +22,25 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-uint32_t Numachip2::read32(const uint16_t reg)
+uint32_t Numachip2::read32(const reg_t reg)
 {
 	/* FIXME: use SCI */
 	return lib::mcfg_read32(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::write32(const uint16_t reg, const uint32_t val)
+void Numachip2::write32(const reg_t reg, const uint32_t val)
 {
 	/* FIXME: use SCI */
 	lib::mcfg_write32(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
-uint8_t Numachip2::read8(const uint16_t reg)
+uint8_t Numachip2::read8(const reg_t reg)
 {
 	/* FIXME: use SCI */
 	return lib::mcfg_read8(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::write8(const uint16_t reg, const uint8_t val)
+void Numachip2::write8(const reg_t reg, const uint8_t val)
 {
 	/* FIXME: use SCI */
 	lib::mcfg_write8(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
