@@ -21,45 +21,4 @@
 #define SIU_ATT_RANGE 2 /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
 #define SIU_ATT_SHIFT (24 + SIU_ATT_RANGE * 4)
 
-/* Function in bits 15:12 */
-#define LC_BASE         0x2800
-#define LC_SIZE         0x0100
-#define LC_LINKSTAT     0x00c4
-
-#define I2C_REG0        0x2040
-#define I2C_REG1        0x2044
-#define SPI_REG0        0x2048
-#define SPI_REG1        0x204c
-
-#define MTAG_BASE       0x2080
-#define CTAG_BASE       0x20a0
-#define NCACHE_BASE     0x20c0
-#define MCTL_SIZE       0x20
-
-#define TAG_CTRL        0x00
-#define TAG_ADDR_MASK   0x04
-#define TAG_MCTR_OFFSET 0x08
-#define TAG_MCTR_MASK   0x0c
-#define TAG_CPU_ADDR    0x10
-#define TAG_CPU_DATA    0x18
-
-#define SIU_XBAR_LOW    0x2200
-#define SIU_XBAR_MID    0x2240
-#define SIU_XBAR_HIGH   0x2280
-#define SIU_XBAR_CHUNK  0x22c0
-#define SIU_NODEID      0x22c4
-#define SIU_ATT_INDEX   0x2300
-#define SIU_ATT_ENTRY   0x2304
-#define SIU_STATUS      0x2308
-
-/* FIXME */
-#define MAP_INDEX       0x1000
-#define DRAM_BASE       0x1004
-#define DRAM_LIMIT      0x1008
-#define MMIO_BASE       0x100a
-#define MMIO_LIMIT      0x100c
-
-
-#define HSS_PLLCTL      0x2f00
-
 #endif
