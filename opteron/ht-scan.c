@@ -174,13 +174,13 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 	/* Optimize width (16b) */
 	printf("+");
-	val = lib::cht_read32(nc, 0, NC2_F0_LINK_CONTROL_REGISTER);
+	val = lib::cht_read32(nc, 0, Numachip2::LINK_CONTROL);
 	printf(".");
 
 	if (!options->ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
-			lib::cht_write32(nc, 0, NC2_F0_LINK_CONTROL_REGISTER, (val & 0x00ffffff) | 0x11000000);
+			lib::cht_write32(nc, 0, Numachip2::LINK_CONTROL, (val & 0x00ffffff) | 0x11000000);
 			reboot = 1;
 		}
 
@@ -200,7 +200,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		uint8_t max_supported = 0;
 
 		printf("+");
-		val = lib::cht_read32(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER);
+		val = lib::cht_read32(nc, 0, Numachip2::LINK_FREQUENCY_REVISION);
 		printf(".");
 
 		/* Find maximum supported frequency */
@@ -209,7 +209,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<NC freq=%d>",max_supported);
-			lib::cht_write32(nc, 0, NC2_F0_LINK_FREQUENCY_REVISION_REGISTER, (val & ~0xf00) | (max_supported << 8));
+			lib::cht_write32(nc, 0, Numachip2::LINK_FREQUENCY_REVISION, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
 
@@ -240,10 +240,10 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 	ht_t nnodes = (val >> 4) & 7;
 
 	/* Check the last cHT node for our VID/DID incase it's already been included in the cHT fabric */
-	val = lib::cht_read32(nnodes, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
+	val = lib::cht_read32(nnodes, 0, Numachip2::DEVICE_VENDOR_ID);
 	if (val == vendev) {
 		nc = nnodes;
-		*p_chip_rev = lib::cht_read32(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
+		*p_chip_rev = lib::cht_read32(nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
 		printf("NumaChip2 rev %d already at HT%d\n", *p_chip_rev, nc);
 		/* Chip already found; make sure the desired width/frequency is set */
 		ht_optimize_link(nc, -1, -1);
@@ -309,10 +309,10 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 			lib::cht_write32(i, F0_HT, 0x40 + nc * 4, val);
 		}
 
-		val = lib::cht_read32(nc, 0, NC2_F0_DEVICE_VENDOR_ID_REGISTER);
+		val = lib::cht_read32(nc, 0, Numachip2::DEVICE_VENDOR_ID);
 		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 
-		*p_chip_rev = lib::cht_read32(nc, 0, NC2_F0_CLASS_CODE_REVISION_ID_REGISTER) & 0xffff;
+		*p_chip_rev = lib::cht_read32(nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
 		printf("NumaChip2 rev %d found on HT%d.%d\n", *p_chip_rev, neigh, link);
 
 		/* Ramp up link speed and width before adding to coherent fabric */
@@ -345,7 +345,7 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 
 	val = lib::cht_read32(0, F0_HT, 0x60);
 	lib::cht_write32(nc, 0,
-		   NC2_F0_NODE_ID_REGISTER,
+		   Numachip2::NODE_ID,
 		   (((val >> 12) & 7) << 24) | /* LkNode */
 		   (((val >> 8)  & 7) << 16) | /* SbNode */
 		   (nc << 8) | /* NodeCnt */

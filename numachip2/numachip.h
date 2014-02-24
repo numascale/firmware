@@ -78,6 +78,17 @@ class Numachip2 {
 	void routing_init(void);
 public:
 	/* Function in bits 15:12 */
+	static const reg_t DEVICE_VENDOR_ID        = 0x0000;
+	static const reg_t STATUS_COMMAND          = 0x0004;
+	static const reg_t CLASS_CODE_REVISION_ID  = 0x0008;
+	static const reg_t HEADER_TYPE             = 0x000c;
+	static const reg_t BASE_ADDRESS_0          = 0x0010;
+	static const reg_t CAPABILITIES_POINTER    = 0x0034;
+	static const reg_t LINK_CONTROL            = 0x0084;
+	static const reg_t LINK_FREQUENCY_REVISION = 0x0088;
+	static const reg_t NODE_ID                 = 0x00c8;
+	static const reg_t UNIT_ID                 = 0x00d0;
+
 	static const reg_t HT_NODEID       = 0x00c8;
 	static const reg_t LC_BASE         = 0x2800;
 	static const reg_t LC_SIZE         = 0x0100;
