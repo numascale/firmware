@@ -168,6 +168,8 @@ int main(const int argc, const char *argv[])
 	else
 		config = new Config(options->config_filename);
 
+	e820 = new E820();
+
 	local_node = new Node(config->node->sci);
 
 	/* Add global MCFG maps */
@@ -197,8 +199,6 @@ int main(const int argc, const char *argv[])
 
 	printf("Local secret is %08x\n", lib::mcfg_read32(config->node->sci, 0, 26, 0, 0x14));
 	printf("Remote secret is %08x\n", lib::mcfg_read32(r, 0, 26, 0, 0x14));
-
-	e820 = new E820();
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

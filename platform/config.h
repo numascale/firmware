@@ -43,6 +43,7 @@ public:
 	uint32_t x_size, y_size, z_size;
 	uint32_t strict;
 
+	bool master;
 	int ringmask : 6;
 	int nnodes, npartitions;
 	struct node *node, *nodes;

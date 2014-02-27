@@ -40,7 +40,7 @@ void Opteron::reset(const enum reset mode, const int last)
 	}
 
 	/* Ensure console drains */
-	udelay(1500000);
+	udelay(1000000);
 
 	if (mode == Warm) {
 		outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);

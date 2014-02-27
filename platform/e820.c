@@ -25,15 +25,15 @@ extern "C" {
 	#include "com32.h"
 }
 
+const char *E820::names[] = {"", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
+
 void E820::dump(void)
 {
-	const char *name[] = {"usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
-
 	uint64_t last_base = map->base, last_length = map->length;
 
 	for (int i = 0; i < *used; i++) {
 		printf(" %011llx:%011llx (%011llx) %s\n",
-		  map[i].base, map[i].base + map[i].length, map[i].length, name[map[i].type]);
+		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
 		if (i) {
 			assert(map[i].base >= (last_base + last_length));
