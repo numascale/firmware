@@ -70,7 +70,7 @@ namespace lib
 	{
 		uint32_t ret;
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+			printf("CF8:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		ret = inl(PCI_CONF_DATA + (reg & 3));
@@ -87,7 +87,7 @@ namespace lib
 
 		uint32_t ret;
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
 		setup_fs(MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
@@ -101,7 +101,7 @@ namespace lib
 	{
 		uint8_t ret;
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+			printf("CF8:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		ret = inb(PCI_CONF_DATA + (reg & 3));
@@ -122,7 +122,7 @@ namespace lib
 	void cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
 	{
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+			printf("CF8:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		outl(val, PCI_CONF_DATA + (reg & 3));
@@ -139,7 +139,7 @@ namespace lib
 		}
 
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		cli();
 		setup_fs(MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
@@ -151,7 +151,7 @@ namespace lib
 	void cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
 	{
 		if (options->debug.access)
-			printf("pci:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
+			printf("CF8:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
 		cli();
 		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
 		outb(val, PCI_CONF_DATA + (reg & 3));
