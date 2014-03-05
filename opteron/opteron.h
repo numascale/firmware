@@ -30,9 +30,9 @@ class Opteron {
 		int ranges;
 
 		struct reg setup(const int range);
-		void print(const int range);
 		int unused(void);
 	public:
+		void print(const int range);
 		MmioMap(Opteron &_opteron);
 		void remove(int range);
 		bool read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
@@ -64,10 +64,12 @@ protected:
 	static const int F4_LINK = 4;
 	static const int F5_EXTD = 5;
 public:
+	static const uint32_t VENDEV = 12001022;
+
 	static int family;
 	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
-	const sci_t sci;
+	sci_t sci;
 	const ht_t ht;
 	MmioMap mmiomap;
 	DramMap drammap;
@@ -84,7 +86,7 @@ public:
 	static void cht_print(int neigh, int link);
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
-	static ht_t ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev);
+	static ht_t ht_fabric_fixup(const uint32_t vendev);
 
 	uint32_t read32(const uint8_t func, const uint16_t reg);
 	void write32(const uint8_t func, const uint16_t reg, const uint32_t val);

@@ -45,7 +45,6 @@ class Numachip2 {
 	};
 
 	char card_type[16];
-	const uint32_t rev;
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
 
@@ -89,6 +88,7 @@ public:
 	static const reg_t NODE_ID                 = 0x00c8;
 	static const reg_t UNIT_ID                 = 0x00d0;
 
+	static const reg_t FABRIC_CONTROL  = 0x0014; // FIXME correct when implemented later
 	static const reg_t HT_NODEID       = 0x00c8;
 	static const reg_t LC_BASE         = 0x2800;
 	static const reg_t LC_SIZE         = 0x0100;
@@ -126,11 +126,10 @@ public:
 	static const reg_t MMIO_EXTBASE   = 0x1058;
 	static const reg_t MMIO_EXTLIMIT  = 0x105c;
 
-
 	static const int SIU_ATT_RANGE = 2; /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
 	static const int SIU_ATT_SHIFT = 24 + SIU_ATT_RANGE * 4;
 
-	static const uint32_t vendev = 0x07001b47;
+	static const uint32_t VENDEV = 0x07001b47;
 
 	sci_t sci;
 	const ht_t ht;
@@ -140,7 +139,9 @@ public:
 	void write32(const reg_t reg, const uint32_t val);
 	uint8_t read8(const reg_t reg);
 	void write8(const reg_t reg, const uint8_t val);
-	Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev);
+	static ht_t probe(const sci_t sci);
+	Numachip2(const sci_t sci, const ht_t _ht); // remote
+	Numachip2(const ht_t _ht); // local
 	void set_sci(const sci_t _sci);
 	void fabric_status(void);
 };

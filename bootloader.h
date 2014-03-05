@@ -30,15 +30,15 @@
 #include "numachip2/numachip.h"
 
 class Node {
-	sci_t sci;
 public:
+	sci_t sci;
 	int nopterons;
 	Opteron *opterons[7];
 	Numachip2 *numachip;
 
-	Node(const sci_t _sci);
-	/* Returns 0 on success */
-	bool probe(void) {return 0;};
+	Node(void);
+	Node(const sci_t _sci, const ht_t ht);
+	void set_sci(const sci_t _sci);
 };
 
 /* Global constants found in initialization */
@@ -49,6 +49,7 @@ extern Opteron *opteron;
 extern Numachip2 *numachip;
 extern E820 *e820;
 extern Node *local_node;
+extern Node **nodes;
 
 void udelay(const uint32_t usecs);
 void wait_key(void);

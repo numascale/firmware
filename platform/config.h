@@ -19,6 +19,7 @@
 #define __CONFIG_H
 
 #include "../json-1.5/src/json.h"
+#include "../library/base.h"
 
 class Config {
 	struct node {
@@ -35,6 +36,7 @@ class Config {
 		uint32_t builder;
 	};
 
+	struct node *find(const sci_t sci);
 	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt);
 	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt);
 	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt);
@@ -43,10 +45,10 @@ public:
 	uint32_t x_size, y_size, z_size;
 	uint32_t strict;
 
-	bool master;
+	bool master_local;
 	int ringmask : 6;
 	int nnodes, npartitions;
-	struct node *node, *nodes;
+	struct node *local_node, *nodes, *master;
 	struct partition *partition, *partitions;
 
 	Config(void);

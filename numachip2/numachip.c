@@ -24,26 +24,22 @@
 
 uint32_t Numachip2::read32(const reg_t reg)
 {
-	/* FIXME: use SCI */
-	return lib::mcfg_read32(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const reg_t reg, const uint32_t val)
 {
-	/* FIXME: use SCI */
-	lib::mcfg_write32(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const reg_t reg)
 {
-	/* FIXME: use SCI */
-	return lib::mcfg_read8(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const reg_t reg, const uint8_t val)
 {
-	/* FIXME: use SCI */
-	lib::mcfg_write8(0xfff0, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Numachip2::routing_init(void)
@@ -96,10 +92,37 @@ void Numachip2::routing_init(void)
 	printf("\n");
 }
 
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev):
-  rev(_rev), mmiomap(*this), drammap(*this), sci(_sci), ht(_ht)
+// check NC2 position in remote system and readiness
+ht_t Numachip2::probe(const sci_t sci)
 {
-	write32(SIU_NODEID, sci);
+	// read node count
+	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
+	assert(vendev == 0x12001022);
+	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
+
+	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
+	assert(vendev == VENDEV);
+
+	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CONTROL);
+	if (control & (1 << 31))
+		return ht;
+
+	return 0;
+}
+
+// used for remote card
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
+  mmiomap(*this), drammap(*this), sci(_sci), ht(_ht)
+{
+	write32(FABRIC_CONTROL, 3 << 30);
+}
+
+// used for local card
+Numachip2::Numachip2(const ht_t _ht):
+  mmiomap(*this), drammap(*this), sci(0xfff0), ht(_ht)
+{
+	uint32_t vendev = read32(0x0);
+	assert(vendev == VENDEV);
 
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
@@ -107,14 +130,16 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const uint32_t _rev):
 
 	selftest();
 
-	if (!config->node->sync_only)
+	if (!config->local_node->sync_only)
 		fabric_init();
 	dram_init();
-	routing_init();
 }
 
 void Numachip2::set_sci(const sci_t _sci)
 {
+	printf("Setting Numachip to SCI%03x\n", _sci);
 	sci = _sci;
+
 	write32(SIU_NODEID, sci);
+	routing_init();
 }

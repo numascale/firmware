@@ -126,20 +126,34 @@ void wait_key(const char *msg)
 	} while (ch != 0x0a); /* Enter */
 }
 
-Node::Node(const sci_t _sci): sci(_sci)
+Node::Node(const sci_t _sci, const ht_t ht): sci(_sci)
 {
-	uint32_t rev;
-	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::vendev, &rev);
+	numachip = new Numachip2(sci, ht);
+}
+
+Node::Node(void): sci(0xfff0)
+{
+	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV);
 	assertf(nc, "NumaChip2 not found");
 
 	/* Set SCI ID later once mapping is setup */
-	numachip = new Numachip2(sci, nc, rev);
+	numachip = new Numachip2(nc);
 
 	nopterons = nc;
 
 	/* Opterons are on all HT IDs before Numachip */
 	for (ht_t nb = 0; nb < nopterons; nb++)
 		opterons[nb] = new Opteron(0xfff0, nb);
+}
+
+void Node::set_sci(const sci_t _sci)
+{
+	sci = _sci;
+
+	for (ht_t nb = 0; nb < nopterons; nb++)
+		opterons[nb]->sci = sci;
+
+	numachip->set_sci(sci);
 }
 
 int main(const int argc, const char *argv[])
@@ -159,7 +173,8 @@ int main(const int argc, const char *argv[])
 
 	options = new Options(argc, argv);
 	platform_quirks();
-	/* SMI often assumes HT nodes are Northbridges, so handover early */
+
+	// SMI often assumes HT nodes are Northbridges, so handover early
 	if (options->handover_acpi)
 		stop_acpi();
 
@@ -169,36 +184,68 @@ int main(const int argc, const char *argv[])
 		config = new Config(options->config_filename);
 
 	e820 = new E820();
+	local_node = new Node();
 
-	local_node = new Node(config->node->sci);
-
-	/* Add global MCFG maps */
+	// add global MCFG maps
 	for (int i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(8, MCFG_BASE, MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap.add(9, MCFG_BASE, MCFG_LIM, local_node->numachip->ht, 0);
 
-	local_node->numachip->set_sci(config->node->sci);
-
-	uint64_t val6 = MCFG_BASE | ((uint64_t)config->node->sci << 28ULL) | 0x21ULL;
+	// setup local MCFG access
+	uint64_t val6 = MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
 	lib::wrmsr(MSR_MCFG_BASE, val6);
 
-	sci_t r;
-	uint32_t secret;
-	if (config->node->sci == 000) {
-		r = 0x001;
-		secret = 0x182d25a0;
-	} else {
-		r = 0x000;
-		secret = 0x8a2ce729;
+	local_node->set_sci(config->local_node->sci);
+
+	if (!config->master_local) {
+		// set go-ahead for master
+		local_node->numachip->write32(Numachip2::FABRIC_CONTROL, 1 << 31);
+
+		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
+
+		// FIXME: wait for bit 30 being set when remote writes work
+		while (local_node->numachip->read32(Numachip2::FABRIC_CONTROL) & (1 << 31))
+			cpu_relax();
+
+		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect system\n"
+		  "Refer to the console on SCI%03x ", config->local_node->sci, config->local_node->hostname,
+		  config->nnodes, config->partition->master);
+
+		while (1) {
+			cli();
+			asm volatile("hlt" ::: "memory");
+			printf("wake ");
+		}
 	}
 
-	printf("Writing secret %08x into local register\n", secret);
-	local_node->numachip->write32(0x0014, secret);
+	nodes = (Node **)zalloc(sizeof(void *) * config->nnodes);
+	assert(nodes);
+	nodes[0] = local_node; // FIXME: assumption
 
-	wait_key("Press enter when remote ready");
-	local_node->numachip->fabric_status();
+	int left = config->nnodes - 1;
 
-	printf("Local secret is %08x\n", lib::mcfg_read32(config->node->sci, 0, 26, 0, 0x14));
-	printf("Remote secret is %08x\n", lib::mcfg_read32(r, 0, 26, 0, 0x14));
+	// FIXME: remove when remote access doesn't cause local an remote SF
+	wait_key("Press enter when slave ready");
+	printf("Servers ready:");
+
+	while (left) {
+		for (int n = 0; n < config->nnodes; n++) {
+			// skip initialised nodes
+			if (nodes[n])
+				continue;
+
+			ht_t ht = Numachip2::probe(config->nodes[n].sci);
+			if (ht) {
+				nodes[n] = new Node(config->nodes[n].sci, ht);
+				printf(" SCI%03x", config->nodes[n].sci);
+				left--;
+			}
+
+			cpu_relax();
+		}
+	}
+	printf("\n");
+
+	// FIXME: scan memory
 
 	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)

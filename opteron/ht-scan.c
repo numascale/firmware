@@ -34,9 +34,9 @@ void Opteron::reset(const enum reset mode, const int last)
 {
 	/* Prevent some BIOSs reprogramming the link back to 200MHz */
 	for (int i = 0; i <= last; i++) {
-		uint32_t val = lib::cht_read32(i, F0_HT, HT_INIT_CONTROL);
+		uint32_t val = lib::cf8_read32(0, 24 + i, F0_HT, HT_INIT_CONTROL);
 		val &= ~HTIC_BIOSR_Detect;
-		lib::cht_write32(i, F0_HT, HT_INIT_CONTROL, val);
+		lib::cf8_write32(0, 24 + i, F0_HT, HT_INIT_CONTROL, val);
 	}
 
 	/* Ensure console drains */
@@ -92,12 +92,12 @@ uint32_t Opteron::get_phy_register(const ht_t ht, const link_t link, const int i
 {
 	const int base = 0x180 + link * 8;
 	uint32_t reg;
-	lib::cht_write32(ht, F4_LINK, base, idx | (direct << 29));
+	lib::cf8_write32(0, 24 + ht, F4_LINK, base, idx | (direct << 29));
 
 	for (int i = 0; i < 1000; i++) {
-		reg = lib::cht_read32(ht, F4_LINK, base);
+		reg = lib::cf8_read32(0, 24 + ht, F4_LINK, base);
 		if (reg & 0x80000000)
-			return lib::cht_read32(ht, F4_LINK, base + 4);
+			return lib::cf8_read32(0, 24 + ht, F4_LINK, base + 4);
 		cpu_relax();
 	}
 
@@ -109,11 +109,11 @@ void Opteron::cht_print(int neigh, int link)
 {
 	uint32_t val;
 	printf("HT#%d L%d Link Control       : 0x%08x\n", neigh, link,
-	      lib::cht_read32(neigh, F0_HT, 0x84 + link * 0x20));
+	      lib::cf8_read32(0, 24 + neigh, F0_HT, 0x84 + link * 0x20));
 	printf("HT#%d L%d Link Freq/Revision : 0x%08x\n", neigh, link,
-	       lib::cht_read32(neigh, F0_HT, 0x88 + link * 0x20));
+	       lib::cf8_read32(0, 24 + neigh, F0_HT, 0x88 + link * 0x20));
 	printf("HT#%d L%d Link Ext. Control  : 0x%08x\n", neigh, link,
-	       lib::cht_read32(neigh, 0, 0x170 + link * 4));
+	       lib::cf8_read32(0, 24 + neigh, 0, 0x170 + link * 4));
 	val = get_phy_register(neigh, link, 0xe0, 0); /* Link phy compensation and calibration control 1 */
 	printf("HT#%d L%d Link Phy Settings  : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
@@ -132,11 +132,11 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 		while (1) {
 			int next = 0;
-			rqrt = lib::cht_read32(neigh, F0_HT, 0x40 + 4 * nc) & 0x1f;
+			rqrt = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x40 + 4 * nc) & 0x1f;
 
 			/* Look for other CPUs routed on same link as NC */
 			for (i = 0; i < nc; i++) {
-				if (rqrt == (lib::cht_read32(neigh, F0_HT, 0x40 + 4 * i) & 0x1f)) {
+				if (rqrt == (lib::cf8_read32(0, 24 + neigh, F0_HT, 0x40 + 4 * i) & 0x1f)) {
 					next = i;
 					break;
 				}
@@ -154,7 +154,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 			link ++;
 	}
 
-	ganged = lib::cht_read32(neigh, 0, 0x170 + link * 4) & 1;
+	ganged = lib::cf8_read32(0, 24 + neigh, 0, 0x170 + link * 4) & 1;
 	printf("Found %s link to NC on HT#%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
 	if (options->debug.ht)
@@ -164,33 +164,33 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 	/* Gang link when appropriate, as the BIOS may not */
 	printf("*");
-	val = lib::cht_read32(neigh, F0_HT, 0x170 + link * 4);
+	val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x170 + link * 4);
 	printf(".");
 	if ((val & 1) == 0) {
 		printf("<ganging>");
-		lib::cht_write32(neigh, F0_HT, 0x170 + link * 4, val | 1);
+		lib::cf8_write32(0, 24 + neigh, F0_HT, 0x170 + link * 4, val | 1);
 		reboot = 1;
 	}
 
 	/* Optimize width (16b) */
 	printf("+");
-	val = lib::cht_read32(nc, 0, Numachip2::LINK_CONTROL);
+	val = lib::cf8_read32(0, 24 + nc, 0, Numachip2::LINK_CONTROL);
 	printf(".");
 
 	if (!options->ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
-			lib::cht_write32(nc, 0, Numachip2::LINK_CONTROL, (val & 0x00ffffff) | 0x11000000);
+			lib::cf8_write32(0, 24 + nc, 0, Numachip2::LINK_CONTROL, (val & 0x00ffffff) | 0x11000000);
 			reboot = 1;
 		}
 
 		printf(".");
-		val = lib::cht_read32(neigh, F0_HT, 0x84 + link * 0x20);
+		val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x84 + link * 0x20);
 		printf(".");
 
 		if ((val >> 24) != 0x11) {
 			printf("<CPU width>");
-			lib::cht_write32(neigh, F0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
+			lib::cf8_write32(0, 24 + neigh, F0_HT, 0x84 + link * 0x20, (val & 0x00ffffff) | 0x11000000);
 			reboot = 1;
 		}
 	}
@@ -200,7 +200,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		uint8_t max_supported = 0;
 
 		printf("+");
-		val = lib::cht_read32(nc, 0, Numachip2::LINK_FREQUENCY_REVISION);
+		val = lib::cf8_read32(0, 24 + nc, 0, Numachip2::LINK_FREQUENCY_REVISION);
 		printf(".");
 
 		/* Find maximum supported frequency */
@@ -209,17 +209,17 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<NC freq=%d>",max_supported);
-			lib::cht_write32(nc, 0, Numachip2::LINK_FREQUENCY_REVISION, (val & ~0xf00) | (max_supported << 8));
+			lib::cf8_write32(0, 24 + nc, 0, Numachip2::LINK_FREQUENCY_REVISION, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
 
 		printf(".");
-		val = lib::cht_read32(neigh, F0_HT, 0x88 + link * 0x20);
+		val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x88 + link * 0x20);
 		printf(".");
 
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<CPU freq=%d>",max_supported);
-			lib::cht_write32(neigh, F0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (max_supported << 8));
+			lib::cf8_write32(0, 24 + neigh, F0_HT, 0x88 + link * 0x20, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
 	}
@@ -233,18 +233,18 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
-ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
+ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 {
 	ht_t nc;
-	uint32_t val = lib::cht_read32(0, F0_HT, 0x60);
+	uint32_t val = lib::cf8_read32(0, 24 + 0, F0_HT, 0x60);
 	ht_t nnodes = (val >> 4) & 7;
 
 	/* Check the last cHT node for our VID/DID incase it's already been included in the cHT fabric */
-	val = lib::cht_read32(nnodes, 0, Numachip2::DEVICE_VENDOR_ID);
+	val = lib::cf8_read32(0, 24 + nnodes, 0, Numachip2::DEVICE_VENDOR_ID);
 	if (val == vendev) {
 		nc = nnodes;
-		*p_chip_rev = lib::cht_read32(nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
-		printf("NumaChip2 rev %d already at HT%d\n", *p_chip_rev, nc);
+		uint16_t rev = lib::cf8_read32(0, 24 + nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
+		printf("NumaChip2 rev %d already at HT%d\n", rev, nc);
 		/* Chip already found; make sure the desired width/frequency is set */
 		ht_optimize_link(nc, -1, -1);
 	} else {
@@ -253,11 +253,11 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 		bool use = 1;
 
 		for (neigh = 0; neigh <= nnodes; neigh++) {
-			uint32_t aggr = lib::cht_read32(neigh, F0_HT, 0x164);
+			uint32_t aggr = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x164);
 
 			for (link = 0; link < 4; link++) {
-				val = lib::cht_read32(neigh, F0_HT, 0x98 + link * 0x20);
-				uint32_t val2 = lib::cht_read32(neigh, F0_HT, 0x84 + link * 0x20);
+				val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x98 + link * 0x20);
+				uint32_t val2 = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x84 + link * 0x20);
 				if (options->debug.ht)
 					printf("HT%d.%d LinkControl = 0x%08x\n", neigh, link, val2);
 				if ((val & 0x1f) != 0x3)
@@ -269,7 +269,7 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 					use = 1;
 
 				for (rt = 0; rt <= nnodes; rt++) {
-					val = lib::cht_read32(neigh, F0_HT, 0x40 + rt * 4);
+					val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x40 + rt * 4);
 
 					if (val & (2 << link))
 						use = 1; /* Routing entry "rt" uses link "link" */
@@ -293,27 +293,27 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 
 		nc = nnodes + 1;
 		/* "neigh" request/response routing, copy bcast values from self */
-		val = lib::cht_read32(neigh, F0_HT, 0x40 + neigh * 4);
-		lib::cht_write32(neigh, F0_HT, 0x40 + nc * 4,
+		val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x40 + neigh * 4);
+		lib::cf8_write32(0, 24 + neigh, F0_HT, 0x40 + nc * 4,
 			   (val & 0x07fc0000) | (0x402 << link));
 
 		for (i = 0; i <= nnodes; i++) {
-			val = lib::cht_read32(i, F0_HT, 0x68);
-			lib::cht_write32(i, F0_HT, 0x68, val & ~(1 << 15)); /* LimitCldtCfg */
+			val = lib::cf8_read32(0, 24 + i, F0_HT, 0x68);
+			lib::cf8_write32(0, 24 + i, F0_HT, 0x68, val & ~(1 << 15)); /* LimitCldtCfg */
 
 			if (i == neigh)
 				continue;
 
 			/* Route "nc" same as "neigh" for all other nodes */
-			val = lib::cht_read32(i, F0_HT, 0x40 + neigh * 4);
-			lib::cht_write32(i, F0_HT, 0x40 + nc * 4, val);
+			val = lib::cf8_read32(0, 24 + i, F0_HT, 0x40 + neigh * 4);
+			lib::cf8_write32(0, 24 + i, F0_HT, 0x40 + nc * 4, val);
 		}
 
-		val = lib::cht_read32(nc, 0, Numachip2::DEVICE_VENDOR_ID);
+		val = lib::cf8_read32(0, 24 + nc, 0, Numachip2::DEVICE_VENDOR_ID);
 		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 
-		*p_chip_rev = lib::cht_read32(nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
-		printf("NumaChip2 rev %d found on HT%d.%d\n", *p_chip_rev, neigh, link);
+		uint16_t rev = lib::cf8_read32(0, 24 + nc, 0, Numachip2::CLASS_CODE_REVISION_ID) & 0xffff;
+		printf("NumaChip2 rev %d found on HT%d.%d\n", rev, neigh, link);
 
 		/* Ramp up link speed and width before adding to coherent fabric */
 		ht_optimize_link(nc, neigh, link);
@@ -325,26 +325,26 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev, uint32_t *p_chip_rev)
 		for (i = nnodes; i >= 0; i--) {
 			uint32_t ltcr, val2;
 			/* Disable probes while adjusting */
-			ltcr = lib::cht_read32(i, F0_HT, 0x68);
-			lib::cht_write32(i, F0_HT, 0x68,
+			ltcr = lib::cf8_read32(0, 24 + i, F0_HT, 0x68);
+			lib::cf8_write32(0, 24 + i, F0_HT, 0x68,
 				   ltcr | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
 			/* Update "neigh" bcast values for node about to increment fabric size */
-			val = lib::cht_read32(neigh, F0_HT, 0x40 + i * 4);
-			val2 = lib::cht_read32(i, F0_HT, 0x60);
-			lib::cht_write32(neigh, F0_HT, 0x40 + i * 4, val | (0x80000 << link));
+			val = lib::cf8_read32(0, 24 + neigh, F0_HT, 0x40 + i * 4);
+			val2 = lib::cf8_read32(0, 24 + i, F0_HT, 0x60);
+			lib::cf8_write32(0, 24 + neigh, F0_HT, 0x40 + i * 4, val | (0x80000 << link));
 			/* FIXME: Race condition observered to cause lockups at this point */
 			/* Increase fabric size */
-			lib::cht_write32(i, F0_HT, 0x60, val2 + (1 << 4));
+			lib::cf8_write32(0, 24 + i, F0_HT, 0x60, val2 + (1 << 4));
 			/* Reassert LimitCldtCfg */
-			lib::cht_write32(i, F0_HT, 0x68, ltcr | (1 << 15));
+			lib::cf8_write32(0, 24 + i, F0_HT, 0x68, ltcr | (1 << 15));
 		}
 
 		critical_leave();
 		printf("\n");
 	}
 
-	val = lib::cht_read32(0, F0_HT, 0x60);
-	lib::cht_write32(nc, 0,
+	val = lib::cf8_read32(0, 24 + 0, F0_HT, 0x60);
+	lib::cf8_write32(0, 24 + nc, 0,
 		   Numachip2::NODE_ID,
 		   (((val >> 12) & 7) << 24) | /* LkNode */
 		   (((val >> 8)  & 7) << 16) | /* SbNode */

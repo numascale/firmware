@@ -229,12 +229,11 @@ Config::Config(void)
 	z_size = 0;
 	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
 
-	master = 1;
 	nnodes = 1;
 	nodes = (struct node *)malloc(sizeof(*nodes));
 	assert(nodes);
 
-	nodes->uuid = local_node->numachip->uuid;
+	nodes->uuid = ::local_node->numachip->uuid;
 	nodes->sci = 0;
 	nodes->partition = 0;
 	strcpy(nodes->hostname, "self");
@@ -245,8 +244,19 @@ Config::Config(void)
 	partitions->master = 0;
 	partitions->builder = 0;
 
-	node = nodes;
+	local_node = nodes;
+	master = local_node;
+	master_local = 1;
 	partition = partitions;
+}
+
+struct Config::node *Config::find(const sci_t sci)
+{
+	for (int n = 0; n < nnodes; n++)
+		if (nodes[n].sci == sci)
+			return &nodes[n];
+
+	fatal("Failed to find SCI%03x in configuration", sci);
 }
 
 Config::Config(const char *filename)
@@ -272,7 +282,8 @@ Config::Config(const char *filename)
 		printf("Fabric configuration:: x %d, y %x, z %d\n", x_size, y_size, z_size);
 
 		for (int i = 0; i < nnodes; i++)
-			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, UUID %08X, SCI%03x, partition %d, sync-only %d\n",
+			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, "
+			  "UUID %08X, SCI%03x, partition %d, sync-only %d\n",
 		      i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
 		      nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5], nodes[i].uuid,
 		      nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
@@ -296,24 +307,26 @@ Config::Config(const char *filename)
 		if (!memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac))) {
 			if (options->debug.config)
 				printf("MAC matches node %d", i);
-			node = &nodes[i];
+			local_node = &nodes[i];
 			break;
 		}
 
 		if (!strcmp(syslinux->hostname, nodes[i].hostname)) {
 			if (options->debug.config)
 				printf("Hostname matches node %d", i);
-			node = &nodes[i];
+			local_node = &nodes[i];
 			break;
 		}
 	}
 
-	assertf(node, "Failed to find entry matching this node with UUID %08X or hostname %s", local_node->numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
+	assertf(local_node, "Failed to find entry matching this node with UUID %08X or hostname %s",
+	  ::local_node->numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
 
-	partition = &partitions[node->partition];
-	master = node->sci == partition->master;
-	printf("; partition %d; %s\n", node->partition, master ? "master" : "slave");
+	partition = &partitions[local_node->partition];
+	master = find(partition->master);
+	master_local = local_node == master;
+	printf("; partition %d; %s\n", local_node->partition, master ? "master" : "slave");
 
-	partition = &partitions[node->partition];
+	partition = &partitions[local_node->partition];
 }
 

@@ -82,7 +82,7 @@ namespace lib
 
 	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	{
-		if (sci == 0xfff0)
+		if (sci == 0xfff0 || sci == config->local_node->sci)
 			return cf8_read32(bus, dev, func, reg);
 
 		uint32_t ret;
@@ -133,7 +133,7 @@ namespace lib
 
 	void mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 	{
-		if (sci == 0xfff0) {
+		if (sci == 0xfff0 || sci == config->local_node->sci) {
 			cf8_write32(bus, dev, func, reg, val);
 			return;
 		}
@@ -168,25 +168,5 @@ namespace lib
 		}
 
 		assertf(0, "Unimplemented");
-	}
-
-	uint32_t cht_read32(const ht_t ht, uint8_t func, uint16_t reg)
-	{
-		return cf8_read32(0, 24 + ht, func, reg);
-	}
-
-	void cht_write32(const ht_t ht, uint8_t func, uint16_t reg, uint32_t val)
-	{
-		cf8_write32(0, 24 + ht, func, reg, val);
-	}
-
-	void cht_write8(const ht_t ht, uint8_t func, uint16_t reg, uint8_t val)
-	{
-		cf8_write8(0, 24 + ht, func, reg, val);
-	}
-
-	uint8_t cht_read8(const ht_t ht, uint8_t func, uint16_t reg)
-	{
-		return cf8_read8(0, 24 + ht, func, reg);
 	}
 }

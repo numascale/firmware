@@ -92,12 +92,16 @@ typedef uint16_t reg_t;
 
 inline void *operator new(const size_t size)
 {
-	return zalloc(size);
+	void *p = zalloc(size);
+	assert(p);
+	return p;
 }
 
 inline void *operator new[](const size_t size)
 {
-	return zalloc(size);
+	void *p = zalloc(size);
+	assert(p);
+	return p;
 }
 
 inline void operator delete(void *const p)
