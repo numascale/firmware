@@ -64,8 +64,68 @@ protected:
 	static const int F4_LINK = 4;
 	static const int F5_EXTD = 5;
 public:
-	static const uint32_t VENDEV = 12001022;
+	static const msr_t TOPMEM            = 0xc001001a;
+	static const msr_t TOPMEM2           = 0xc001001d;
+	static const msr_t APIC_BAR          = 0x0000001b;
+	static const msr_t FS_BASE           = 0xc0000100;
+	static const msr_t SYSCFG            = 0xc0010010;
+	static const msr_t HWCR              = 0xc0010015;
+	static const msr_t NB_CFG            = 0xc001001f;
+	static const msr_t INT_HALT          = 0xc0010055;
+	static const msr_t MCFG_BASE         = 0xc0010058;
+	static const msr_t COFVID_STAT       = 0xc0010071;
+	static const msr_t SMM_BASE          = 0xc0010111;
+	static const msr_t OSVW_ID_LEN       = 0xc0010140;
+	static const msr_t OSVW_STATUS       = 0xc0010141;
+	static const msr_t NODE_ID           = 0xc001100c;
+	static const msr_t LSCFG             = 0xc0011020;
+	static const msr_t CU_CFG2           = 0xc001102a;
+	static const msr_t CU_CFG3           = 0xc001102b;
+	static const msr_t MTRR_PHYS_BASE0   = 0x00000200;
+	static const msr_t MTRR_PHYS_BASE1   = 0x00000202;
+	static const msr_t MTRR_PHYS_BASE2   = 0x00000204;
+	static const msr_t MTRR_PHYS_BASE3   = 0x00000206;
+	static const msr_t MTRR_PHYS_BASE4   = 0x00000208;
+	static const msr_t MTRR_PHYS_BASE5   = 0x0000020a;
+	static const msr_t MTRR_PHYS_BASE6   = 0x0000020c;
+	static const msr_t MTRR_PHYS_BASE7   = 0x0000020e;
+	static const msr_t MTRR_PHYS_MASK0   = 0x00000201;
+	static const msr_t MTRR_PHYS_MASK1   = 0x00000203;
+	static const msr_t MTRR_PHYS_MASK2   = 0x00000205;
+	static const msr_t MTRR_PHYS_MASK3   = 0x00000207;
+	static const msr_t MTRR_PHYS_MASK4   = 0x00000209;
+	static const msr_t MTRR_PHYS_MASK5   = 0x0000020b;
+	static const msr_t MTRR_PHYS_MASK6   = 0x0000020d;
+	static const msr_t MTRR_PHYS_MASK7   = 0x0000020f;
+	static const msr_t PERF_CTL0         = 0xc0010001;
+	static const msr_t PERF_CTR0         = 0xc0010005;
+	static const msr_t IORR_PHYS_BASE0   = 0xc0010016;
+	static const msr_t IORR_PHYS_BASE1   = 0xc0010018;
+	static const msr_t IORR_PHYS_MASK0   = 0xc0010017;
+	static const msr_t IORR_PHYS_MASK1   = 0xc0010019;
+	static const msr_t MTRR_FIX64K_00000 = 0x00000250;
+	static const msr_t MTRR_FIX16K_80000 = 0x00000258;
+	static const msr_t MTRR_FIX16K_A0000 = 0x00000259;
+	static const msr_t MTRR_FIX4K_C0000  = 0x00000268;
+	static const msr_t MTRR_FIX4K_C8000  = 0x00000269;
+	static const msr_t MTRR_FIX4K_D0000  = 0x0000026a;
+	static const msr_t MTRR_FIX4K_D8000  = 0x0000026b;
+	static const msr_t MTRR_FIX4K_E0000  = 0x0000026c;
+	static const msr_t MTRR_FIX4K_E8000  = 0x0000026d;
+	static const msr_t MTRR_FIX4K_F0000  = 0x0000026e;
+	static const msr_t MTRR_FIX4K_F8000  = 0x0000026f;
+	static const msr_t MTRR_DEFAULT      = 0x000002ff;
 
+	static const uint32_t VENDEV_SR5690	 = 0x5a101002;
+	static const uint32_t VENDEV_SR5670	 = 0x5a121002;
+	static const uint32_t VENDEV_SR5650	 = 0x5a131002;
+	static const uint32_t VENDEV_MCP55	 = 0x036910de;
+	static const uint32_t VENDEV_OPTERON = 0x12001022;
+
+	static const reg_t DRAM_BASE         = 0x1120;
+	static const reg_t DRAM_LIMIT        = 0x1124;
+
+	uint64_t dram_base, dram_size;
 	static int family;
 	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
@@ -90,5 +150,7 @@ public:
 
 	uint32_t read32(const uint8_t func, const uint16_t reg);
 	void write32(const uint8_t func, const uint16_t reg, const uint32_t val);
+	uint32_t read32(const reg_t reg);
+	void write32(const reg_t reg, const uint32_t val);
 };
 #endif

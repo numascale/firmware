@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <sys/io.h>
 
-#include "../opteron/defs.h"
 #include "../platform/acpi.h"
 #include "../bootloader.h"
 #include "../platform/options.h"

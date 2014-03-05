@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "../opteron/defs.h"
 #include "../bootloader.h"
 #include "access.h"
 
@@ -35,7 +34,7 @@
 #define canonicalize(a) (((a) & (1ULL << 47)) ? ((a) | (0xffffULL << 48)) : (a))
 #define setup_fs(addr) do { \
   asm volatile("mov %%ds, %%ax\n\tmov %%ax, %%fs" ::: "eax"); \
-  asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(MSR_FS_BASE)); \
+  asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(Opteron::FS_BASE)); \
   } while(0)
 
 namespace lib
@@ -89,7 +88,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs(MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
 		sti();
 		if (options->debug.access)
@@ -141,7 +140,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs(MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
 		if (options->debug.access)

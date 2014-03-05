@@ -20,7 +20,6 @@
 
 #include "../bootloader.h"
 #include "../platform/options.h"
-#include "../opteron/defs.h"
 #include "acpi.h"
 
 #define SHADOW_BASE 0xf0000
@@ -37,13 +36,13 @@ static void shadow_bios(void)
 	int *area = (int *)malloc(SHADOW_LEN);
 	assert(area);
 	memcpy(area, (void *)SHADOW_BASE, SHADOW_LEN);
-	uint64_t val = lib::rdmsr(MSR_SYSCFG);
-	lib::wrmsr(MSR_SYSCFG, val | (3 << 18));
+	uint64_t val = lib::rdmsr(Opteron::SYSCFG);
+	lib::wrmsr(Opteron::SYSCFG, val | (3 << 18));
 	disable_cache();
-	lib::wrmsr(MSR_MTRR_FIX4K_F0000, FMTRR_WRITETHROUGH);
-	lib::wrmsr(MSR_MTRR_FIX4K_F8000, FMTRR_WRITETHROUGH);
+	lib::wrmsr(Opteron::MTRR_FIX4K_F0000, FMTRR_WRITETHROUGH);
+	lib::wrmsr(Opteron::MTRR_FIX4K_F8000, FMTRR_WRITETHROUGH);
 	enable_cache();
-	lib::wrmsr(MSR_SYSCFG, val | (1 << 18));
+	lib::wrmsr(Opteron::SYSCFG, val | (1 << 18));
 	memcpy((void *)SHADOW_BASE, area, SHADOW_LEN);
 	free(area);
 	printf("done\n");

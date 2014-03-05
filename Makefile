@@ -81,25 +81,25 @@ $(mjson_dir)/src/json.c: mjson-$(mjson_version).tar.gz
 
 $(mjson_dir)/src/json.o: $(mjson_dir)/src/json.c
 
-version.h: opteron/defs.h library/access.h platform/acpi.h bootloader.h library/access.c bootloader.c
+version.h: library/access.h platform/acpi.h bootloader.h library/access.c bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
 bootloader.elf: bootloader.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o platform/syslinux.o platform/e820.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
-bootloader.o: $(mjson_dir)/src/json.h bootloader.c opteron/defs.h bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
+bootloader.o: $(mjson_dir)/src/json.h bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
-opteron/ht-scan.o: opteron/ht-scan.c opteron/defs.h bootloader.h library/access.h
+opteron/ht-scan.o: opteron/ht-scan.c bootloader.h library/access.h
 opteron/maps.o: opteron/maps.c
 opteron/opteron.o: opteron/opteron.c opteron/opteron.h
 
-platform/options.o: platform/options.c opteron/defs.h bootloader.h library/access.h
+platform/options.o: platform/options.c bootloader.h library/access.h
 platform/acpi.o: platform/acpi.c platform/acpi.h
 platform/smbios.o: platform/smbios.c bootloader.h
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
 platform/config.o: platform/config.c platform/config.h
 platform/e820.o: platform/e820.c platform/e820.h
 
-library/access.o: library/access.c opteron/defs.h library/access.h
+library/access.o: library/access.c library/access.h
 
 numachip2/spd.o: numachip2/spd.c numachip2/spd.h bootloader.h
 numachip2/numachip.o: numachip2/numachip.c numachip2/numachip.h

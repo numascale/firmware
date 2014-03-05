@@ -18,7 +18,6 @@
 #include "opteron.h"
 #include "../library/base.h"
 #include "../library/access.h"
-#include "defs.h"
 
 /* Approximation before probing */
 uint32_t Opteron::tsc_mhz = 2200;
@@ -28,16 +27,16 @@ int Opteron::family;
 void Opteron::prepare(void)
 {
 	/* Enable CF8 extended access */
-	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
-	lib::wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
+	uint64_t msr = lib::rdmsr(NB_CFG);
+	lib::wrmsr(NB_CFG, msr | (1ULL << 46));
 
 	/* Disable 32-bit address wrapping to allow 64-bit access in 32-bit code */
-	msr = lib::rdmsr(MSR_HWCR);
-	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
+	msr = lib::rdmsr(HWCR);
+	lib::wrmsr(HWCR, msr | (1ULL << 17));
 
 	/* Enable 64-bit config access */
-	msr = lib::rdmsr(MSR_CU_CFG2);
-	lib::wrmsr(MSR_CU_CFG2, msr | (1ULL << 50));
+	msr = lib::rdmsr(CU_CFG2);
+	lib::wrmsr(CU_CFG2, msr | (1ULL << 50));
 
 	/* Detect processor family */
 	uint32_t val = lib::cf8_read32(0, 24 + 0, F3_MISC, 0xfc);
@@ -47,7 +46,7 @@ void Opteron::prepare(void)
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
 		val = lib::cf8_read32(0, 24 + 0, F3_MISC, 0xd4);
-		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
+		uint64_t val6 = lib::rdmsr(COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
 
@@ -103,8 +102,8 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(
 Opteron::~Opteron(void)
 {
 	/* Restore 32-bit only access */
-	uint64_t val = lib::rdmsr(MSR_HWCR);
-	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
+	uint64_t val = lib::rdmsr(HWCR);
+	lib::wrmsr(HWCR, val & ~(1ULL << 17));
 }
 
 uint32_t Opteron::read32(const uint8_t func, const uint16_t reg)
@@ -115,4 +114,14 @@ uint32_t Opteron::read32(const uint8_t func, const uint16_t reg)
 void Opteron::write32(const uint8_t func, const uint16_t reg, const uint32_t val)
 {
 	lib::mcfg_write32(sci, 0, 24 + ht, func, reg, val);
+}
+
+uint32_t Opteron::read32(const reg_t reg)
+{
+	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
+void Opteron::write32(const reg_t reg, const uint32_t val)
+{
+	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }

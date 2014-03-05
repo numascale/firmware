@@ -23,8 +23,8 @@
 
 #include "base.h"
 
-#define MCFG_BASE 0x3f0000000000ULL
-#define MCFG_LIM  0x3ffeffffffffULL
+#define NC_MCFG_BASE 0x3f0000000000ULL
+#define NC_MCFG_LIM  0x3ffeffffffffULL
 
 #define cli() { asm volatile("cli"); }
 #define sti() { asm volatile("sti"); }
@@ -71,7 +71,7 @@ namespace lib
 		return val;
 	}
 
-	static inline uint64_t rdmsr(uint32_t msr)
+	static inline uint64_t rdmsr(const msr_t msr)
 	{
 		union {
 			uint32_t dw[2];
@@ -82,7 +82,7 @@ namespace lib
 	}
 
 
-	static inline void wrmsr(uint32_t msr, uint64_t v)
+	static inline void wrmsr(const msr_t msr, const uint64_t v)
 	{
 		union {
 			uint32_t dw[2];

@@ -27,7 +27,6 @@ extern "C" {
 
 #include "version.h"
 #include "bootloader.h"
-#include "opteron/defs.h"
 #include "library/base.h"
 #include "library/access.h"
 #include "platform/acpi.h"
@@ -188,11 +187,11 @@ int main(const int argc, const char *argv[])
 
 	// add global MCFG maps
 	for (int i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(9, MCFG_BASE, MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap.add(9, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
 
 	// setup local MCFG access
-	uint64_t val6 = MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
-	lib::wrmsr(MSR_MCFG_BASE, val6);
+	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
+	lib::wrmsr(Opteron::MCFG_BASE, val6);
 
 	local_node->set_sci(config->local_node->sci);
 
