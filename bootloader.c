@@ -130,9 +130,10 @@ Node::Node(const sci_t _sci, const ht_t ht): sci(_sci)
 	numachip = new Numachip2(sci, ht);
 }
 
+// instantiated for local nodes
 Node::Node(void): sci(0xfff0)
 {
-	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV);
+	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
 	/* Set SCI ID later once mapping is setup */

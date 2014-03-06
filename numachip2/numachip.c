@@ -97,13 +97,13 @@ ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
-	assert(vendev == 0x12001022);
+	assert(vendev == Opteron::VENDEV_OPTERON);
 	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
 
 	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
-	assert(vendev == VENDEV);
+	assert(vendev == VENDEV_NC2);
 
-	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CONTROL);
+	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CTRL);
 	if (control & (1 << 31))
 		return ht;
 
@@ -114,15 +114,15 @@ ht_t Numachip2::probe(const sci_t sci)
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
   mmiomap(*this), drammap(*this), sci(_sci), ht(_ht)
 {
-	write32(FABRIC_CONTROL, 3 << 30);
+	write32(FABRIC_CTRL, 3 << 30);
 }
 
 // used for local card
 Numachip2::Numachip2(const ht_t _ht):
   mmiomap(*this), drammap(*this), sci(0xfff0), ht(_ht)
 {
-	uint32_t vendev = read32(0x0);
-	assert(vendev == VENDEV);
+	uint32_t vendev = read32(VENDEV);
+	assert(vendev == VENDEV_NC2);
 
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);

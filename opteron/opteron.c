@@ -39,13 +39,13 @@ void Opteron::prepare(void)
 	lib::wrmsr(CU_CFG2, msr | (1ULL << 50));
 
 	/* Detect processor family */
-	uint32_t val = lib::cf8_read32(0, 24 + 0, F3_MISC, 0xfc);
+	uint32_t val = lib::cht_read32(0, NB_CPUID);
 	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 	if (family >= 0x15) {
-		val = lib::cf8_read32(0, 24 + 0, F5_EXTD, 0x160);
+		val = lib::cht_read32(0, NB_PSTATE_0);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
-		val = lib::cf8_read32(0, 24 + 0, F3_MISC, 0xd4);
+		val = lib::cht_read32(0, CLK_CTRL_0);
 		uint64_t val6 = lib::rdmsr(COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
@@ -53,7 +53,7 @@ void Opteron::prepare(void)
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
 	/* Detect IOH */
-	ioh_vendev = lib::cf8_read32(0, 0, 0, 0);
+	ioh_vendev = lib::mcfg_read32(0xfff0, 0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
 
 	switch (ioh_vendev) {
@@ -61,41 +61,60 @@ void Opteron::prepare(void)
 	case VENDEV_SR5670:
 	case VENDEV_SR5650:
 		/* Enable 52-bit PCIe address generation */
-		val = lib::cf8_read32(0, 0, 0, 0xc8);
-		lib::cf8_write32(0, 0, 0, 0xc8, val | (1 << 15));
+		val = lib::mcfg_read32(0xfff0, 0, 0, 0, 0xc8);
+		lib::mcfg_write32(0xfff0, 0, 0, 0, 0xc8, val | (1 << 15));
 	}
 }
 
+void Opteron::init(void)
+{
+	uint32_t vendev = read32(VENDEV);
+	assert(vendev == VENDEV_OPTERON);
+
+	dram_base = ((uint64_t)read32(DRAM_BASE) & 0x1fffff) << 27;
+	uint64_t dram_limit = ((uint64_t)read32(DRAM_LIMIT) & 0x1fffff) << 27;
+	dram_limit |= 0x1fffff;
+	dram_size = dram_limit - dram_base;
+
+	printf("SCI%03x#%d DRAM from %lldGB for %lldGB\n", sci, ht, dram_base >> 30, dram_size >> 30);
+}
+
+// remote instantiation
 Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
 {
-	uint32_t vendev = read32(F0_HT, 0x0);
-	assert(vendev == 0x12001022); // FIXME: VENDEV somehow equals 0x00b71efe
+	init();
+}
+
+// local instantiation; SCI is set later
+Opteron::Opteron(const ht_t _ht): sci(0xfff0), ht(_ht), mmiomap(*this), drammap(*this)
+{
+	init();
 
 	/* Enable CF8 extended access; Linux needs this later */
-	uint32_t val = read32(F3_MISC, 0x8c);
-	write32(F3_MISC, 0x8c, val | (1 << (46 - 32)));
+	uint32_t val = read32(NB_CONF_1H);
+	write32(NB_CONF_1H, val | (1 << (46 - 32)));
 
 	/* Set CHtExtAddrEn, ApicExtId, ApicExtBrdCst */
-	val = read32(F0_HT, 0x68);
+	val = read32(LINK_TRANS_CTRL);
 	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
-		write32(F0_HT, 0x68, val | (1 << 25) | (1 << 18) | (1 << 17));
+		write32(LINK_TRANS_CTRL, val | (1 << 25) | (1 << 18) | (1 << 17));
 
 	/* Enable 128MB-granularity on extended MMIO maps */
 	if (Opteron::family < 0x15) {
-		val = read32(F0_HT, 0x168);
-		write32(F0_HT, 0x168, (val & ~0x300) | 0x200);
+		val = read32(EXT_LINK_TRANS_CTRL);
+		write32(EXT_LINK_TRANS_CTRL, (val & ~0x300) | 0x200);
 	}
 
 	/* Enable Addr64BitEn on IO links */
 	for (int i = 0; i < 4; i++) {
 		/* Skip coherent/disabled links */
-		val = read32(F0_HT, 0x98 + i * 0x20);
+		val = read32(LINK_TYPE + i * 0x20);
 		if (!(val & (1 << 2)))
 			continue;
 
-		val = read32(F0_HT, 0x84 + i * 0x20);
+		val = read32(LINK_CTRL + i * 0x20);
 		if (!(val & (1 << 15)))
-			write32(F0_HT, 0x84 + i * 0x20, val | (1 << 15));
+			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
 }
 
@@ -104,16 +123,6 @@ Opteron::~Opteron(void)
 	/* Restore 32-bit only access */
 	uint64_t val = lib::rdmsr(HWCR);
 	lib::wrmsr(HWCR, val & ~(1ULL << 17));
-}
-
-uint32_t Opteron::read32(const uint8_t func, const uint16_t reg)
-{
-	return lib::mcfg_read32(sci, 0, 24 + ht, func, reg);
-}
-
-void Opteron::write32(const uint8_t func, const uint16_t reg, const uint32_t val)
-{
-	lib::mcfg_write32(sci, 0, 24 + ht, func, reg, val);
 }
 
 uint32_t Opteron::read32(const reg_t reg)

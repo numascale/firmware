@@ -168,4 +168,14 @@ namespace lib
 
 		assertf(0, "Unimplemented");
 	}
+
+	uint32_t cht_read32(const ht_t ht, const reg_t reg)
+	{
+		return cf8_read32(0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
+	void cht_write32(const ht_t ht, const reg_t reg, uint32_t val)
+	{
+		cf8_write32(0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
 }

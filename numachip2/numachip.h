@@ -77,19 +77,26 @@ class Numachip2 {
 	void routing_init(void);
 public:
 	/* Registers; function in bits 15:12 */
-	static const reg_t DEVICE_VENDOR_ID        = 0x0000;
-	static const reg_t STATUS_COMMAND          = 0x0004;
-	static const reg_t CLASS_CODE_REVISION_ID  = 0x0008;
-	static const reg_t HEADER_TYPE             = 0x000c;
-	static const reg_t BASE_ADDRESS_0          = 0x0010;
-	static const reg_t CAPABILITIES_POINTER    = 0x0034;
-	static const reg_t LINK_CONTROL            = 0x0084;
-	static const reg_t LINK_FREQUENCY_REVISION = 0x0088;
-	static const reg_t NODE_ID                 = 0x00c8;
-	static const reg_t UNIT_ID                 = 0x00d0;
+	static const reg_t VENDEV          = 0x0000;
+	static const reg_t STAT_COMMAND    = 0x0004;
+	static const reg_t CLASS_CODE_REV  = 0x0008;
+	static const reg_t HEADER_TYPE     = 0x000c;
+	static const reg_t BASE_ADDR_0     = 0x0010;
+	static const reg_t FABRIC_CTRL     = 0x0014; // FIXME correct when implemented later
+	static const reg_t CAP_PTR         = 0x0034;
+	static const reg_t LINK_CTRL       = 0x0084;
+	static const reg_t LINK_FREQ_REV   = 0x0088;
+	static const reg_t UNIT_ID         = 0x00d0;
+	static const reg_t HT_NODE_ID      = 0x00c8;
 
-	static const reg_t FABRIC_CONTROL  = 0x0014; // FIXME correct when implemented later
-	static const reg_t HT_NODEID       = 0x00c8;
+	static const reg_t MAP_INDEX       = 0x1044;
+	static const reg_t DRAM_BASE       = 0x1048;
+	static const reg_t DRAM_LIMIT      = 0x104c;
+	static const reg_t MMIO_BASE       = 0x1050;
+	static const reg_t MMIO_LIMIT      = 0x1054;
+	static const reg_t MMIO_EXTBASE    = 0x1058;
+	static const reg_t MMIO_EXTLIMIT   = 0x105c;
+
 	static const reg_t LC_BASE         = 0x2800;
 	static const reg_t LC_SIZE         = 0x0100;
 	static const reg_t LC_LINKSTAT     = 0x00c4;
@@ -117,19 +124,10 @@ public:
 	static const reg_t SIU_STATUS      = 0x2308;
 	static const reg_t HSS_PLLCTL      = 0x2f00;
 
-	/* From Numachip documentation */
-	static const reg_t MAP_INDEX      = 0x1044;
-	static const reg_t DRAM_BASE      = 0x1048;
-	static const reg_t DRAM_LIMIT     = 0x104c;
-	static const reg_t MMIO_BASE      = 0x1050;
-	static const reg_t MMIO_LIMIT     = 0x1054;
-	static const reg_t MMIO_EXTBASE   = 0x1058;
-	static const reg_t MMIO_EXTLIMIT  = 0x105c;
-
 	static const int SIU_ATT_RANGE = 2; /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
 	static const int SIU_ATT_SHIFT = 24 + SIU_ATT_RANGE * 4;
 
-	static const uint32_t VENDEV = 0x07001b47;
+	static const uint32_t VENDEV_NC2 = 0x07001b47;
 
 	sci_t sci;
 	const ht_t ht;

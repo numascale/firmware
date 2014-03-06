@@ -103,5 +103,7 @@ namespace lib
 	void     mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
 	void     cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
 	void     mcfg_write8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+	uint32_t cht_read32(const ht_t ht, const reg_t reg);
+	void     cht_write32(const ht_t ht, const reg_t reg, uint32_t val);
 }
 #endif
