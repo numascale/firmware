@@ -25,7 +25,7 @@ class LC5;
 
 class Numachip2 {
 	class MmioMap {
-		Numachip2 &numachip;
+		const Numachip2 &numachip;
 	public:
 		MmioMap(Numachip2 &_numachip);
 		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
@@ -35,7 +35,7 @@ class Numachip2 {
 	};
 
 	class DramMap {
-		Numachip2 &numachip;
+		const Numachip2 &numachip;
 	public:
 		DramMap(Numachip2 &_numachip);
 		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
@@ -44,14 +44,23 @@ class Numachip2 {
 		void print(const int range);
 	};
 
+	class DramAtt {
+		const Numachip2 &numachip;
+	public:
+		DramAtt(Numachip2 &_numachip);
+		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
+	};
+
+	class MmioAtt {
+		const Numachip2 &numachip;
+	public:
+		MmioAtt(Numachip2 &_numachip);
+		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
+	};
+
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
-
-	MmioMap mmiomap;
-	DramMap drammap;
-	friend class MmioMap;
-	friend class DramMap;
 
 	/* i2c-master.c */
 	void i2c_master_init(void);
@@ -77,66 +86,79 @@ class Numachip2 {
 	void routing_init(void);
 public:
 	/* Registers; function in bits 15:12 */
-	static const reg_t VENDEV          = 0x0000;
-	static const reg_t STAT_COMMAND    = 0x0004;
-	static const reg_t CLASS_CODE_REV  = 0x0008;
-	static const reg_t HEADER_TYPE     = 0x000c;
-	static const reg_t BASE_ADDR_0     = 0x0010;
-	static const reg_t FABRIC_CTRL     = 0x0014; // FIXME correct when implemented later
-	static const reg_t CAP_PTR         = 0x0034;
-	static const reg_t LINK_CTRL       = 0x0084;
-	static const reg_t LINK_FREQ_REV   = 0x0088;
-	static const reg_t UNIT_ID         = 0x00d0;
-	static const reg_t HT_NODE_ID      = 0x00c8;
+	static const reg_t VENDEV            = 0x0000;
+	static const reg_t STAT_COMMAND      = 0x0004;
+	static const reg_t CLASS_CODE_REV    = 0x0008;
+	static const reg_t HEADER_TYPE       = 0x000c;
+	static const reg_t BASE_ADDR_0       = 0x0010;
+	static const reg_t FABRIC_CTRL       = 0x0014; // FIXME correct when implemented later
+	static const reg_t CAP_PTR           = 0x0034;
+	static const reg_t LINK_CTRL         = 0x0084;
+	static const reg_t LINK_FREQ_REV     = 0x0088;
+	static const reg_t UNIT_ID           = 0x00d0;
+	static const reg_t HT_NODE_ID        = 0x00c8;
 
-	static const reg_t MAP_INDEX       = 0x1044;
-	static const reg_t DRAM_BASE       = 0x1048;
-	static const reg_t DRAM_LIMIT      = 0x104c;
-	static const reg_t MMIO_BASE       = 0x1050;
-	static const reg_t MMIO_LIMIT      = 0x1054;
-	static const reg_t MMIO_EXTBASE    = 0x1058;
-	static const reg_t MMIO_EXTLIMIT   = 0x105c;
+	static const reg_t MAP_INDEX         = 0x1044;
+	static const reg_t DRAM_MAP_BASE     = 0x1048;
+	static const reg_t DRAM_MAP_LIMIT    = 0x104c;
+	static const reg_t MMIO_MAP_BASE     = 0x1050;
+	static const reg_t MMIO_MAP_LIMIT    = 0x1054;
+	static const reg_t EXTMMIO_MAP_BASE  = 0x1058;
+	static const reg_t EXTMMIO_MAP_LIMIT = 0x105c;
+	static const reg_t DRAM_BASE         = 0x1070;
+	static const reg_t DRAM_LIMIT        = 0x1074;
+	static const reg_t PIU_ATT_INDEX     = 0x1078;
+	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 
-	static const reg_t LC_BASE         = 0x2800;
-	static const reg_t LC_SIZE         = 0x0100;
-	static const reg_t LC_LINKSTAT     = 0x00c4;
-	static const reg_t I2C_REG0        = 0x2040;
-	static const reg_t I2C_REG1        = 0x2044;
-	static const reg_t SPI_REG0        = 0x2048;
-	static const reg_t SPI_REG1        = 0x204c;
-	static const reg_t MTAG_BASE       = 0x2080;
-	static const reg_t CTAG_BASE       = 0x20a0;
-	static const reg_t NCACHE_BASE     = 0x20c0;
-	static const reg_t MCTL_SIZE       = 0x20;
-	static const reg_t TAG_CTRL        = 0x00;
-	static const reg_t TAG_ADDR_MASK   = 0x04;
-	static const reg_t TAG_MCTR_OFFSET = 0x08;
-	static const reg_t TAG_MCTR_MASK   = 0x0c;
-	static const reg_t TAG_CPU_ADDR    = 0x10;
-	static const reg_t TAG_CPU_DATA    = 0x18;
-	static const reg_t SIU_XBAR_LOW    = 0x2200;
-	static const reg_t SIU_XBAR_MID    = 0x2240;
-	static const reg_t SIU_XBAR_HIGH   = 0x2280;
-	static const reg_t SIU_XBAR_CHUNK  = 0x22c0;
-	static const reg_t SIU_NODEID      = 0x22c4;
-	static const reg_t SIU_ATT_INDEX   = 0x2300;
-	static const reg_t SIU_ATT_ENTRY   = 0x2304;
-	static const reg_t SIU_STATUS      = 0x2308;
-	static const reg_t HSS_PLLCTL      = 0x2f00;
+	static const reg_t LC_BASE           = 0x2800;
+	static const reg_t LC_SIZE           = 0x0100;
+	static const reg_t LC_LINKSTAT       = 0x00c4;
+	static const reg_t I2C_REG0          = 0x2040;
+	static const reg_t I2C_REG1          = 0x2044;
+	static const reg_t SPI_REG0          = 0x2048;
+	static const reg_t SPI_REG1          = 0x204c;
+	static const reg_t MTAG_BASE         = 0x2080;
+	static const reg_t CTAG_BASE         = 0x20a0;
+	static const reg_t NCACHE_BASE       = 0x20c0;
+	static const reg_t MCTL_SIZE         = 0x20;
+	static const reg_t TAG_CTRL          = 0x00;
+	static const reg_t TAG_ADDR_MASK     = 0x04;
+	static const reg_t TAG_MCTR_OFFSET   = 0x08;
+	static const reg_t TAG_MCTR_MASK     = 0x0c;
+	static const reg_t TAG_CPU_ADDR      = 0x10;
+	static const reg_t TAG_CPU_DATA      = 0x18;
+	static const reg_t SIU_XBAR_LOW      = 0x2200;
+	static const reg_t SIU_XBAR_MID      = 0x2240;
+	static const reg_t SIU_XBAR_HIGH     = 0x2280;
+	static const reg_t SIU_XBAR_CHUNK    = 0x22c0;
+	static const reg_t SIU_NODEID        = 0x22c4;
+	static const reg_t SIU_ATT_INDEX     = 0x2300;
+	static const reg_t SIU_ATT_ENTRY     = 0x2304;
+	static const reg_t SIU_STATUS        = 0x2308;
+	static const reg_t HSS_PLLCTL        = 0x2f00;
 
-	static const int SIU_ATT_RANGE = 2; /* 3 = 47:36, 2 = 43:32, 1 = 39:28, 0 = 35:24 */
-	static const int SIU_ATT_SHIFT = 24 + SIU_ATT_RANGE * 4;
+	static const int SIU_ATT_SHIFT = 32;
+	static const int MMIO32_ATT_SHIFT = 20;
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
+
+	MmioMap mmiomap;
+	friend class MmioMap;
+	DramMap drammap;
+	friend class DramMap;
+	DramAtt dramatt;
+	friend class DramAtt;
+	MmioAtt mmioatt;
+	friend class MmioAtt;
 
 	sci_t sci;
 	const ht_t ht;
 	uint32_t uuid;
 
-	uint32_t read32(const reg_t reg);
-	void write32(const reg_t reg, const uint32_t val);
-	uint8_t read8(const reg_t reg);
-	void write8(const reg_t reg, const uint8_t val);
+	uint32_t read32(const reg_t reg) const;
+	void write32(const reg_t reg, const uint32_t val) const;
+	uint8_t read8(const reg_t reg) const;
+	void write8(const reg_t reg, const uint8_t val) const;
 	static ht_t probe(const sci_t sci);
 	Numachip2(const sci_t sci, const ht_t _ht); // remote
 	Numachip2(const ht_t _ht); // local

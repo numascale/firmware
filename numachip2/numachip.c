@@ -22,22 +22,22 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-uint32_t Numachip2::read32(const reg_t reg)
+uint32_t Numachip2::read32(const reg_t reg) const
 {
 	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::write32(const reg_t reg, const uint32_t val)
+void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
 	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
-uint8_t Numachip2::read8(const reg_t reg)
+uint8_t Numachip2::read8(const reg_t reg) const
 {
 	return lib::mcfg_read8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::write8(const reg_t reg, const uint8_t val)
+void Numachip2::write8(const reg_t reg, const uint8_t val) const
 {
 	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
@@ -112,14 +112,14 @@ ht_t Numachip2::probe(const sci_t sci)
 
 // used for remote card
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
-  mmiomap(*this), drammap(*this), sci(_sci), ht(_ht)
+  mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(_sci), ht(_ht)
 {
 	write32(FABRIC_CTRL, 3 << 30);
 }
 
 // used for local card
 Numachip2::Numachip2(const ht_t _ht):
-  mmiomap(*this), drammap(*this), sci(0xfff0), ht(_ht)
+  mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(0xfff0), ht(_ht)
 {
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_NC2);
