@@ -22,6 +22,7 @@
 #include <stdbool.h>
 
 #include "../library/base.h"
+#include "smbios.h"
 
 struct acpi_rsdp {
 	unsigned char sig[8];
@@ -114,17 +115,30 @@ struct acpi_mcfg_allocation {
 	uint32_t reserved;
 } __attribute__((packed));
 
-#define ACPI_REV 2 /* 64-bit pointers; ACPI 2-5 */
-
 typedef struct acpi_sdt *acpi_sdt_p;
 
-void debug_acpi(void);
-checked uint8_t checksum(const acpi_sdt_p addr, const int len);
-checked bool replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize);
-void add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, unsigned int ptrsize);
-checked acpi_sdt_p find_root(const char *sig);
-checked bool replace_root(const char *sig, const acpi_sdt_p replacement);
-checked acpi_sdt_p find_sdt(const char *sig);
-checked bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
+class ACPI {
+	static const int acpi_rev = 2; // 64-bit pointers; ACPI 2-5
+	SMBIOS smbios;
+
+	void shadow_bios(void);
+	checked uint8_t checksum(const acpi_sdt_p addr, const int len);
+	void checksum_ok(acpi_sdt_p table, const int len);
+	acpi_rsdp *find_rsdp(const char *start, int len);
+	bool rdsp_exists(void);
+	acpi_sdt_p find_child(const char *sig, acpi_sdt_p parent, const int ptrsize);
+	uint32_t slack(acpi_sdt_p parent);
+	void acpi_dump(const acpi_sdt_p table);
+public:
+	void debug_acpi(void);
+	checked bool replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize);
+	void add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, unsigned int ptrsize);
+	checked acpi_sdt_p find_root(const char *sig);
+	checked bool replace_root(const char *sig, const acpi_sdt_p replacement);
+	checked acpi_sdt_p find_sdt(const char *sig);
+	checked bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
+	void handover(void);
+	ACPI(void);
+};
 
 #endif

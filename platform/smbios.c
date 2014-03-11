@@ -18,26 +18,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 
 #include "../bootloader.h"
+#include "smbios.h"
 
-struct smbios_header {
-	uint8_t type;
-	uint8_t length;
-	uint16_t handle;
-	uint8_t *data;
-};
-
-static const char *smbios_string(const char *table, uint8_t index) {
+const char *SMBIOS::string(const char *table, uint8_t index) {
 	while (--index)
 		table += strlen(table) + 1;
 	return table;
 }
 
-int smbios_parse(const char **biosver, const char **biosdate,
-		 const char **sysmanuf, const char **sysproduct,
-		 const char **boardmanuf, const char **boardproduct)
+SMBIOS::SMBIOS(void)
 {
 	const char *mem = (const char *)0xf0000;
 	const char *buf, *data;
@@ -49,10 +40,7 @@ int smbios_parse(const char **biosver, const char **biosdate,
 		if (!memcmp(mem + fp, "_SM_", 4))
 			break;
 
-	if (fp >= 0x10000) {
-		error("Failed to find SMBIOS signature");
-		return -1;
-	}
+	assertf(fp < 0x10000, "Failed to find SMBIOS signature");
 
 	uint16_t len = *(uint16_t *)(mem + fp + 0x16);
 	uint16_t num = *(uint16_t *)(mem + fp + 0x1c);
@@ -71,14 +59,14 @@ int smbios_parse(const char **biosver, const char **biosdate,
 		next = data + h->length;
 
 		if (h->type == 0) {
-			*biosver = smbios_string(next, data[5]);
-			*biosdate = smbios_string(next, data[8]);
+			biosver = string(next, data[5]);
+			biosdate = string(next, data[8]);
 		} else if (h->type == 1) {
-			*sysmanuf = smbios_string(next, data[4]);
-			*sysproduct = smbios_string(next, data[5]);
+			sysmanuf = string(next, data[4]);
+			sysproduct = string(next, data[5]);
 		} else if (h->type == 2) {
-			*boardmanuf = smbios_string(next, data[4]);
-			*boardproduct = smbios_string(next, data[5]);
+			boardmanuf = string(next, data[4]);
+			boardproduct = string(next, data[5]);
 		}
 
 		while (next - buf + 1 < len && (next[0] != 0 || next[1] != 0))
@@ -88,5 +76,12 @@ int smbios_parse(const char **biosver, const char **biosdate,
 		i++;
 	}
 
-	return 0;
+	assert(biosver);
+	assert(biosdate);
+	assert(sysmanuf);
+	assert(sysproduct);
+	assert(boardmanuf);
+	assert(boardproduct);
+
+	printf("Platform is %s %s (%s %s) with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
 }

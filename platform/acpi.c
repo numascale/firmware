@@ -30,7 +30,7 @@
 static struct acpi_rsdp *rptr = NULL;
 static bool bios_shadowed = 0;
 
-static void shadow_bios(void)
+void ACPI::shadow_bios(void)
 {
 	printf("Shadowing BIOS...");
 	int *area = (int *)malloc(SHADOW_LEN);
@@ -49,7 +49,7 @@ static void shadow_bios(void)
 	bios_shadowed = 1;
 }
 
-uint8_t checksum(const acpi_sdt_p addr, const int len)
+uint8_t ACPI::checksum(const acpi_sdt_p addr, const int len)
 {
 	uint8_t sum = 0;
 	int i;
@@ -60,12 +60,12 @@ uint8_t checksum(const acpi_sdt_p addr, const int len)
 	return sum;
 }
 
-static void checksum_ok(acpi_sdt_p table, const int len)
+void ACPI::checksum_ok(acpi_sdt_p table, const int len)
 {
 	assertf(checksum(table, len) == 0, "ACPI table %.4s at 0x%p has bad checksum", table->sig.s, table);
 }
 
-static acpi_rsdp *find_rsdp(const char *start, int len)
+acpi_rsdp *ACPI::find_rsdp(const char *start, int len)
 {
 	acpi_rsdp *ret = NULL;
 	int i;
@@ -81,7 +81,7 @@ static acpi_rsdp *find_rsdp(const char *start, int len)
 	return ret;
 }
 
-static bool rdsp_exists(void)
+bool ACPI::rdsp_exists(void)
 {
 	const char *ebda = (char *)(*((unsigned short *)0x40e) * 16);
 	rptr = find_rsdp(ebda, 1024);
@@ -95,7 +95,7 @@ static bool rdsp_exists(void)
 	return 1;
 }
 
-static acpi_sdt_p find_child(const char *sig, acpi_sdt_p parent, const int ptrsize)
+acpi_sdt_p ACPI::find_child(const char *sig, acpi_sdt_p parent, const int ptrsize)
 {
 	uint64_t childp;
 	acpi_sdt_p table;
@@ -130,7 +130,7 @@ static acpi_sdt_p find_child(const char *sig, acpi_sdt_p parent, const int ptrsi
 }
 
 /* Return the number of bytes after an ACPI table before the next */
-static uint32_t slack(acpi_sdt_p parent)
+uint32_t ACPI::slack(acpi_sdt_p parent)
 {
 	acpi_sdt_p next_table = (acpi_sdt_p)0xffffffff;
 	acpi_sdt_p rsdt = (acpi_sdt_p)rptr->rsdt_addr;
@@ -214,7 +214,7 @@ out:
 	return (uint32_t)next_table - (uint32_t)parent - parent->len;
 }
 
-bool replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
+bool ACPI::replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
 {
 	uint64_t newp, childp;
 	acpi_sdt_p table;
@@ -275,7 +275,7 @@ again:
 	fatal("ACPI tables immutable when replacing child at 0x%p", &parent->data[i]);
 }
 
-void add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
+void ACPI::add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
 {
 	/* If insufficient space, replace unimportant tables */
 	if (slack(parent) < ptrsize) {
@@ -313,7 +313,7 @@ again:
 	fatal("ACPI tables immutable when adding child at 0x%p", &parent->data[i]);
 }
 
-acpi_sdt_p find_root(const char *sig)
+acpi_sdt_p ACPI::find_root(const char *sig)
 {
 	if (!rdsp_exists())
 		return NULL;
@@ -345,7 +345,7 @@ acpi_sdt_p find_root(const char *sig)
 	return NULL;
 }
 
-bool replace_root(const char *sig, const acpi_sdt_p replacement)
+bool ACPI::replace_root(const char *sig, const acpi_sdt_p replacement)
 {
 	if (!rdsp_exists())
 		return 0;
@@ -374,7 +374,7 @@ bool replace_root(const char *sig, const acpi_sdt_p replacement)
 	return 0;
 }
 
-acpi_sdt_p find_sdt(const char *sig)
+acpi_sdt_p ACPI::find_sdt(const char *sig)
 {
 	acpi_sdt_p root = find_root("XSDT");
 	if (root)
@@ -387,7 +387,7 @@ acpi_sdt_p find_sdt(const char *sig)
 	return NULL;
 }
 
-static void acpi_dump(const acpi_sdt_p table)
+void ACPI::acpi_dump(const acpi_sdt_p table)
 {
 	int i;
 	unsigned char *data = (unsigned char *)table;
@@ -406,7 +406,7 @@ static void acpi_dump(const acpi_sdt_p table)
 	printf("\n");
 }
 
-bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
+bool ACPI::acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
 {
 	/* Check if enough space to append to SSDT */
 	acpi_sdt_p table = find_child(sig, parent, ptrsize);
@@ -424,7 +424,7 @@ bool acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, co
 	return 1;
 }
 
-void debug_acpi(void)
+void ACPI::debug_acpi(void)
 {
 	if (!rdsp_exists())
 		return;
@@ -559,3 +559,57 @@ void debug_acpi(void)
 	}
 }
 
+void ACPI::handover(void)
+{
+	printf("ACPI handoff: ");
+	acpi_sdt_p fadt = find_sdt("FACP");
+
+	if (!fadt) {
+		printf("ACPI FACP table not found\n");
+		return;
+	}
+
+	uint32_t smi_cmd = *(uint32_t *)&fadt->data[48 - 36];
+	uint8_t acpi_enable = fadt->data[52 - 36];
+
+	if (!smi_cmd || !acpi_enable) {
+		printf("legacy support not enabled\n");
+		return;
+	}
+
+	uint32_t acpipm1cntblk = *(uint32_t *)&fadt->data[64 - 36];
+	uint16_t sci_en = inb(acpipm1cntblk);
+	outb(acpi_enable, smi_cmd);
+	int limit = 100;
+
+	do {
+		udelay(100);
+		sci_en = inb(acpipm1cntblk);
+
+		if ((sci_en & 1) == 1) {
+			printf("legacy handoff succeeded\n");
+			return;
+		}
+	} while (--limit);
+
+	printf("ACPI handoff timed out\n");
+}
+
+ACPI::ACPI(void)
+{
+	/* Skip if already set */
+	if (!options->handover_acpi) {
+		/* Systems where ACPI must be handed off early */
+		const char *acpi_blacklist[] = {"H8QGL", NULL};
+
+		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
+			if (!strcmp(smbios.boardproduct, acpi_blacklist[i])) {
+				printf(" (blacklisted)");
+				options->handover_acpi = 1;
+				break;
+			}
+		}
+	}
+
+	printf("\n");
+}

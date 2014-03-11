@@ -42,70 +42,7 @@ Config *config;
 E820 *e820;
 Node *local_node;
 Node **nodes;
-
-static void stop_acpi(void)
-{
-	printf("ACPI handoff: ");
-	acpi_sdt_p fadt = find_sdt("FACP");
-
-	if (!fadt) {
-		printf("ACPI FACP table not found\n");
-		return;
-	}
-
-	uint32_t smi_cmd = *(uint32_t *)&fadt->data[48 - 36];
-	uint8_t acpi_enable = fadt->data[52 - 36];
-
-	if (!smi_cmd || !acpi_enable) {
-		printf("legacy support not enabled\n");
-		return;
-	}
-
-	uint32_t acpipm1cntblk = *(uint32_t *)&fadt->data[64 - 36];
-	uint16_t sci_en = inb(acpipm1cntblk);
-	outb(acpi_enable, smi_cmd);
-	int limit = 100;
-
-	do {
-		udelay(100);
-		sci_en = inb(acpipm1cntblk);
-
-		if ((sci_en & 1) == 1) {
-			printf("legacy handoff succeeded\n");
-			return;
-		}
-	} while (--limit);
-
-	printf("ACPI handoff timed out\n");
-}
-
-static void platform_quirks(void)
-{
-	const char *biosver = NULL, *biosdate = NULL;
-	const char *sysmanuf = NULL, *sysproduct = NULL;
-	const char *boardmanuf = NULL, *boardproduct = NULL;
-
-	smbios_parse(&biosver, &biosdate, &sysmanuf, &sysproduct, &boardmanuf, &boardproduct);
-	assert(biosver && biosdate && sysmanuf && sysproduct && boardmanuf && boardproduct);
-
-	printf("Platform is %s %s (%s %s) with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
-
-	/* Skip if already set */
-	if (!options->handover_acpi) {
-		/* Systems where ACPI must be handed off early */
-		const char *acpi_blacklist[] = {"H8QGL", NULL};
-
-		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
-			if (!strcmp(boardproduct, acpi_blacklist[i])) {
-				printf(" (blacklisted)");
-				options->handover_acpi = 1;
-				break;
-			}
-		}
-	}
-
-	printf("\n");
-}
+ACPI *acpi;
 
 void udelay(const uint32_t usecs)
 {
@@ -172,11 +109,11 @@ int main(const int argc, const char *argv[])
 	Opteron::prepare();
 
 	options = new Options(argc, argv);
-	platform_quirks();
+	acpi = new ACPI();
 
 	// SMI often assumes HT nodes are Northbridges, so handover early
 	if (options->handover_acpi)
-		stop_acpi();
+		acpi->handover();
 
 	if (options->singleton)
 		config = new Config();
