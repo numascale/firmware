@@ -142,6 +142,8 @@ public:
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 
+	const static char *ringnames[6];
+
 	MmioMap mmiomap;
 	friend class MmioMap;
 	DramMap drammap;

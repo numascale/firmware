@@ -34,6 +34,7 @@ extern "C" {
 #include "platform/syslinux.h"
 #include "platform/e820.h"
 #include "platform/config.h"
+#include "platform/acpi.h"
 #include "numachip2/numachip.h"
 
 Syslinux *syslinux;

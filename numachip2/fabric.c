@@ -30,8 +30,6 @@ void Numachip2::fabric_status(void)
 
 void Numachip2::fabric_init(void)
 {
-	const char *ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
-
 	printf("Fabric connected:");
 
 	for (int lc = 0; lc < 6; lc++) {

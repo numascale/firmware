@@ -22,6 +22,8 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
+const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
+
 uint32_t Numachip2::read32(const reg_t reg) const
 {
 	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);

@@ -26,7 +26,7 @@ struct reg {
 
 class Opteron {
 	class MmioMap {
-		Opteron &opteron;
+		const Opteron &opteron;
 		int ranges;
 
 		struct reg setup(const int range);
@@ -41,7 +41,7 @@ class Opteron {
 	};
 
 	class DramMap {
-		Opteron &opteron;
+		const Opteron &opteron;
 		static const int ranges = 8;
 
 		int unused(void);
@@ -137,6 +137,7 @@ public:
 	static const reg_t DRAM_LIMIT          = 0x1124;
 	static const reg_t DRAM_MAP_BASE_HIGH  = 0x1140;
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
+	static const reg_t MCA_NB_CONF         = 0x3044;
 	static const reg_t NB_CONF_1H          = 0x308c;
 	static const reg_t CLK_CTRL_0          = 0x30d4;
 	static const reg_t NB_CPUID            = 0x30fc;
@@ -165,7 +166,9 @@ public:
 	static void ht_optimize_link(int nc, int neigh, int link);
 	static ht_t ht_fabric_fixup(const uint32_t vendev);
 
-	uint32_t read32(const reg_t reg);
-	void write32(const reg_t reg, const uint32_t val);
+	uint32_t read32(const reg_t reg) const;
+	void write32(const reg_t reg, const uint32_t val) const;
+	void set32(const reg_t reg, const uint32_t mask) const;
+	void clear32(const reg_t reg, const uint32_t mask) const;
 };
 #endif

@@ -81,7 +81,7 @@ namespace lib
 
 	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
 	{
-		if (sci == 0xfff0 || sci == config->local_node->sci)
+		if (sci == 0xfff0)
 			return cf8_read32(bus, dev, func, reg);
 
 		uint32_t ret;
@@ -132,7 +132,7 @@ namespace lib
 
 	void mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
 	{
-		if (sci == 0xfff0 || sci == config->local_node->sci) {
+		if (sci == 0xfff0) {
 			cf8_write32(bus, dev, func, reg, val);
 			return;
 		}
