@@ -63,9 +63,24 @@ void wait_key(const char *msg)
 	} while (ch != 0x0a); /* Enter */
 }
 
-Node::Node(const sci_t _sci, const ht_t ht): sci(_sci)
+// instantiated for remote nodes
+Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
 {
+	dram_base = -1;
+
+	for (ht_t n = 0; n < nopterons; n++) {
+		Opteron *nb = new Opteron(sci, n);
+
+		if (nb->dram_base < dram_base)
+			dram_base = nb->dram_base;
+
+		dram_size += nb->dram_size;
+		opterons[n] = nb;
+	}
+
 	numachip = new Numachip2(sci, ht);
+
+	printf("SCI%03x has %lldGB for %lldGB\n", sci, dram_base >> 30, dram_size >> 30);
 }
 
 // instantiated for local nodes
@@ -81,7 +96,7 @@ Node::Node(void): sci(0xfff0)
 
 	/* Opterons are on all HT IDs before Numachip */
 	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(0xfff0, nb);
+		opterons[nb] = new Opteron(nb);
 }
 
 void Node::set_sci(const sci_t _sci)
@@ -92,6 +107,38 @@ void Node::set_sci(const sci_t _sci)
 		opterons[nb]->sci = sci;
 
 	numachip->set_sci(sci);
+}
+
+void scan(void)
+{
+	printf("Map scan:\n");
+	uint64_t limit = nodes[0]->dram_size; // FIXME: nodes[0] doesn't have DRAM size yet
+
+	options->debug.access = 1;
+
+	// set DRAM ranges
+	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++) {
+		printf("DRAM limit now %lluGB\n", limit);
+		(*node)->dram_base = limit;
+
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+//		foreach_nb(node, nb)
+			(*nb)->dram_base = limit;
+//			(*nb)->write32(Opteron::DRAM_BASE, limit >> 27);
+			e820->add((*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size, E820::RAM);
+			limit += (*nb)->dram_size;
+//			(*nb)->write32(Opteron::DRAM_LIMIT, (limit - 1) >> 27);
+		}
+	}
+
+	// route DRAM access
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
+			(*node)->numachip->dramatt.range(
+			  (*dnode)->dram_base, (*dnode)->dram_base + (*dnode)->dram_size - 1, (*dnode)->sci);
+
+	printf("New DRAM limit %lluGB\n", limit >> 30);
+	lib::wrmsr(Opteron::TOPMEM2, limit);
 }
 
 int main(const int argc, const char *argv[])
@@ -134,19 +181,34 @@ int main(const int argc, const char *argv[])
 
 	local_node->set_sci(config->local_node->sci);
 
+	wait_key("Press enter when other server ready");
+
 	if (!config->master_local) {
+		local_node->numachip->fabric_train();
+
+		for (int i = 0; i < 10; i++) {
+			local_node->numachip->fabric_status();
+			udelay(1000000);
+		}
+syslinux->exec(options->next_label);
+
 		// set go-ahead for master
-		local_node->numachip->write32(Numachip2::FABRIC_CONTROL, 1 << 31);
+		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 31);
 
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
 
+		options->debug.access = 1;
+
 		// FIXME: wait for bit 30 being set when remote writes work
-		while (local_node->numachip->read32(Numachip2::FABRIC_CONTROL) & (1 << 31))
+		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31)) {
+			local_node->numachip->fabric_status();
 			cpu_relax();
+			udelay(1000000);
+		}
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect system\n"
-		  "Refer to the console on SCI%03x ", config->local_node->sci, config->local_node->hostname,
-		  config->nnodes, config->partition->master);
+		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
+		  config->nnodes, config->master->sci, config->master->hostname);
 
 		while (1) {
 			cli();
@@ -161,9 +223,17 @@ int main(const int argc, const char *argv[])
 
 	int left = config->nnodes - 1;
 
-	// FIXME: remove when remote access doesn't cause local an remote SF
-	wait_key("Press enter when slave ready");
+	local_node->numachip->fabric_train();
+
+	for (int i = 0; i < 10; i++) {
+		local_node->numachip->fabric_status();
+		udelay(1000000);
+	}
+
+syslinux->exec(options->next_label);
 	printf("Servers ready:");
+
+	options->debug.access = 1;
 
 	while (left) {
 		for (int n = 0; n < config->nnodes; n++) {
@@ -183,12 +253,12 @@ int main(const int argc, const char *argv[])
 	}
 	printf("\n");
 
-	// FIXME: scan memory
+	scan();
 
-	printf("Unification succeeded; loading %s...\n", options->next_label);
 	if (options->boot_wait)
 		wait_key("Press enter to boot");
 
+	printf("Unification succeeded; loading %s", options->next_label);
 	syslinux->exec(options->next_label);
 
 	return 0;

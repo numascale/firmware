@@ -20,24 +20,91 @@
 #include "../platform/config.h"
 #include "../bootloader.h"
 
+void Numachip2::fabric_reset(void)
+{
+		write32(Numachip2::HSS_PLLCTL, 1 << 31);
+}
+
 void Numachip2::fabric_status(void)
 {
 	printf("Link status:");
-	for (int lc = 0; lc < 6; lc++)
-		printf(" %08x", lcs[lc]->link_status());
-	printf("\n");
-}
-
-void Numachip2::fabric_init(void)
-{
-	printf("Fabric connected:");
-
 	for (int lc = 0; lc < 6; lc++) {
 		if (!(config->ringmask & (1 << lc)))
 			continue;
 
-		printf(" %s", ringnames[lc]);
-		lcs[lc] = new LC5(*this, LC_BASE + lc * LC_SIZE);
+		printf(" %08x", lcs[lc]->status());
+	}
+	printf("\n");
+}
+
+// goal: read all phy status successfully 5M times; if any error encountered, reset and restart
+void Numachip2::fabric_train(void)
+{
+	int i;
+	printf("Fabric connected:");
+
+	while (1) {
+		// wait until all links are up
+		for (i = training_period; i > 0; i--) {
+			bool allup = 1;
+
+			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				allup &= (*lc)->status() && (1 << 31);
+
+			// exit early if all up
+			if (allup)
+				break;
+		}
+
+		// not all links are up; restart training
+		if (i == 0) {
+			printf("<links not up:");
+			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				printf(" %x", (*lc)->status());
+			printf(">");
+			goto reset;
+		}
+
+		// clear link errors
+		for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+			(*lc)->clear();
+
+		// check for errors over period
+		for (i = stability_period; i; i--) {
+			bool errors = 0;
+
+			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				errors |= ((*lc)->status() & 7) > 0;
+
+			// exit early if all up
+			if (errors) {
+				printf("<errors:");
+				for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+					printf(" %08x", (*lc)->status());
+				printf(">");
+				goto reset;
+			}
+		}
+
+		// no errors found, exit
+		if (!i)
+			break;
+reset:
+		printf("<reset>\n");
+		fabric_reset();
+		udelay(1000000);
+	}
+
+	printf(" ready\n");
+}
+
+void Numachip2::fabric_init(void)
+{
+	for (int lc = 0; lc < 6; lc++) {
+		if (!(config->ringmask & (1 << lc)))
+			continue;
+
+		lcs[nlcs++] = new LC5(*this, LC_BASE + lc * LC_SIZE);
 	}
 
 	printf("\n");

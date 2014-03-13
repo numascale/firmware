@@ -116,6 +116,7 @@ ht_t Numachip2::probe(const sci_t sci)
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
   mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(_sci), ht(_ht)
 {
+	fabric_init();
 	write32(FABRIC_CTRL, 3 << 30);
 }
 
@@ -131,17 +132,15 @@ Numachip2::Numachip2(const ht_t _ht):
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 
 	selftest();
-
-	if (!config->local_node->sync_only)
-		fabric_init();
 	dram_init();
+	fabric_init();
 }
 
 void Numachip2::set_sci(const sci_t _sci)
 {
 	printf("Setting Numachip to SCI%03x\n", _sci);
-	sci = _sci;
 
-	write32(SIU_NODEID, sci);
+	write32(SIU_NODEID, _sci);
+	sci = _sci;
 	routing_init();
 }

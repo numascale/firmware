@@ -58,9 +58,12 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
+	static const int training_period = 2000000;
+	static const int stability_period = 5000000;
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
+	int nlcs;
 
 	/* i2c-master.c */
 	void i2c_master_init(void);
@@ -80,10 +83,8 @@ class Numachip2 {
 	/* dram.c */
 	void dram_init(void);
 
-	/* fabric.h */
-	void fabric_init(void);
-
 	void routing_init(void);
+	void fabric_init(void);
 public:
 	/* Registers; function in bits 15:12 */
 	static const reg_t VENDEV            = 0x0000;
@@ -165,7 +166,9 @@ public:
 	Numachip2(const sci_t sci, const ht_t _ht); // remote
 	Numachip2(const ht_t _ht); // local
 	void set_sci(const sci_t _sci);
+	void fabric_train(void);
 	void fabric_status(void);
+	void fabric_reset(void);
 };
 
 #endif

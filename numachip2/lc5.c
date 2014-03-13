@@ -18,24 +18,17 @@
 #include "lc5.h"
 #include "../bootloader.h"
 
-uint32_t LC5::link_status(void)
+uint32_t LC5::status(void)
 {
 	return numachip.read32(addr + Numachip2::LC_LINKSTAT);
 }
 
-LC5::LC5(Numachip2& _numachip, uint16_t _addr): numachip(_numachip), addr(_addr)
+void LC5::clear(void)
 {
-	uint64_t count = 0;
-	while (!(numachip.read32(addr + Numachip2::LC_LINKSTAT) & (1 << 31))) {
-		if (count++ % 5000000 == 0) {
-			printf("<status=%x> reset", numachip.read32(addr + Numachip2::LC_LINKSTAT));
-			numachip.write32(Numachip2::HSS_PLLCTL, 1 << 31);
-
-			// clear link error bits
-			uint64_t status = numachip.read32(addr + Numachip2::LC_LINKSTAT);
-			numachip.write32(addr + Numachip2::LC_LINKSTAT, status & 7);
-		}
-		cpu_relax();
-	}
+	// clear link error bits
+	numachip.write32(addr + Numachip2::LC_LINKSTAT, 7);
 }
 
+LC5::LC5(Numachip2& _numachip, const uint16_t _addr): numachip(_numachip), addr(_addr)
+{
+}

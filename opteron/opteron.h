@@ -155,6 +155,8 @@ public:
 	friend class DramMap;
 
 	static void prepare(void);
+	void init(void);
+	Opteron(const ht_t _ht);
 	Opteron(const sci_t _sci, const ht_t _ht);
 	~Opteron(void);
 	static void disable_smi(void);

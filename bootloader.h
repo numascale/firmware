@@ -38,6 +38,7 @@ public:
 	int nopterons;
 	Opteron *opterons[7];
 	Numachip2 *numachip;
+	uint64_t dram_base, dram_size;
 
 	Node(void);
 	Node(const sci_t _sci, const ht_t ht);

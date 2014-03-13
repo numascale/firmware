@@ -15,19 +15,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __LC5_H
-#define __LC5_H
+#ifndef __SMBIOS_H
+#define __SMBIOS_H
 
-#include "../library/base.h"
-#include "numachip.h"
+#include <inttypes.h>
 
-class LC5 {
-	const Numachip2& numachip;
-	const uint16_t addr;
+class SMBIOS {
+	struct smbios_header {
+		uint8_t type;
+		uint8_t length;
+		uint16_t handle;
+		uint8_t *data;
+	};
+
+	const char *string(const char *table, uint8_t index);
 public:
-	void clear(void);
-	uint32_t status(void);
-	LC5(Numachip2& _numachip, const uint16_t _addr);
+	const char *biosver, *biosdate;
+	const char *sysmanuf, *sysproduct;
+	const char *boardmanuf, *boardproduct;
+
+	SMBIOS(void);
 };
 
 #endif
