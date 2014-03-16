@@ -124,18 +124,20 @@ void scan(void)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 //		foreach_nb(node, nb)
 			(*nb)->dram_base = limit;
-//			(*nb)->write32(Opteron::DRAM_BASE, limit >> 27);
+			(*nb)->write32(Opteron::DRAM_BASE, limit >> 27);
 			e820->add((*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size, E820::RAM);
 			limit += (*nb)->dram_size;
-//			(*nb)->write32(Opteron::DRAM_LIMIT, (limit - 1) >> 27);
+			(*nb)->write32(Opteron::DRAM_LIMIT, (limit - 1) >> 27);
 		}
 	}
 
+#ifdef FIXME
 	// route DRAM access
 	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
 		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
 			(*node)->numachip->dramatt.range(
 			  (*dnode)->dram_base, (*dnode)->dram_base + (*dnode)->dram_size - 1, (*dnode)->sci);
+#endif
 
 	printf("New DRAM limit %lluGB\n", limit >> 30);
 	lib::wrmsr(Opteron::TOPMEM2, limit);
@@ -182,29 +184,16 @@ int main(const int argc, const char *argv[])
 	local_node->set_sci(config->local_node->sci);
 
 	wait_key("Press enter when other server ready");
+	local_node->numachip->fabric_train();
 
 	if (!config->master_local) {
-		local_node->numachip->fabric_train();
-
-		for (int i = 0; i < 10; i++) {
-			local_node->numachip->fabric_status();
-			udelay(1000000);
-		}
-syslinux->exec(options->next_label);
-
 		// set go-ahead for master
 		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 31);
 
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
 
-		options->debug.access = 1;
-
-		// FIXME: wait for bit 30 being set when remote writes work
-		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31)) {
-			local_node->numachip->fabric_status();
+		while (!(local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31)))
 			cpu_relax();
-			udelay(1000000);
-		}
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
@@ -223,16 +212,7 @@ syslinux->exec(options->next_label);
 
 	int left = config->nnodes - 1;
 
-	local_node->numachip->fabric_train();
-
-	for (int i = 0; i < 10; i++) {
-		local_node->numachip->fabric_status();
-		udelay(1000000);
-	}
-
-syslinux->exec(options->next_label);
 	printf("Servers ready:");
-
 	options->debug.access = 1;
 
 	while (left) {
@@ -258,7 +238,7 @@ syslinux->exec(options->next_label);
 	if (options->boot_wait)
 		wait_key("Press enter to boot");
 
-	printf("Unification succeeded; loading %s", options->next_label);
+	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
 	syslinux->exec(options->next_label);
 
 	return 0;

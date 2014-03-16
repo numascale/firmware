@@ -116,7 +116,6 @@ ht_t Numachip2::probe(const sci_t sci)
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
   mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(_sci), ht(_ht)
 {
-	fabric_init();
 	write32(FABRIC_CTRL, 3 << 30);
 }
 
