@@ -73,17 +73,19 @@ void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 	struct e820entry *end = map + *used;
 	struct e820entry *pos = position(base);
 
-	/* Extend end of existing range if adjacent */
-	if (base == pos->base + pos->length && type == pos->type) {
-		pos->length += length;
-		return;
-	}
+	if (type == pos->type) {
+		/* Extend end of existing range if adjacent */
+		if (base == pos->base + pos->length) {
+			pos->length += length;
+			return;
+		}
 
-	/* Extend start of existing range if adjacent */
-	if (base + length == pos->base) {
-		pos->base -= length;
-		pos->length += length;
-		return;
+		/* Extend start of existing range if adjacent */
+		if (base + length == pos->base) {
+			pos->base -= length;
+			pos->length += length;
+			return;
+		}
 	}
 
 	const uint64_t orig_base = pos->base, orig_length = pos->length;
