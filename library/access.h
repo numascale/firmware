@@ -95,15 +95,15 @@ namespace lib
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	void     pmio_write8(const uint16_t offset, const uint8_t val);
-	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
-	void     cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
-	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-	uint8_t  cf8_read8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-	uint8_t  mcfg_read8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg);
-	void     mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
-	void     cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val);
-	void     mcfg_write8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val);
+	uint8_t  mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
+	uint16_t mcfg_read16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
+	uint32_t mcfg_read32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
+	uint64_t mcfg_read64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
+	void     mcfg_write8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint8_t val);
+	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
+	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
+	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
 	uint32_t cht_read32(const ht_t ht, const reg_t reg);
-	void     cht_write32(const ht_t ht, const reg_t reg, uint32_t val);
+	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
 }
 #endif

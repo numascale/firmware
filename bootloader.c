@@ -84,7 +84,7 @@ Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
 }
 
 // instantiated for local nodes
-Node::Node(void): sci(0xfff0)
+Node::Node(void): sci(SCI_LOCAL)
 {
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
@@ -145,7 +145,7 @@ void scan(void)
 
 int main(const int argc, const char *argv[])
 {
-	syslinux = new Syslinux(); /* Needed first for console access */
+	syslinux = new Syslinux(); // needed first for console access
 
 	printf(CLEAR BANNER "NumaConnect unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  lib::rtc_read(RTC_YEAR), lib::rtc_read(RTC_MONTH), lib::rtc_read(RTC_DAY),

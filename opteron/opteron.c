@@ -26,6 +26,9 @@ int Opteron::family;
 
 void Opteron::prepare(void)
 {
+	// ensure MMCFG access is setup
+	assert(lib::rdmsr(MCFG_BASE) &~ 0xfffff);
+
 	// enable CF8 extended access
 	uint64_t msr = lib::rdmsr(NB_CFG);
 	lib::wrmsr(NB_CFG, msr | (1ULL << 46));
@@ -53,7 +56,7 @@ void Opteron::prepare(void)
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
 	// detect IOH
-	ioh_vendev = lib::mcfg_read32(0xfff0, 0, 0, 0, 0);
+	ioh_vendev = lib::mcfg_read32(SCI_LOCAL, 0, 0, 0, 0);
 	assert(ioh_vendev != 0xffffffff);
 
 	switch (ioh_vendev) {
@@ -61,8 +64,11 @@ void Opteron::prepare(void)
 	case VENDEV_SR5670:
 	case VENDEV_SR5650:
 		// enable 52-bit PCIe address generation
-		val = lib::mcfg_read32(0xfff0, 0, 0, 0, 0xc8);
-		lib::mcfg_write32(0xfff0, 0, 0, 0, 0xc8, val | (1 << 15));
+		val = lib::mcfg_read32(SCI_LOCAL, 0, 0, 0, 0xc8);
+		lib::mcfg_write32(SCI_LOCAL, 0, 0, 0, 0xc8, val | (1 << 15));
+		break;
+	default:
+		fatal("Unknown IOH");
 	}
 }
 
@@ -86,7 +92,7 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(
 }
 
 // local instantiation; SCI is set later
-Opteron::Opteron(const ht_t _ht): sci(0xfff0), ht(_ht), mmiomap(*this), drammap(*this)
+Opteron::Opteron(const ht_t _ht): sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this)
 {
 	init();
 

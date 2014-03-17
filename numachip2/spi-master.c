@@ -61,15 +61,15 @@ void Numachip2::spi_master_enable(void)
 	const uint8_t espr = 4;
 
 	/* Set extended control register first */
-	lib::cf8_write8(0, 24 + ht, 2, 0x4b, (espr & 0xC) >> 2);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4b, (espr & 0xC) >> 2);
 
 	/* Set clock prescaler, chip enable etc. */
-	lib::cf8_write8(0, 24 + ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
 }
 
 void Numachip2::spi_master_disable(void)
 {
-	lib::cf8_write8(0, 24 + ht, 2, 0x48, 0);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x48, 0);
 }
 
 uint8_t Numachip2::spi_master_read_fifo(void)
@@ -77,11 +77,11 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 	uint8_t val;
 
 	do {
-		val = lib::cf8_read8(0, 24 + ht, 2, 0x49);
+		val = lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x49);
 		cpu_relax();
 	} while (val & SPI_MASTER_SR_RFEMPTY);  /* Wait for read-fifo non-empty */
 
-	return lib::cf8_read8(0, 24 + ht, 2, 0x4a);
+	return lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x4a);
 }
 
 void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
@@ -90,20 +90,20 @@ void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *dat
 	spi_master_enable();
 
 	/* Write SPI Read instruction to the transmit fifo */
-	lib::cf8_write8(0, 24 + ht, 2, 0x4a, SPI_INSTR_READ);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, SPI_INSTR_READ);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte1 (most significant 8 bit) to the transmit fifo */
-	lib::cf8_write8(0, 24 + ht, 2, 0x4a, (addr >> 8) & 0xff);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, (addr >> 8) & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte2 (least significant 8 bit) to the transmit fifo */
-	lib::cf8_write8(0, 24 + ht, 2, 0x4a, addr & 0xff);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, addr & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Read SPI data */
 	for (int i = 0; i < len; i++) {
-		lib::cf8_write8(0, 24 + ht, 2, 0x4a, 0); /* Dummy write */
+		lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, 0); /* Dummy write */
 		data[i] = spi_master_read_fifo();
 	}
 

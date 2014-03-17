@@ -38,6 +38,8 @@
 #define CLEAR         "\033\143"
 #define BANNER        "\033[1m"
 
+#define SCI_LOCAL 0x000
+
 #define STR_DW_N(a) (uint32_t)((a[0] << 24) + (a[1] << 16) + (a[2] << 8) + a[3])
 #define STR_DW_H(a) (uint32_t)(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
 

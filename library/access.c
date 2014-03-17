@@ -65,30 +65,41 @@ namespace lib
 		outw(offset | val << 8, PMIO_PORT);
 	}
 
-	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
+	uint8_t mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		uint32_t ret;
+		uint8_t ret;
 		if (options->debug.access)
-			printf("CF8:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-		ret = inl(PCI_CONF_DATA + (reg & 3));
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("movb %%fs:(0), %%al" : "=a"(ret));
 		sti();
 		if (options->debug.access)
-			printf("%08x\n", ret);
+			printf("%02x\n", ret);
 		return ret;
 	}
 
-	uint32_t mcfg_read32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint16_t mcfg_read16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		if (sci == 0xfff0 || sci == config->local_node->sci)
-			return cf8_read32(bus, dev, func, reg);
+		uint16_t ret;
+		if (options->debug.access)
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
+		cli();
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("movw %%fs:(0), %%ax" : "=a"(ret));
+		sti();
+		if (options->debug.access)
+			printf("%04x\n", ret);
+		return ret;
+	}
 
+	uint32_t mcfg_read32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
+	{
 		uint32_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
 		sti();
 		if (options->debug.access)
@@ -96,86 +107,75 @@ namespace lib
 		return ret;
 	}
 
-	uint8_t cf8_read8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
+	uint64_t mcfg_read64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		uint8_t ret;
+		uint64_t ret;
 		if (options->debug.access)
-			printf("CF8:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-		ret = inb(PCI_CONF_DATA + (reg & 3));
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&ret) :"memory");
 		sti();
 		if (options->debug.access)
-			printf("%02x\n", ret);
+			printf("%016llx\n", ret);
 		return ret;
 	}
 
-	uint8_t mcfg_read8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg)
-	{
-		if (sci == 0xfff0)
-			return cf8_read8(bus, dev, func, reg);
-
-		assertf(0, "Unimplemented");
-	}
-
-	void cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
+	void mcfg_write8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint8_t val)
 	{
 		if (options->debug.access)
-			printf("CF8:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
 		cli();
-		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-		outl(val, PCI_CONF_DATA + (reg & 3));
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
 		sti();
 		if (options->debug.access)
 			printf("\n");
 	}
 
-	void mcfg_write32(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
+	void mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val)
 	{
-		if (sci == 0xfff0 || sci == config->local_node->sci) {
-			cf8_write32(bus, dev, func, reg, val);
-			return;
-		}
+		if (options->debug.access)
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
+		cli();
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
+		sti();
+		if (options->debug.access)
+			printf("\n");
+	}
 
+	void mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
+	{
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs(NC_MCFG_BASE | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
+		sti();
+		if (options->debug.access)
+			printf("\n");
+	}
+
+	void mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
+	{
+		if (options->debug.access)
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
+		cli();
+		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
 		if (options->debug.access)
 			printf("\n");
 	}
 
-	void cf8_write8(const uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint8_t val)
-	{
-		if (options->debug.access)
-			printf("CF8:%02x:%02x.%x %03x <- %02x", bus, dev, func, reg, val);
-		cli();
-		outl(PCI_EXT_CONF(bus, ((dev << 3) | func), reg), PCI_CONF_SEL);
-		outb(val, PCI_CONF_DATA + (reg & 3));
-		sti();
-		if (options->debug.access)
-			printf("\n");
-	}
-
-	void mcfg_write8(const sci_t sci, uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg, uint32_t val)
-	{
-		if (sci == 0xfff0) {
-			cf8_write8(bus, dev, func, reg, val);
-			return;
-		}
-
-		assertf(0, "Unimplemented");
-	}
-
 	uint32_t cht_read32(const ht_t ht, const reg_t reg)
 	{
-		return cf8_read32(0, 24 + ht, reg >> 12, reg & 0xfff);
+		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
 	}
 
-	void cht_write32(const ht_t ht, const reg_t reg, uint32_t val)
+	void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
 	{
-		cf8_write32(0, 24 + ht, reg >> 12, reg & 0xfff, val);
+		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 	}
 }

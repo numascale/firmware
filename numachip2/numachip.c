@@ -121,7 +121,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
 
 // used for local card
 Numachip2::Numachip2(const ht_t _ht):
-  mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(0xfff0), ht(_ht)
+  mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), sci(SCI_LOCAL), ht(_ht)
 {
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_NC2);
