@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "../bootloader.h"
+#include "../opteron/msrs.h"
 #include "access.h"
 
 #define PCI_CONF_SEL 0xcf8
@@ -34,7 +35,7 @@
 #define canonicalize(a) (((a) & (1ULL << 47)) ? ((a) | (0xffffULL << 48)) : (a))
 #define setup_fs(addr) do { \
   asm volatile("mov %%ds, %%ax\n\tmov %%ax, %%fs" ::: "eax"); \
-  asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(Opteron::FS_BASE)); \
+  asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(MSR_FS_BASE)); \
   } while(0)
 
 namespace lib
@@ -71,7 +72,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movb %%fs:(0), %%al" : "=a"(ret));
 		sti();
 		if (options->debug.access)
@@ -85,7 +86,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movw %%fs:(0), %%ax" : "=a"(ret));
 		sti();
 		if (options->debug.access)
@@ -99,7 +100,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
 		sti();
 		if (options->debug.access)
@@ -113,7 +114,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&ret) :"memory");
 		sti();
 		if (options->debug.access)
@@ -126,7 +127,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
 		sti();
 		if (options->debug.access)
@@ -138,7 +139,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
 		sti();
 		if (options->debug.access)
@@ -150,7 +151,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
 		sti();
 		if (options->debug.access)
@@ -162,7 +163,7 @@ namespace lib
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
 		cli();
-		setup_fs((rdmsr(Opteron::MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
 		if (options->debug.access)

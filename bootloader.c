@@ -35,6 +35,7 @@ extern "C" {
 #include "platform/e820.h"
 #include "platform/config.h"
 #include "platform/acpi.h"
+#include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 
 Syslinux *syslinux;
@@ -140,7 +141,7 @@ void scan(void)
 #endif
 
 	printf("New DRAM limit %lluGB\n", limit >> 30);
-	lib::wrmsr(Opteron::TOPMEM2, limit);
+	lib::wrmsr(MSR_TOPMEM2, limit);
 }
 
 int main(const int argc, const char *argv[])
@@ -179,7 +180,7 @@ int main(const int argc, const char *argv[])
 
 	// setup local MCFG access
 	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
-	lib::wrmsr(Opteron::MCFG_BASE, val6);
+	lib::wrmsr(MSR_MCFG_BASE, val6);
 
 	local_node->set_sci(config->local_node->sci);
 

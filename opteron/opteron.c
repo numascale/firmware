@@ -16,6 +16,7 @@
  */
 
 #include "opteron.h"
+#include "msrs.h"
 #include "../library/base.h"
 #include "../library/access.h"
 
@@ -27,19 +28,19 @@ int Opteron::family;
 void Opteron::prepare(void)
 {
 	// ensure MMCFG access is setup
-	assert(lib::rdmsr(MCFG_BASE) &~ 0xfffff);
+	assert(lib::rdmsr(MSR_MCFG_BASE) &~ 0xfffff);
 
 	// enable CF8 extended access
-	uint64_t msr = lib::rdmsr(NB_CFG);
-	lib::wrmsr(NB_CFG, msr | (1ULL << 46));
+	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
+	lib::wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
 
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
-	msr = lib::rdmsr(HWCR);
-	lib::wrmsr(HWCR, msr | (1ULL << 17));
+	msr = lib::rdmsr(MSR_HWCR);
+	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
 	// enable 64-bit config access
-	msr = lib::rdmsr(CU_CFG2);
-	lib::wrmsr(CU_CFG2, msr | (1ULL << 50));
+	msr = lib::rdmsr(MSR_CU_CFG2);
+	lib::wrmsr(MSR_CU_CFG2, msr | (1ULL << 50));
 
 	// detect processor family
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
@@ -49,7 +50,7 @@ void Opteron::prepare(void)
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
 		val = lib::cht_read32(0, CLK_CTRL_0);
-		uint64_t val6 = lib::rdmsr(COFVID_STAT);
+		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
 	}
 
@@ -129,8 +130,8 @@ Opteron::Opteron(const ht_t _ht): sci(SCI_LOCAL), ht(_ht), mmiomap(*this), dramm
 Opteron::~Opteron(void)
 {
 	// restore 32-bit only access
-	uint64_t val = lib::rdmsr(HWCR);
-	lib::wrmsr(HWCR, val & ~(1ULL << 17));
+	uint64_t val = lib::rdmsr(MSR_HWCR);
+	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 }
 
 uint32_t Opteron::read32(const reg_t reg) const
