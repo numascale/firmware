@@ -281,12 +281,17 @@ Config::Config(const char *filename)
 	if (options->debug.config) {
 		printf("Fabric configuration:: x %d, y %x, z %d\n", x_size, y_size, z_size);
 
-		for (int i = 0; i < nnodes; i++)
-			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, "
-			  "UUID %08X, SCI%03x, partition %d, sync-only %d\n",
-		      i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
-		      nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5], nodes[i].uuid,
+		for (int i = 0; i < nnodes; i++) {
+			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
+			  i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
+			  nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5]);
+
+			if (nodes[i].uuid != 0xffffffff)
+				printf("UUID %08X, ", nodes[i].uuid);
+
+			printf("SCI%03x, partition %d, sync-only %d\n",
 		      nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
+		}
 
 		for (int i = 0; i < npartitions; i++)
 			printf("Partition %d: master SCI%03x, builder SCI%03x\n",
