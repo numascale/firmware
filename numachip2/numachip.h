@@ -45,6 +45,7 @@ class Numachip2 {
 
 	class DramAtt {
 		const Numachip2 &numachip;
+		unsigned int depth;
 	public:
 		DramAtt(Numachip2 &_numachip);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
@@ -63,6 +64,7 @@ class Numachip2 {
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
 	int nlcs;
+	const bool local;
 
 	/* i2c-master.c */
 	void i2c_master_init(void);
@@ -144,6 +146,9 @@ public:
 
 	const static char *ringnames[6];
 
+	sci_t sci;
+	const ht_t ht;
+
 	MmioMap mmiomap;
 	friend class MmioMap;
 	DramMap drammap;
@@ -153,8 +158,6 @@ public:
 	MmioAtt mmioatt;
 	friend class MmioAtt;
 
-	sci_t sci;
-	const ht_t ht;
 	uint32_t uuid;
 
 	uint32_t read32(const reg_t reg) const;

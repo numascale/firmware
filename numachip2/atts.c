@@ -16,25 +16,42 @@
  */
 
 #include "numachip.h"
+#include "../bootloader.h"
 
 Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 {
+	// detect ATT depth
+	numachip.write32(SIU_NODEID, 0xffff);
+	uint32_t val = numachip.read32(SIU_NODEID) & 0xffff;
+
+	int i;
+	for (i = 15; i >= 11; i--)
+		if (val & (1 << i))
+			break;
+
+	depth = i + 33;
+
+	if (numachip.local)
+		printf("SIU ATT limited to %dTB\n", 1 << (depth - 40));
 }
 
 void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
+	printf("SCI%03x: DRAM att 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
+	assert(limit < (1ULL << depth));
+
 	const uint64_t mask = (1ULL << SIU_ATT_SHIFT) - 1;
 	assert((base & mask) == 0);
 	assert((limit & mask) == mask);
 
-	numachip.write32(SIU_ATT_INDEX, (1 << 31) | (1 << (SIU_ATT_SHIFT / 4 + 21))
-	  | (base >> SIU_ATT_SHIFT));
+	numachip.write32(SIU_ATT_INDEX, (1 << 31) | (base >> SIU_ATT_SHIFT));
 
 	uint64_t pos = base;
 	while (pos < limit) {
 		numachip.write32(SIU_ATT_ENTRY, dest);
 		pos += 1ULL << SIU_ATT_SHIFT;
 	}
+	printf("\n");
 }
 
 Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
