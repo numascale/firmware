@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __OPTERON_H
-#define __OPTERON_H
+#pragma once
 
 #include "../library/base.h"
 
@@ -121,4 +120,3 @@ public:
 	void set32(const reg_t reg, const uint32_t mask) const;
 	void clear32(const reg_t reg, const uint32_t mask) const;
 };
-#endif

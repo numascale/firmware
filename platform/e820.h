@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __E820_H
-#define __E820_H
+#pragma once
 
 #include <stdint.h>
 
@@ -47,5 +46,3 @@ public:
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
 	uint64_t memlimit(void);
 };
-
-#endif

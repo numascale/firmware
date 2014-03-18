@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NUMACHIP_H
-#define __NUMACHIP_H
+#pragma once
 
 #include "spd.h"
 #include "../library/base.h"
@@ -170,5 +169,3 @@ public:
 	void fabric_status(void);
 	void fabric_reset(void);
 };
-
-#endif

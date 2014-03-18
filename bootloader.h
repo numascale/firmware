@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __BOOTLOADER_H
-#define __BOOTLOADER_H
+#pragma once
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -60,5 +59,3 @@ void wait_key(void);
 int smbios_parse(const char **biosver, const char **biosdate,
 		 const char **sysmanuf, const char **sysproduct,
 		 const char **boardmanuf, const char **boardproduct);
-
-#endif
