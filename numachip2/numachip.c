@@ -136,6 +136,9 @@ Numachip2::Numachip2(const ht_t _ht):
 	selftest();
 	dram_init();
 	fabric_init();
+
+	// 1.31ms transaction timeout
+	write32(RMPE_CTRL, (1 << 31) | (2 << 28) | (2 << 26));
 }
 
 void Numachip2::set_sci(const sci_t _sci)

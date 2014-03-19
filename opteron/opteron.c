@@ -124,7 +124,7 @@ Opteron::Opteron(const ht_t _ht): sci(SCI_LOCAL), ht(_ht), mmiomap(*this), dramm
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
 
-	clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
+//	clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
 }
 
 Opteron::~Opteron(void)
