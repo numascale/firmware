@@ -37,7 +37,10 @@ Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 
 void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
-	printf("SCI%03x: DRAM att 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
+	if (options->debug.maps)
+		printf("SCI%03x: DRAM ATT 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
+
+	assert(limit > base);
 	assert(limit < (1ULL << depth));
 
 	const uint64_t mask = (1ULL << SIU_ATT_SHIFT) - 1;
@@ -60,6 +63,7 @@ Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
 
 void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
+	assert(limit > base);
 	const uint64_t mask = (1ULL << MMIO32_ATT_SHIFT) - 1;
 	assert((base & mask) == 0);
 	assert((limit & mask) == mask);

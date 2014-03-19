@@ -61,7 +61,7 @@ void wait_key(const char *msg)
 
 	do {
 		fread(&ch, 1, 1, stdin);
-	} while (ch != 0x0a); /* Enter */
+	} while (ch != 0x0a); // enter
 }
 
 // instantiated for remote nodes
@@ -90,12 +90,11 @@ Node::Node(void): sci(SCI_LOCAL)
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
-	/* Set SCI ID later once mapping is setup */
+	// set SCI ID later once mapping is setup
 	numachip = new Numachip2(nc);
-
 	nopterons = nc;
 
-	/* Opterons are on all HT IDs before Numachip */
+	// Opterons are on all HT IDs before Numachip
 	for (ht_t nb = 0; nb < nopterons; nb++)
 		opterons[nb] = new Opteron(nb);
 }
@@ -157,9 +156,8 @@ int main(const int argc, const char *argv[])
 		syslinux->mac[3], syslinux->mac[4], syslinux->mac[5],
 		inet_ntoa(syslinux->ip), syslinux->hostname ? syslinux->hostname : "<none>");
 
+	options = new Options(argc, argv); // needed before first PCI access
 	Opteron::prepare();
-
-	options = new Options(argc, argv);
 	acpi = new ACPI();
 
 	// SMI often assumes HT nodes are Northbridges, so handover early
@@ -175,7 +173,7 @@ int main(const int argc, const char *argv[])
 	local_node = new Node();
 
 	// add global MCFG maps
-	for (int i = 0; i < local_node->nopterons; i++)
+	for (unsigned i = 0; i < local_node->nopterons; i++)
 		local_node->opterons[i]->mmiomap.add(9, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
 
 	// setup local MCFG access
@@ -207,7 +205,7 @@ int main(const int argc, const char *argv[])
 
 	nodes = (Node **)zalloc(sizeof(void *) * config->nnodes);
 	assert(nodes);
-	nodes[0] = local_node; // FIXME: assumption
+	nodes[0] = local_node;
 
 	int left = config->nnodes - 1;
 

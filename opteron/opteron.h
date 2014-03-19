@@ -88,6 +88,8 @@ public:
 	static const reg_t NB_CONF_1H          = 0x308c;
 	static const reg_t CLK_CTRL_0          = 0x30d4;
 	static const reg_t NB_CPUID            = 0x30fc;
+	static const reg_t DOWNCORE_CTRL       = 0x3190;
+	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
 
 	uint64_t dram_base, dram_size;

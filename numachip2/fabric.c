@@ -66,11 +66,12 @@ void Numachip2::fabric_train(void)
 
 		// not all links are up; restart training
 		if (i == 0) {
-			if (options->debug.fabric)
+			if (options->debug.fabric) {
 				printf("<links not up:");
-			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-				printf(" %x", (*lc)->status());
-			printf(">");
+				for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+					printf(" %x", (*lc)->status());
+				printf(">");
+			}
 			continue;
 		}
 

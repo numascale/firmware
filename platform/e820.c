@@ -66,10 +66,9 @@ void E820::insert(struct e820entry *pos)
 
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
-#ifdef UNUSED
 	if (options->debug.e820)
-		printf("Adding e820 %011llx:%011llx (%011llx) [%d]\n", base, base + length, length, type);
-#endif
+		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
+
 	struct e820entry *end = map + *used;
 	struct e820entry *pos = position(base);
 
