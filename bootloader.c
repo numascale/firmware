@@ -183,8 +183,6 @@ int main(const int argc, const char *argv[])
 	lib::wrmsr(MSR_MCFG_BASE, val6);
 
 	local_node->set_sci(config->local_node->sci);
-
-	wait_key("Press enter when other server ready");
 	local_node->numachip->fabric_train();
 
 	if (!config->master_local) {
@@ -213,8 +211,7 @@ int main(const int argc, const char *argv[])
 
 	int left = config->nnodes - 1;
 
-	printf("Servers ready:");
-	options->debug.access = 1;
+	printf("Servers ready:\n");
 
 	while (left) {
 		for (int n = 0; n < config->nnodes; n++) {

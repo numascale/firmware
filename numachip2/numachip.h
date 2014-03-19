@@ -45,7 +45,7 @@ class Numachip2 {
 
 	class DramAtt {
 		const Numachip2 &numachip;
-		unsigned int depth;
+		unsigned depth;
 	public:
 		DramAtt(Numachip2 &_numachip);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
@@ -58,8 +58,8 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
-	static const int training_period = 2000000;
-	static const int stability_period = 5000000;
+	static const int training_period = 20000;
+	static const int stability_period = 500000;
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
