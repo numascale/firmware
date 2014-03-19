@@ -78,12 +78,34 @@ void Opteron::init(void)
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_OPTERON);
 
-	dram_base = ((uint64_t)read32(DRAM_BASE) & 0x1fffff) << 27;
-	uint64_t dram_limit = ((uint64_t)read32(DRAM_LIMIT) & 0x1fffff) << 27;
-	dram_limit |= 0x1fffff;
-	dram_size = dram_limit - dram_base;
+	// detect amount of memory
+	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
+	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x1fffff;
+	dram_size = dram_limit - dram_base + 1;
+	printf("dram_base=0x%llx dram_limit=0x%llx dram_size=0x%llx\n", dram_base, dram_limit, dram_size);
 
-	printf("SCI%03x#%d DRAM from %lldGB for %lldGB\n", sci, ht, dram_base >> 30, dram_size >> 30);
+	// detect number of cores
+	cores = 1;
+	if (family < 0x15) {
+		uint32_t val = read32(LINK_TRANS_CTRL);
+		if (val & 0x20)
+			cores++; /* Cpu1En */
+
+		val = read32(EXT_LINK_TRANS_CTRL);
+		for (int i = 0; i <= 3; i++)
+			if (val & (1 << i))
+				cores++;
+	} else {
+		uint32_t val = read32(NB_CAP_2);
+		cores += val & 0xff;
+
+		val = read32(DOWNCORE_CTRL);
+		while (val) {
+			if (val & 1)
+				cores--;
+			val >>= 1;
+		}
+	}
 }
 
 // remote instantiation

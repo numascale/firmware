@@ -45,4 +45,5 @@ public:
 	void dump(void);
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
 	uint64_t memlimit(void);
+	void install(void);
 };

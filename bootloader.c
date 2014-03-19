@@ -64,24 +64,31 @@ void wait_key(const char *msg)
 	} while (ch != 0x0a); // enter
 }
 
-// instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
+void Node::init(void)
 {
 	dram_base = -1;
 
 	for (ht_t n = 0; n < nopterons; n++) {
-		Opteron *nb = new Opteron(sci, n);
-
+		Opteron *nb = opterons[n];
 		if (nb->dram_base < dram_base)
 			dram_base = nb->dram_base;
 
 		dram_size += nb->dram_size;
-		opterons[n] = nb;
+		cores += nb->cores;
 	}
 
-	numachip = new Numachip2(sci, ht);
+	dram_end = roundup(dram_size, 1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
+	printf("SCI%03x (%lldGB, %d cores)\n", sci, dram_size >> 30, cores);
+}
 
-	printf("SCI%03x has %lldGB for %lldGB\n", sci, dram_base >> 30, dram_size >> 30);
+// instantiated for remote nodes
+Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
+{
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n] = new Opteron(sci, n);
+
+	numachip = new Numachip2(sci, ht);
+	init();
 }
 
 // instantiated for local nodes
@@ -97,6 +104,8 @@ Node::Node(void): sci(SCI_LOCAL)
 	// Opterons are on all HT IDs before Numachip
 	for (ht_t nb = 0; nb < nopterons; nb++)
 		opterons[nb] = new Opteron(nb);
+
+	init();
 }
 
 void Node::set_sci(const sci_t _sci)
@@ -112,35 +121,42 @@ void Node::set_sci(const sci_t _sci)
 void scan(void)
 {
 	printf("Map scan:\n");
-	uint64_t limit = nodes[0]->dram_size; // FIXME: nodes[0] doesn't have DRAM size yet
-
-	options->debug.access = 1;
+	uint64_t next = nodes[0]->dram_end + 1;
+	if (options->debug.maps)
+		printf("node[0]->dram_end=%lluGB\n", nodes[0]->dram_size >> 30);
 
 	// set DRAM ranges
 	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++) {
-		printf("DRAM limit now %lluGB\n", limit);
-		(*node)->dram_base = limit;
+		(*node)->dram_base = next;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 //		foreach_nb(node, nb)
-			(*nb)->dram_base = limit;
-			(*nb)->write32(Opteron::DRAM_BASE, limit >> 27);
-			e820->add((*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size, E820::RAM);
-			limit += (*nb)->dram_size;
-			(*nb)->write32(Opteron::DRAM_LIMIT, (limit - 1) >> 27);
+			(*nb)->dram_base = next;
+			(*nb)->write32(Opteron::DRAM_BASE, next >> 27);
+			e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
+
+			next += (*nb)->dram_size;
+			(*nb)->write32(Opteron::DRAM_LIMIT, (next - 1) >> 27);
 		}
+
+		next = roundup(next, 1ULL << Numachip2::SIU_ATT_SHIFT);
+		(*node)->dram_end = next - 1;
+
+		if (options->debug.maps)
+			printf("SCI%03x dram_base=0x%llx dram_size=0x%llx dram_end=%llx\n",
+				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 
-#ifdef FIXME
 	// route DRAM access
 	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
 		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
 			(*node)->numachip->dramatt.range(
-			  (*dnode)->dram_base, (*dnode)->dram_base + (*dnode)->dram_size - 1, (*dnode)->sci);
-#endif
+			  (*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
 
-	printf("New DRAM limit %lluGB\n", limit >> 30);
-	lib::wrmsr(MSR_TOPMEM2, limit);
+	printf("New DRAM limit %lluGB\n", next >> 30);
+	lib::wrmsr(MSR_TOPMEM2, next);
+
+	e820->install();
 }
 
 int main(const int argc, const char *argv[])
@@ -220,14 +236,12 @@ int main(const int argc, const char *argv[])
 			ht_t ht = Numachip2::probe(config->nodes[n].sci);
 			if (ht) {
 				nodes[n] = new Node(config->nodes[n].sci, ht);
-				printf(" SCI%03x", config->nodes[n].sci);
 				left--;
 			}
 
 			cpu_relax();
 		}
 	}
-	printf("\n");
 
 	scan();
 

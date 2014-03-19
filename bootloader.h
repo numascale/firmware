@@ -34,11 +34,13 @@
 class Node {
 public:
 	sci_t sci;
-	int nopterons;
+	unsigned nopterons;
+	unsigned cores;
 	Opteron *opterons[7];
 	Numachip2 *numachip;
-	uint64_t dram_base, dram_size;
+	uint64_t dram_base, dram_size, dram_end;
 
+	void init(void);
 	Node(void);
 	Node(const sci_t _sci, const ht_t ht);
 	void set_sci(const sci_t _sci);

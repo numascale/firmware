@@ -98,6 +98,7 @@ public:
 	static uint32_t tsc_mhz;
 	sci_t sci;
 	const ht_t ht;
+	unsigned cores;
 	MmioMap mmiomap;
 	DramMap drammap;
 	friend class MmioMap;

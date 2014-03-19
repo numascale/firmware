@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "e820.h"
+#include "trampoline.h"
 #include "../library/base.h"
 #include "../bootloader.h"
 
@@ -165,4 +166,29 @@ uint64_t E820::memlimit(void)
 	printf("Memory limit at %lluGB\n", limit >> 30);
 
 	return limit;
+}
+
+void E820::install(void)
+{
+	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);
+
+	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
+	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
+
+	char *asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
+	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
+
+	add((uint64_t)asm_relocated, relocate_size, RESERVED);
+
+	// replace int15h handler
+	uint32_t *int_vecs = 0x0;
+	*REL32(old_int15_vec) = int_vecs[0x15];
+	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
+	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));
+
+	printf("Persistent code relocated to 0x%x:0x%x\n",
+	  (unsigned)asm_relocated, (unsigned)(asm_relocated + relocate_size));
+
+	printf("Final e820 memory map:\n");
+	e820->dump();
 }
