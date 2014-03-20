@@ -54,14 +54,16 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, (ncache + ctag) >> 19);
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
 
-	printf("%lldGB %s partitions:", total >> 10, nc2_ddr3_module_type(spd_eeprom.module_type));
+	assert(read32(NCACHE + ) & (1 << 6));
+	printf("%lldGB %s partitions: %lluMB nCache",
+	  total >> 10, nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 
-	for (int port = 0; port < 3; port++)
+	for (int port = 0; port < 2; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
 		  ((spd_eeprom.density_banks - 2) << 3) | (1 << 2) | 1);
 
-	const char *mctls[] = {"MTag", "CTag", "NCache"};
-	const uint64_t part[] = {mtag >> 20, ctag >> 20, ncache >> 20};
+	const char *mctls[] = {"MTag", "CTag"};
+	const uint64_t part[] = {mtag >> 20, ctag >> 20};
 
 	/* FIXME: add NCache back in when implemented */
 	for (int port = 0; port < 2; port++) {
