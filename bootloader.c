@@ -191,6 +191,10 @@ int main(const int argc, const char *argv[])
 	for (unsigned i = 0; i < local_node->nopterons; i++)
 		local_node->opterons[i]->mmiomap.add(9, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
 
+	// reserve HT decode and MCFG address range so Linux accepts it
+	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
+	e820->add(NC_MCFG_BASE, NC_MCFG_LIM - NC_MCFG_BASE + 1, E820::RESERVED);
+
 	// setup local MCFG access
 	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
 	lib::wrmsr(MSR_MCFG_BASE, val6);
