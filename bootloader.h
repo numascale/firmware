@@ -56,8 +56,4 @@ extern E820 *e820;
 extern Node *local_node;
 extern Node **nodes;
 
-void udelay(const uint32_t usecs);
 void wait_key(void);
-int smbios_parse(const char **biosver, const char **biosdate,
-		 const char **sysmanuf, const char **sysproduct,
-		 const char **boardmanuf, const char **boardproduct);

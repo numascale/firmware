@@ -40,6 +40,14 @@
 
 namespace lib
 {
+	void udelay(const uint32_t usecs)
+	{
+		uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
+
+		while (lib::rdtscll() < limit)
+			cpu_relax();
+	}
+
 	uint8_t rtc_read(const int addr)
 	{
 		outb(addr, 0x70);

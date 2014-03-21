@@ -584,7 +584,7 @@ void ACPI::handover(void)
 	int limit = 100;
 
 	do {
-		udelay(100);
+		lib::udelay(100);
 		sci_en = inb(acpipm1cntblk);
 
 		if ((sci_en & 1) == 1) {

@@ -35,7 +35,7 @@ public:
 	bool singleton;
 	bool fast;
 	struct debug_flags {
-		bool config, access, acpi, ht, fabric, maps, remote_io, e820;
+		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820;
 	} debug;
 
 	Options(const int argc, const char *argv[]);

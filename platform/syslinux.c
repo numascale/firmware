@@ -70,7 +70,7 @@ void Syslinux::get_hostname(void)
 Syslinux::Syslinux(void)
 {
 	/* Ensure console drains before opening */
-	udelay(100000);
+	lib::udelay(100000);
 	console_ansi_std();
 	get_hostname();
 }

@@ -46,14 +46,6 @@ Node *local_node;
 Node **nodes;
 ACPI *acpi;
 
-void udelay(const uint32_t usecs)
-{
-	uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
-
-	while (lib::rdtscll() < limit)
-		cpu_relax();
-}
-
 void wait_key(const char *msg)
 {
 	puts(msg);

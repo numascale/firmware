@@ -107,7 +107,7 @@ void Options::parse_flags(const char *val, void *data)
 	const char *pos = strtok(params, ",");
 	while (pos) {
 		if (!strcmp(pos, "all"))
-			memset(flags, 0xff, sizeof(Options::debug));
+			memset(flags, 1, sizeof(Options::debug));
 		else if (!strcmp(pos, "config"))
 			flags->config = 1;
 		else if (!strcmp(pos, "access"))
