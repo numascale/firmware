@@ -51,7 +51,15 @@ struct e820entry *E820::position(const uint64_t base)
 
 	for (i = 0; i < *used; i++)
 		if (map[i].base + map[i].length >= base)
-			return &map[i];
+			break;
+
+	if (options->debug.e820) {
+		if (i < *used)
+			printf("Position at %011llx:%011llx (%011llx) %s\n",
+			  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
+		else
+			printf("Position at end\n");
+	}
 
 	return &map[i];
 }
@@ -127,7 +135,7 @@ E820::E820(void)
 	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
 
 	com32sys_t rm;
-	rm.eax.l = 0x0000e820;
+	rm.eax.l = 0xe820;
 	rm.edx.l = STR_DW_N("SMAP");
 	rm.ebx.l = 0;
 	rm.ecx.l = sizeof(*ent);
@@ -138,7 +146,7 @@ E820::E820(void)
 	add(ent->base, ent->length, ent->type);
 
 	while (rm.ebx.l > 0) {
-		rm.eax.l = 0x0000e820;
+		rm.eax.l = 0xe820;
 		rm.edx.l = STR_DW_N("SMAP");
 		rm.ecx.l = sizeof(*ent);
 		rm.edi.w[0] = OFFS(ent);
@@ -191,4 +199,42 @@ void E820::install(void)
 
 	printf("Final e820 memory map:\n");
 	e820->dump();
+
+	if (options->debug.e820)
+		test();
+}
+
+void E820::test(void)
+{
+	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
+
+	printf("Testing new e820 handler:\n");
+
+	com32sys_t rm;
+	rm.eax.l = 0xe820;
+	rm.edx.l = STR_DW_N("SMAP");
+	rm.ebx.l = 0;
+	rm.ecx.l = sizeof(*ent);
+	rm.edi.w[0] = OFFS(ent);
+	rm.es = SEG(ent);
+	__intcall(0x15, &rm, &rm);
+	assert(rm.eax.l == STR_DW_N("SMAP"));
+
+	printf("%011llx:%011llx (%011llx) %s\n",
+	  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
+	printf("rm.ebx.l=0x%x\n", rm.ebx.l);
+
+	while (rm.ebx.l > 0) {
+		rm.eax.l = 0xe820;
+		rm.edx.l = STR_DW_N("SMAP");
+		rm.ecx.l = sizeof(*ent);
+		rm.edi.w[0] = OFFS(ent);
+		rm.es = SEG(ent);
+		__intcall(0x15, &rm, &rm);
+
+		printf("%011llx:%011llx (%011llx) %s\n",
+		  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
+	}
+
+	lfree(ent);
 }

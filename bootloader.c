@@ -77,7 +77,6 @@ void Node::init(void)
 		cores += nb->cores;
 	}
 
-	dram_end = roundup(dram_size, 1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
 	printf("SCI%03x (%lldGB, %d cores)\n", sci, dram_size >> 30, cores);
 }
 
@@ -121,22 +120,22 @@ void Node::set_sci(const sci_t _sci)
 void scan(void)
 {
 	printf("Map scan:\n");
-	uint64_t next = nodes[0]->dram_end + 1;
-	if (options->debug.maps)
-		printf("node[0]->dram_end=%lluGB\n", nodes[0]->dram_size >> 30);
+	uint64_t next = 0;
 
 	// set DRAM ranges
-	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
 		(*node)->dram_base = next;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-//		foreach_nb(node, nb)
 			(*nb)->dram_base = next;
-			(*nb)->write32(Opteron::DRAM_BASE, next >> 27);
-			e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
-
 			next += (*nb)->dram_size;
+
+			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
 			(*nb)->write32(Opteron::DRAM_LIMIT, (next - 1) >> 27);
+			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
+			// master memory already in map, so skip
+			if ((*node)->sci != config->master->sci)
+				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 		}
 
 		next = roundup(next, 1ULL << Numachip2::SIU_ATT_SHIFT);

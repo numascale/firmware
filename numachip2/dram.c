@@ -54,7 +54,7 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, (ncache + ctag) >> 19);
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
 
-	assert(read32(NCACHE + ) & (1 << 6));
+	assert(read32(NCACHE_CTRL) & (1 << 6));
 	printf("%lldGB %s partitions: %lluMB nCache",
 	  total >> 10, nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 
