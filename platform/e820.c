@@ -166,7 +166,7 @@ uint64_t E820::memlimit(void)
 	assert(*used > 0);
 	struct e820entry *pos = map + *used - 1;
 
-	/* Assume some usable memory exists */
+	// assume some usable memory exists
 	while (pos->type != RAM)
 		pos--;
 

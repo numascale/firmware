@@ -273,10 +273,12 @@ void Opteron::MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t 
 	assert(range < 24);
 	assert((base & 0xffffffff) == 0);
 	assert((limit & 0xffffffff) == 0xffffffff);
+	assert(poweroftwo(limit - base) + 1);
 	range -= 8;
 
 	/* Reading an uninitialised extended MMIO ranges results in MCE, so can't assert */
 
+	// FIXME: Use 2's complement
 	uint64_t mask = 0;
 	base  >>= 27;
 	limit >>= 27;

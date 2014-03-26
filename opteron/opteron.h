@@ -77,6 +77,8 @@ public:
 	static const reg_t DRAM_MAP_LIMIT      = 0x1044;
 	static const reg_t MMIO_MAP_BASE       = 0x1080;
 	static const reg_t MMIO_MAP_LIMIT      = 0x1084;
+	static const reg_t DRAM_HOLE           = 0x10f0;
+	static const reg_t DCT_CONF_SEL        = 0x110c;
 	static const reg_t MMIO_MAP_HIGH       = 0x1180;
 	static const reg_t EXTMMIO_MAP_CTRL    = 0x1110;
 	static const reg_t EXTMMIO_MAP_DATA    = 0x1114;
@@ -84,7 +86,12 @@ public:
 	static const reg_t DRAM_LIMIT          = 0x1124;
 	static const reg_t DRAM_MAP_BASE_HIGH  = 0x1140;
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
+	static const reg_t MCTL_SEL_LOW        = 0x2110;
+	static const reg_t MCTL_CONF_HIGH      = 0x211c;
 	static const reg_t MCA_NB_CONF         = 0x3044;
+	static const reg_t SCRUB_RATE_CTL      = 0x3058;
+	static const reg_t SCRUB_ADDR_LOW      = 0x305c;
+	static const reg_t SCRUB_ADDR_HIGH     = 0x3060;
 	static const reg_t NB_CONF_1H          = 0x308c;
 	static const reg_t CLK_CTRL_0          = 0x30d4;
 	static const reg_t NB_CPUID            = 0x30fc;
