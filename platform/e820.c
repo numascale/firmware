@@ -217,14 +217,33 @@ uint64_t E820::memlimit(void)
 	return limit;
 }
 
-void E820::install(void)
+void E820::test_range(const uint64_t start, const uint64_t end)
+{
+	const unsigned STEP_MIN = 64, STEP_MAX = 4 << 20;
+	uint64_t pos = start;
+	const uint64_t mid = start + (end - start) / 2;
+	uint64_t step = STEP_MIN;
+
+	printf(" [");
+	while (pos < mid) {
+		lib::mem_write32(pos, lib::mem_read32(pos));
+		pos = (pos + step) & ~3;
+		step = min(step << 1, STEP_MAX);
+	}
+
+	while (pos < end) {
+		lib::mem_write32(pos, lib::mem_read32(pos));
+		step = min((end - pos) / 2, STEP_MAX);
+		pos += max(step, STEP_MIN) & ~3;
+	}
+	printf("accessible]");
+}
+
+void E820::test(void)
 {
 	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
 
-	printf("Final e820 memory map:\n");
-	e820->dump();
-
-	printf("Testing new e820 handler:\n");
+	printf("Testing e820 handler and access:\n");
 
 	com32sys_t rm;
 	rm.eax.l = 0xe820;
@@ -236,10 +255,12 @@ void E820::install(void)
 	__intcall(0x15, &rm, &rm);
 	assert(rm.eax.l == STR_DW_N("SMAP"));
 
-	printf("%011llx:%011llx (%011llx) %s\n",
+	printf("%011llx:%011llx (%011llx) %s",
 	  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
-	printf("rm.ebx.l=0x%x\n", rm.ebx.l);
 	assert(ent->length);
+	if (ent->type == RAM)
+		test_range(ent->base, ent->base + ent->length);
+	printf("\n");
 
 	while (rm.ebx.l > 0) {
 		rm.eax.l = 0xe820;
@@ -249,8 +270,11 @@ void E820::install(void)
 		rm.es = SEG(ent);
 		__intcall(0x15, &rm, &rm);
 
-		printf("%011llx:%011llx (%011llx) %s\n",
+		printf("%011llx:%011llx (%011llx) %s",
 		  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
+		if (ent->type == E820::RAM)
+			test_range(ent->base, ent->base + ent->length);
+		printf("\n");
 	}
 
 	lfree(ent);

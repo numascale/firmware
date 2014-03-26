@@ -162,8 +162,6 @@ void scan(void)
 
 	printf("New DRAM limit %lluGB\n", dram_top >> 30);
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
-
-	e820->install();
 }
 
 void finalise(void)
@@ -189,6 +187,8 @@ void finalise(void)
 			(*nb)->dram_scrub_enable();
 
 	printf("\n");
+
+	e820->test();
 }
 
 int main(const int argc, const char *argv[])
