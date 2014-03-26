@@ -54,11 +54,14 @@ struct e820entry *E820::position(const uint64_t base)
 			break;
 
 	if (options->debug.e820) {
-		if (i < *used)
-			printf("Position at %011llx:%011llx (%011llx) %s\n",
-			  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
-		else
-			printf("Position at end\n");
+		if (i < *used) {
+			if (options->debug.e820 > 1)
+				printf("Position at %011llx:%011llx (%011llx) %s",
+				  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
+		} else {
+			if (options->debug.e820 > 1)
+				printf("Position at end");
+		}
 	}
 
 	return &map[i];
@@ -66,11 +69,15 @@ struct e820entry *E820::position(const uint64_t base)
 
 void E820::insert(struct e820entry *pos)
 {
+	if (options->debug.e820 > 1)
+		printf(", inserting");
+
 	int n = *used - (pos - map);
 	if (n > 0)
 		memmove(pos + 1, pos, sizeof(*pos) * n);
 
 	(*used)++;
+	assert(*used < E820_MAP_MAX);
 }
 
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
@@ -223,6 +230,7 @@ void E820::test(void)
 	printf("%011llx:%011llx (%011llx) %s\n",
 	  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
 	printf("rm.ebx.l=0x%x\n", rm.ebx.l);
+	assert(ent->length);
 
 	while (rm.ebx.l > 0) {
 		rm.eax.l = 0xe820;

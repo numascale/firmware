@@ -96,7 +96,7 @@ void Options::parse_flags(const char *val, void *data)
 
 	/* If no args, assume reasonable default */
 	if (!val) {
-		memset(flags, 0xff, sizeof(Options::debug));
+		memset(flags, 0x01, sizeof(Options::debug));
 		flags->fabric = flags->access = flags->ht = 0;
 		return;
 	}
@@ -108,6 +108,8 @@ void Options::parse_flags(const char *val, void *data)
 	while (pos) {
 		if (!strcmp(pos, "all"))
 			memset(flags, 1, sizeof(Options::debug));
+		else if (!strcmp(pos, "full"))
+			memset(flags, 255, sizeof(Options::debug));
 		else if (!strcmp(pos, "config"))
 			flags->config = 1;
 		else if (!strcmp(pos, "access"))
