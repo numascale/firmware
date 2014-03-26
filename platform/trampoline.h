@@ -26,10 +26,17 @@
 
 #define APIC_VECTOR_MASKED 0x00010000
 #define MSR_VECTOR_MASKED 0xc010000001000000
+#define E820_MAP_MAX 2560
 
 #ifndef __ASSEMBLER__
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate
+#define REL8(sym) ((uint8_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
+#define REL16(sym) ((uint16_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
+#define REL32(sym) ((uint32_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
+#define REL64(sym) ((uint64_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
+
 extern unsigned char asm_relocate_start, asm_relocate_end;
+extern char *asm_related;
 
 IMPORT_RELOCATED(init_dispatch);
 IMPORT_RELOCATED(cpu_status);

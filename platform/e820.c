@@ -27,6 +27,7 @@ extern "C" {
 }
 
 const char *E820::names[] = {"", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
+char *E820::asm_relocated = 0;
 
 void E820::dump(void)
 {
@@ -85,62 +86,87 @@ void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 	if (options->debug.e820)
 		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
 
+	assert(base < (base + length));
+
 	struct e820entry *end = map + *used;
 	struct e820entry *pos = position(base);
-
+#ifdef FIXME
+	uint64_t orig_base, orig_length;
+	uint32_t orig_type;
+#endif
 	if (type == pos->type) {
-		/* Extend end of existing range if adjacent */
+		// extend end of existing range if adjacent
 		if (base == pos->base + pos->length) {
+			if (options->debug.e820 > 1)
+				printf(", extending length");
 			pos->length += length;
-			return;
+			goto out;
 		}
 
-		/* Extend start of existing range if adjacent */
+		// extend start of existing range if adjacent
 		if (base + length == pos->base) {
+			if (options->debug.e820 > 1)
+				printf(", lowering base");
 			pos->base -= length;
 			pos->length += length;
-			return;
+			goto out;
 		}
 	}
 
-	const uint64_t orig_base = pos->base, orig_length = pos->length;
-	const uint32_t orig_type = pos->type;
+#ifdef FIXME
+	orig_base = pos->base;
+	orig_length = pos->length;
+	orig_type = pos->type;
+#endif
 
-	/* Split start of existing memory range */
+	// split start of existing memory range
 	if (pos < end && base > pos->base) {
+		if (options->debug.e820 > 1)
+			printf(", splitting");
 		pos->length = base - pos->base;
 		pos++;
 	}
 
-	/* Add new range */
+	// add new range
 	insert(pos);
 	pos->base = base;
 	pos->length = length;
 	pos->type = type;
 	pos++;
 
-	/* Need to split end of existing memory range */
+	// need to split end of existing memory range
+#ifdef FIXME
 	if (pos < end && (base + length) < (orig_base + orig_length)) {
 		insert(pos);
 		pos->base = base + length;
 		pos->length = (orig_base + orig_length) - pos->base;
 		pos->type = orig_type;
 	}
+#endif
+out:
+	if (options->debug.e820 > 1) {
+		printf("\nUpdated e820 map:\n");
+		dump();
+		printf("\n");
+	}
 }
 
 E820::E820(void)
 {
-	/* FIXME: use map in secondary
-	 * map = (e820entry *)REL32(e820_map);
-	 * used = *REL16(e820_used); */
-	map = (struct e820entry *)lzalloc(4096);
-	assert(map);
-	used = (uint16_t *)malloc(sizeof(*used));
-	assert(used);
-	*used = 0;
+	// setup relocated area
+	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);
+	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
+	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
+	char *asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
+	printf("Tramppoline at 0x%p:0x%p\n", asm_relocated, (asm_relocated + relocate_size));
 
+	// copy trampoline data
+	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
+	map = (e820entry *)REL32(new_e820_map);
+	used = REL16(new_e820_len);
 	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
 
+	// read existing E820 entries
 	com32sys_t rm;
 	rm.eax.l = 0xe820;
 	rm.edx.l = STR_DW_N("SMAP");
@@ -166,6 +192,14 @@ E820::E820(void)
 
 	printf("BIOS-provided e820 map:\n");
 	dump();
+
+	add((uint64_t)asm_relocated, relocate_size, RESERVED);
+
+	// install new int15h handler
+	uint32_t *int_vecs = 0x0;
+	*REL32(old_int15_vec) = int_vecs[0x15];
+	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
+	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));
 }
 
 uint64_t E820::memlimit(void)
@@ -185,35 +219,10 @@ uint64_t E820::memlimit(void)
 
 void E820::install(void)
 {
-	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);
-
-	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
-	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
-
-	char *asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
-	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
-
-	add((uint64_t)asm_relocated, relocate_size, RESERVED);
-
-	// replace int15h handler
-	uint32_t *int_vecs = 0x0;
-	*REL32(old_int15_vec) = int_vecs[0x15];
-	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
-	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));
-
-	printf("Persistent code relocated to 0x%x:0x%x\n",
-	  (unsigned)asm_relocated, (unsigned)(asm_relocated + relocate_size));
+	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
 
 	printf("Final e820 memory map:\n");
 	e820->dump();
-
-	if (options->debug.e820)
-		test();
-}
-
-void E820::test(void)
-{
-	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
 
 	printf("Testing new e820 handler:\n");
 

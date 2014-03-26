@@ -34,6 +34,7 @@ private:
 	struct e820entry *position(const uint64_t base);
 	void insert(struct e820entry *pos);
 	static const char *names[6];
+	static char *asm_relocated;
 public:
 	static const uint64_t RAM = 1;
 	static const uint64_t RESERVED = 2;
@@ -46,5 +47,4 @@ public:
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
 	uint64_t memlimit(void);
 	void install(void);
-	void test(void);
 };

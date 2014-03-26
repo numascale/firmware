@@ -112,42 +112,83 @@ void Node::set_sci(const sci_t _sci)
 void scan(void)
 {
 	printf("Map scan:\n");
-	uint64_t next = 0;
+	uint64_t dram_top = 0;
 
-	// set DRAM ranges
+	// setup local DRAM windows
 	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
-		(*node)->dram_base = next;
+		(*node)->dram_base = dram_top;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-			(*nb)->dram_base = next;
-			next += (*nb)->dram_size;
+			(*nb)->dram_base = dram_top;
+			dram_top += (*nb)->dram_size;
 
 			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
-			(*nb)->write32(Opteron::DRAM_LIMIT, (next - 1) >> 27);
+			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
 			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 			// master memory already in map, so skip
 			if ((*node)->sci != config->master->sci)
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 		}
 
-		next = roundup(next, 1ULL << Numachip2::SIU_ATT_SHIFT);
-		(*node)->dram_end = next - 1;
+		dram_top = roundup(dram_top, 1ULL << Numachip2::SIU_ATT_SHIFT);
+		(*node)->dram_end = dram_top - 1;
 
 		if (options->debug.maps)
 			printf("SCI%03x dram_base=0x%llx dram_size=0x%llx dram_end=%llx\n",
 				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 
-	// route DRAM access
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
+		// route DRAM access in HT fabric
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+			unsigned range = 0;
+
+			for (Opteron **dnb = &(*node)->opterons[0]; dnb < &(*node)->opterons[(*node)->nopterons]; dnb++)
+				(*nb)->drammap.add(range++, (*dnb)->dram_base, (*dnb)->dram_base + (*dnb)->dram_size - 1, (*dnb)->ht);
+
+			// add below remote DRAM range
+			if (node > &nodes[0])
+				(*nb)->drammap.add(range++, nodes[0]->dram_base, (*(node - 1))->dram_end, (*node)->numachip->ht);
+
+			if (node < &nodes[config->nnodes - 1])
+				(*nb)->drammap.add(range++, (*(node + 1))->dram_base, dram_top - 1, (*node)->numachip->ht);
+		}
+
+		// route DRAM access in NumaConnect fabric
 		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
 			(*node)->numachip->dramatt.range(
 			  (*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
+	}
 
-	printf("New DRAM limit %lluGB\n", next >> 30);
-	lib::wrmsr(MSR_TOPMEM2, next);
+	printf("New DRAM limit %lluGB\n", dram_top >> 30);
+	lib::wrmsr(MSR_TOPMEM2, dram_top);
 
 	e820->install();
+}
+
+void finalise(void)
+{
+#ifdef FIXME
+	printf("Clearing DRAM");
+	// start clearing DRAM
+	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_start();
+
+	printf(".");
+	// wait for clear to complete
+	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_wait();
+#endif
+	printf("\nEnabling scrubbers");
+
+	// enable DRAM scrubbers
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_scrub_enable();
+
+	printf("\n");
 }
 
 int main(const int argc, const char *argv[])
@@ -239,6 +280,7 @@ int main(const int argc, const char *argv[])
 	}
 
 	scan();
+	finalise();
 
 	if (options->boot_wait)
 		wait_key("Press enter to boot");
