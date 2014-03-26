@@ -25,6 +25,33 @@ uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 int Opteron::family;
 
+uint32_t Opteron::read32(const reg_t reg) const
+{
+	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
+void Opteron::write64(const reg_t reg, const uint64_t val) const
+{
+	lib::mcfg_write64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
+void Opteron::write32(const reg_t reg, const uint32_t val) const
+{
+	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
+void Opteron::set32(const reg_t reg, const uint32_t mask) const
+{
+	uint32_t val = read32(reg);
+	write32(reg, val | mask);
+}
+
+void Opteron::clear32(const reg_t reg, const uint32_t mask) const
+{
+	uint32_t val = read32(reg);
+	write32(reg, val & ~mask);
+}
+
 void Opteron::prepare(void)
 {
 	// ensure MMCFG access is setup
@@ -73,6 +100,36 @@ void Opteron::prepare(void)
 	}
 }
 
+void Opteron::dram_scrub_disable(void)
+{
+	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
+	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
+	   See erratum 505 */
+	if (family >= 0x15)
+		write32(DCT_CONF_SEL, 0);
+
+	// disable DRAM scrubbers
+	scrub = read32(SCRUB_RATE_CTL);
+	if (scrub & 0x1f) {
+		write32(SCRUB_RATE_CTL, scrub & ~0x1f);
+		lib::udelay(40); // allow outstanding scrub requests to finish
+	}
+}
+
+void Opteron::dram_scrub_enable(void)
+{
+	uint32_t redir = read32(SCRUB_ADDR_LOW) & 1;
+	write64(SCRUB_ADDR_LOW, dram_base | redir);
+
+	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
+	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
+	   See erratum 505 */
+	if (family >= 0x15)
+		write32(DCT_CONF_SEL, 0);
+
+	write32(SCRUB_RATE_CTL, scrub);
+}
+
 void Opteron::init(void)
 {
 	uint32_t vendev = read32(VENDEV);
@@ -106,11 +163,17 @@ void Opteron::init(void)
 			val >>= 1;
 		}
 	}
+
+	dram_scrub_disable();
 }
 
 // remote instantiation
 Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
 {
+	// ensure memory hoisting is disabled for slave nodes
+	// FIXME: check for DRAM interleaving
+	clear32(DRAM_HOLE, 1);
+
 	init();
 }
 
@@ -156,24 +219,19 @@ Opteron::~Opteron(void)
 	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 }
 
-uint32_t Opteron::read32(const reg_t reg) const
+void Opteron::dram_clear_start(void)
 {
-	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	set32(MCTL_CONF_HIGH, 3 << 12); // disable memory controller prefetch
+	set32(MCTL_SEL_LOW), 1 << 3); // start memory clearing
 }
 
-void Opteron::write32(const reg_t reg, const uint32_t val) const
+void Opteron::dram_clear_wait(void)
 {
-	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
-}
+	uint32_t val;
 
-void Opteron::set32(const reg_t reg, const uint32_t mask) const
-{
-	uint32_t val = read32(reg);
-	write32(reg, val | mask);
-}
+	// poll until done indicated
+	while (read32(MCTL_SEL_LOW) & (1 << 9))
+		cpu_relax();
 
-void Opteron::clear32(const reg_t reg, const uint32_t mask) const
-{
-	uint32_t val = read32(reg);
-	write32(reg, val & ~mask);
+	clear32(MCTL_CONF_HIGH, 3 << 12); // reenable memory controller prefetch
 }

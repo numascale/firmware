@@ -53,6 +53,7 @@ class Opteron {
 	};
 
 	enum reset {Warm, Cold};
+	uint32_t scrub;
 
 	static void reset(const enum reset mode, const int last);
 public:
@@ -114,7 +115,15 @@ public:
 	friend class MmioMap;
 	friend class DramMap;
 
+	uint32_t read32(const reg_t reg) const;
+	void write64(const reg_t reg, const uint64_t val) const;
+	void write32(const reg_t reg, const uint32_t val) const;
+	void set32(const reg_t reg, const uint32_t mask) const;
+	void clear32(const reg_t reg, const uint32_t mask) const;
+
 	static void prepare(void);
+	void dram_scrub_disable(void);
+	void dram_scrub_enable(void);
 	void init(void);
 	Opteron(const ht_t _ht);
 	Opteron(const sci_t _sci, const ht_t _ht);
@@ -127,9 +136,6 @@ public:
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
 	static ht_t ht_fabric_fixup(const uint32_t vendev);
-
-	uint32_t read32(const reg_t reg) const;
-	void write32(const reg_t reg, const uint32_t val) const;
-	void set32(const reg_t reg, const uint32_t mask) const;
-	void clear32(const reg_t reg, const uint32_t mask) const;
+	void dram_clear_start(void);
+	void dram_clear_wait(void);
 };
