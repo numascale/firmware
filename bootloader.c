@@ -125,7 +125,8 @@ void scan(void)
 			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
 			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
 			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
-			// master memory already in map, so skip
+
+			// add slave e820 entries
 			if ((*node)->sci != config->master->sci)
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 		}
@@ -179,7 +180,7 @@ void finalise(void)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
 #endif
-	printf("\nEnabling scrubbers");
+	printf("Enabling scrubbers");
 
 	// enable DRAM scrubbers
 	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)

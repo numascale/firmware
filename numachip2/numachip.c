@@ -143,8 +143,6 @@ Numachip2::Numachip2(const ht_t _ht):
 
 void Numachip2::set_sci(const sci_t _sci)
 {
-	printf("Setting Numachip to SCI%03x\n", _sci);
-
 	write32(SIU_NODEID, _sci);
 	sci = _sci;
 	routing_init();

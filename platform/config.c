@@ -266,7 +266,7 @@ Config::Config(const char *filename)
 
 #ifdef DEBUG
 	if (options->debug.config)
-		printf("Fabric configuration file:\n%s", data);
+		printf("content:\n%s", data);
 #endif
 
 	json_t *root = NULL;
@@ -279,7 +279,7 @@ Config::Config(const char *filename)
 	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
 
 	if (options->debug.config) {
-		printf("Fabric configuration:: x %d, y %x, z %d\n", x_size, y_size, z_size);
+		printf("geometry %dx%xx%d\n", x_size, y_size, z_size);
 
 		for (int i = 0; i < nnodes; i++) {
 			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",

@@ -81,7 +81,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	char *buf = (char *)lmalloc(strlen(filename) + 1);
 	strcpy(buf, filename);
 
-	printf("Opening %s...", filename);
+	printf("From %s ", filename);
 	memset(&inargs, 0, sizeof inargs);
 	inargs.eax.w[0] = 0x0006; /* Open file */
 	inargs.esi.w[0] = OFFS(buf);
@@ -93,11 +93,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	*len = outargs.eax.l;
 	int bsize = outargs.ecx.w[0];
 
-	if (!fd || *len < 0) {
-		*len = 0;
-		printf("not found\n");
-		return NULL;
-	}
+	assertf(fd && *len > 0, "Failed to open file");
 
 	buf = (char *)lzalloc(roundup(*len, bsize));
 	lassert(buf);
@@ -116,7 +112,6 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	inargs.esi.w[0] = fd;
 	__intcall(0x22, &inargs, NULL);
 
-	printf("done\n");
 	return buf;
 }
 

@@ -158,7 +158,7 @@ E820::E820(void)
 	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
 	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
 	char *asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
-	printf("Tramppoline at 0x%p:0x%p\n", asm_relocated, (asm_relocated + relocate_size));
+	printf("Trampoline at 0x%x:0x%x\n", (unsigned)asm_relocated, (unsigned)(asm_relocated + relocate_size));
 
 	// copy trampoline data
 	memcpy(asm_relocated, &asm_relocate_start, relocate_size);

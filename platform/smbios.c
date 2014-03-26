@@ -83,5 +83,5 @@ SMBIOS::SMBIOS(void)
 	assert(boardmanuf);
 	assert(boardproduct);
 
-	printf("Platform is %s %s (%s %s) with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
+	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
 }
