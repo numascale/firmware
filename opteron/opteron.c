@@ -222,13 +222,11 @@ Opteron::~Opteron(void)
 void Opteron::dram_clear_start(void)
 {
 	set32(MCTL_CONF_HIGH, 3 << 12); // disable memory controller prefetch
-	set32(MCTL_SEL_LOW), 1 << 3); // start memory clearing
+	set32(MCTL_SEL_LOW, 1 << 3); // start memory clearing
 }
 
 void Opteron::dram_clear_wait(void)
 {
-	uint32_t val;
-
 	// poll until done indicated
 	while (read32(MCTL_SEL_LOW) & (1 << 9))
 		cpu_relax();
