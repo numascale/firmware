@@ -54,6 +54,7 @@ class Opteron {
 
 	enum reset {Warm, Cold};
 	uint32_t scrub;
+	bool local;
 
 	static void reset(const enum reset mode, const int last);
 public:

@@ -139,6 +139,16 @@ void Opteron::init(void)
 	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
+
+	// if slave, subtract and disable MMIO hole
+	if (!local) {
+		uint32_t val = read32(DRAM_HOLE);
+		if (val & 1) {
+			dram_size -= (val & 0xff00) << (23 - 7);
+			write32(DRAM_HOLE, val & ~0xff81);
+		}
+	}
+
 	printf("dram_base=0x%llx dram_limit=0x%llx dram_size=0x%llx\n", dram_base, dram_limit, dram_size);
 
 	// detect number of cores
@@ -168,17 +178,15 @@ void Opteron::init(void)
 }
 
 // remote instantiation
-Opteron::Opteron(const sci_t _sci, const ht_t _ht): sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
+Opteron::Opteron(const sci_t _sci, const ht_t _ht):
+  local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
 {
-	// ensure memory hoisting is disabled for slave nodes
-	// FIXME: check for DRAM interleaving
-	clear32(DRAM_HOLE, 1);
-
 	init();
 }
 
 // local instantiation; SCI is set later
-Opteron::Opteron(const ht_t _ht): sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this)
+Opteron::Opteron(const ht_t _ht):
+  local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this)
 {
 	init();
 
