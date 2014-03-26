@@ -96,6 +96,14 @@ namespace lib
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	void     pmio_write8(const uint16_t offset, const uint8_t val);
+	uint8_t  mem_read8(const uint64_t addr);
+	uint16_t mem_read16(const uint64_t addr);
+	uint32_t mem_read32(const uint64_t addr);
+	uint64_t mem_read64(const uint64_t addr);
+	void     mem_write8(const uint64_t addr, const uint8_t val);
+	void     mem_write16(const uint64_t addr, const uint16_t val);
+	void     mem_write32(const uint64_t addr, const uint32_t val);
+	void     mem_write64(const uint64_t addr, const uint64_t val);
 	uint8_t  mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
 	uint16_t mcfg_read16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
 	uint32_t mcfg_read32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);

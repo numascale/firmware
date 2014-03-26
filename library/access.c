@@ -74,15 +74,84 @@ namespace lib
 		outw(offset | val << 8, PMIO_PORT);
 	}
 
+	uint8_t mem_read8(uint64_t addr)
+	{
+		uint8_t ret;
+		cli();
+		setup_fs(addr);
+		asm volatile("movb %%fs:(0), %%al" : "=a"(ret));
+		sti();
+		return ret;
+	}
+
+	uint16_t mem_read16(const uint64_t addr)
+	{
+		uint16_t ret;
+		cli();
+		setup_fs(addr);
+		asm volatile("movw %%fs:(0), %%ax" : "=a"(ret));
+		sti();
+		return ret;
+	}
+
+	uint32_t mem_read32(const uint64_t addr)
+	{
+		uint32_t ret;
+		cli();
+		setup_fs(addr);
+		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
+		sti();
+		return ret;
+	}
+
+	uint64_t mem_read64(const uint64_t addr)
+	{
+		uint64_t val;
+		cli();
+		setup_fs(addr);
+		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&val) :"memory");
+		sti();
+		return val;
+	}
+
+	void mem_write8(uint64_t addr, uint8_t val)
+	{
+		cli();
+		setup_fs(addr);
+		asm volatile("movb %0, %%fs:(0)" :: "a"(val));
+		sti();
+	}
+
+	void mem_write16(uint64_t addr, uint16_t val)
+	{
+		cli();
+		setup_fs(addr);
+		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
+		sti();
+	}
+
+	void mem_write32(const uint64_t addr, const uint32_t val)
+	{
+		cli();
+		setup_fs(addr);
+		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
+		sti();
+	}
+
+	void mem_write64(const uint64_t addr, const uint64_t val)
+	{
+		cli();
+		setup_fs(addr);
+		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
+		sti();
+	}
+
 	uint8_t mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
 		uint8_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("movb %%fs:(0), %%al" : "=a"(ret));
-		sti();
+		ret = mem_read8((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%02x\n", ret);
 		return ret;
@@ -93,10 +162,7 @@ namespace lib
 		uint16_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("movw %%fs:(0), %%ax" : "=a"(ret));
-		sti();
+		ret = mem_read16((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%04x\n", ret);
 		return ret;
@@ -107,10 +173,7 @@ namespace lib
 		uint32_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
-		sti();
+		ret = mem_read32((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%08x\n", ret);
 		return ret;
@@ -121,10 +184,7 @@ namespace lib
 		uint64_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&ret) :"memory");
-		sti();
+		ret = mem_read64((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%016llx\n", ret);
 		return ret;
@@ -134,9 +194,7 @@ namespace lib
 	{
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
+		mem_write8((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		sti();
 		if (options->debug.access)
 			printf("\n");
@@ -146,10 +204,7 @@ namespace lib
 	{
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
-		sti();
+		mem_write16((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
 	}
@@ -158,10 +213,7 @@ namespace lib
 	{
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
-		sti();
+		mem_write32((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
 	}
@@ -170,10 +222,7 @@ namespace lib
 	{
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
-		cli();
-		setup_fs((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
-		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
-		sti();
+		mem_write64((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
 	}
