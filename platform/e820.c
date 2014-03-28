@@ -219,10 +219,14 @@ uint64_t E820::memlimit(void)
 
 void E820::test_range(const uint64_t start, const uint64_t end)
 {
-	const unsigned STEP_MIN = 64, STEP_MAX = 4 << 20;
+	const unsigned STEP_MIN = 64, STEP_MAX = 1024 << 20; // FIXME: put back to 4MB
 	uint64_t pos = start;
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
+
+	// FIXME: remove later
+	if (start == 0x900000000)
+		options->debug.access = 2;
 
 	printf(" [");
 	while (pos < mid) {

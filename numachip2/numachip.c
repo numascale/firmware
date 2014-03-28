@@ -99,7 +99,7 @@ ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
-	assert(vendev == Opteron::VENDEV_OPTERON);
+	assertf(vendev == Opteron::VENDEV_OPTERON, "Expected Opteron but found 0x%08x", vendev);
 	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
 
 	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
