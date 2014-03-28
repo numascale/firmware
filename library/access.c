@@ -40,6 +40,16 @@
 
 namespace lib
 {
+	void wait_key(const char *msg)
+	{
+		puts(msg);
+		char ch;
+
+		do {
+			fread(&ch, 1, 1, stdin);
+		} while (ch != 0x0a); // enter
+	}
+
 	void udelay(const uint32_t usecs)
 	{
 		uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
@@ -74,76 +84,108 @@ namespace lib
 		outw(offset | val << 8, PMIO_PORT);
 	}
 
-	uint8_t mem_read8(uint64_t addr)
+	uint8_t mem_read8(const uint64_t addr)
 	{
-		uint8_t ret;
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx -> ", addr);
+		uint8_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("movb %%fs:(0), %%al" : "=a"(ret));
+		asm volatile("movb %%fs:(0), %%al" : "=a"(val));
 		sti();
-		return ret;
+		if (options->debug.access > 1)
+			printf("0x%02x\n", val);
+		return val;
 	}
 
 	uint16_t mem_read16(const uint64_t addr)
 	{
-		uint16_t ret;
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx -> ", addr);
+		uint16_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("movw %%fs:(0), %%ax" : "=a"(ret));
+		asm volatile("movw %%fs:(0), %%ax" : "=a"(val));
 		sti();
-		return ret;
+		if (options->debug.access > 1)
+			printf("0x%04x\n", val);
+		return val;
 	}
 
 	uint32_t mem_read32(const uint64_t addr)
 	{
-		uint32_t ret;
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx -> ", addr);
+		uint32_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("mov %%fs:(0), %%eax" : "=a"(ret));
+		asm volatile("mov %%fs:(0), %%eax" : "=a"(val));
 		sti();
-		return ret;
+		if (options->debug.access > 1)
+			printf("0x%08x\n", val);
+		return val;
 	}
 
 	uint64_t mem_read64(const uint64_t addr)
 	{
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx -> ", addr);
 		uint64_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&val) :"memory");
 		sti();
+		if (options->debug.access > 1)
+			printf("0x%016llx\n", val);
 		return val;
 	}
 
-	void mem_write8(uint64_t addr, uint8_t val)
+	void mem_write8(const uint64_t addr, const uint8_t val)
 	{
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx <- 0x%02x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movb %0, %%fs:(0)" :: "a"(val));
 		sti();
+		if (options->debug.access > 1)
+			printf("\n");
 	}
 
-	void mem_write16(uint64_t addr, uint16_t val)
+	void mem_write16(const uint64_t addr, const uint16_t val)
 	{
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx <- 0x%04x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
 		sti();
+		if (options->debug.access > 1)
+			printf("\n");
 	}
 
 	void mem_write32(const uint64_t addr, const uint32_t val)
 	{
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx <- 0x%08x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
 		sti();
+		if (options->debug.access > 1)
+			printf("\n");
 	}
 
 	void mem_write64(const uint64_t addr, const uint64_t val)
 	{
+		if (options->debug.access > 1)
+			printf("MEM:0x%016llx <- 0x%016llx", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
+		if (options->debug.access > 1)
+			printf("\n");
 	}
 
 	uint8_t mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)

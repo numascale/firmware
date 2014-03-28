@@ -46,16 +46,6 @@ Node *local_node;
 Node **nodes;
 ACPI *acpi;
 
-void wait_key(const char *msg)
-{
-	puts(msg);
-	char ch;
-
-	do {
-		fread(&ch, 1, 1, stdin);
-	} while (ch != 0x0a); // enter
-}
-
 void Node::init(void)
 {
 	dram_base = -1;
@@ -284,7 +274,7 @@ int main(const int argc, const char *argv[])
 	finalise();
 
 	if (options->boot_wait)
-		wait_key("Press enter to boot");
+		lib::wait_key("Press enter to boot");
 
 	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
 	syslinux->exec(options->next_label);

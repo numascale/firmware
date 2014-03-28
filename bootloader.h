@@ -55,5 +55,3 @@ extern Numachip2 *numachip;
 extern E820 *e820;
 extern Node *local_node;
 extern Node **nodes;
-
-void wait_key(void);

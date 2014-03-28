@@ -92,6 +92,7 @@ namespace lib
 		asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
 	}
 
+	void wait_key(const char *msg);
 	void udelay(const uint32_t usecs);
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
