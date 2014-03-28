@@ -114,6 +114,8 @@ void Opteron::dram_scrub_disable(void)
 		write32(SCRUB_RATE_CTL, scrub & ~0x1f);
 		lib::udelay(40); // allow outstanding scrub requests to finish
 	}
+
+	clear32(SCRUB_ADDR_LOW, 1);
 }
 
 void Opteron::dram_scrub_enable(void)
@@ -128,6 +130,7 @@ void Opteron::dram_scrub_enable(void)
 		write32(DCT_CONF_SEL, 0);
 
 	write32(SCRUB_RATE_CTL, scrub);
+	set32(SCRUB_ADDR_LOW, 1);
 }
 
 void Opteron::init(void)

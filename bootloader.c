@@ -112,14 +112,15 @@ void scan(void)
 			(*nb)->dram_base = dram_top;
 			dram_top += (*nb)->dram_size;
 
-			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
-			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
 			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 
-			// add slave e820 entries
 			if ((*node)->sci != config->master->sci)
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 		}
+
+		// setup Numachip DRAM decoding
+		(*node)->numachip->write32(Numachip2::DRAM_BASE, (*node)->dram_base >> 24);
+		(*node)->numachip->write32(Numachip2::DRAM_LIMIT, (dram_top - 1) >> 24);
 
 		dram_top = roundup(dram_top, 1ULL << Numachip2::SIU_ATT_SHIFT);
 		(*node)->dram_end = dram_top - 1;
@@ -143,6 +144,13 @@ void scan(void)
 
 			if (node < &nodes[config->nnodes - 1])
 				(*nb)->drammap.add(range++, (*(node + 1))->dram_base, dram_top - 1, (*node)->numachip->ht);
+
+			// clear rest of ranges
+			while (range < (*nb)->drammap.ranges)
+				(*nb)->drammap.remove(range++);
+
+			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
+			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
 		}
 
 		// route DRAM access in NumaConnect fabric
@@ -238,6 +246,8 @@ int main(const int argc, const char *argv[])
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
 		  config->nnodes, config->master->sci, config->master->hostname);
+
+		Opteron::disable_smi();
 
 		while (1) {
 			cli();

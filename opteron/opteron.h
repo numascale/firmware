@@ -41,10 +41,11 @@ class Opteron {
 
 	class DramMap {
 		const Opteron &opteron;
-		static const int ranges = 8;
 
 		int unused(void);
 	public:
+		static const int ranges = 8;
+
 		DramMap(Opteron &_opteron);
 		void remove(const int range);
 		bool read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest);
