@@ -281,7 +281,7 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 		}
 
 		if (use) {
-			printf("Error: No unrouted coherent links found, issuing COLD reboot\n");
+			fatal("No unrouted coherent links found");
 			reset(Cold, nnodes);
 			/* Does not return */
 		}
