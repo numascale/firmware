@@ -21,8 +21,8 @@
 Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 {
 	// detect ATT depth
-	numachip.write32(SIU_NODEID, 0xffff);
-	uint32_t val = numachip.read32(SIU_NODEID) & 0xffff;
+	numachip.write32(SIU_ATT_INDEX, 0xffff);
+	uint32_t val = numachip.read32(SIU_ATT_INDEX) & 0xffff;
 
 	int i;
 	for (i = 15; i >= 11; i--)
