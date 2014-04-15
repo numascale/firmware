@@ -126,17 +126,17 @@ void Config::parse_json(json_t *root)
 		errors++;
 	}
 
-	if (!parse_json_num(fab->child, "x-size", &x_size, 0)) {
+	if (!parse_json_num(fab->child, "x-size", &size[0], 0)) {
 		error("Label <x-size> not found in fabric configuration file");
 		errors++;
 	}
 
-	if (!parse_json_num(fab->child, "y-size", &y_size, 0)) {
+	if (!parse_json_num(fab->child, "y-size", &size[1], 0)) {
 		error("Label <y-size> not found in fabric configuration file");
 		errors++;
 	}
 
-	if (!parse_json_num(fab->child, "z-size", &z_size, 0)) {
+	if (!parse_json_num(fab->child, "z-size", &size[2], 0)) {
 		error("Label <z-size> not found in fabric configuration file");
 		errors++;
 	}
@@ -224,10 +224,7 @@ void Config::parse_json(json_t *root)
 
 Config::Config(void)
 {
-	x_size = 1;
-	y_size = 0;
-	z_size = 0;
-	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
+	size[0] = 1;
 
 	nnodes = 1;
 	nodes = (struct node *)malloc(sizeof(*nodes));
@@ -276,10 +273,8 @@ Config::Config(const char *filename)
 	parse_json(root);
 	lfree((char *)data);
 
-	ringmask = ((!!x_size) * 3) | ((!!y_size) * 3 << 2) | ((!!z_size) * 3 << 4);
-
 	if (options->debug.config) {
-		printf("geometry %dx%xx%d\n", x_size, y_size, z_size);
+		printf("geometry %dx%xx%d\n", size[0], size[1], size[2]);
 
 		for (int i = 0; i < nnodes; i++) {
 			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",

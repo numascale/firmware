@@ -42,11 +42,10 @@ class Config {
 	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt);
 	void parse_json(json_t *root);
 public:
-	uint32_t x_size, y_size, z_size;
+	uint32_t size[3];
 	uint32_t strict;
 
 	bool master_local;
-	int ringmask : 6;
 	int nnodes, npartitions;
 	struct node *local_node, *nodes, *master;
 	struct partition *partition, *partitions;
