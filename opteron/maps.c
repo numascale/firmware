@@ -310,7 +310,7 @@ void Opteron::MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t 
 		link_t link2;
 		bool lock2;
 		read(range, &base2, &limit2, &dest2, &link2, &lock2);
-		fatal("Overwriting NB MMIO range %d on 0x%08llx:0x%08llx to %d.%d%s",
+		fatal("Overwriting NB MMIO range %d on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d%s",
 		  range, opteron.sci, opteron.ht, base2, limit2, dest2, link2, lock2 ? " locked" : "");
 	}
 
