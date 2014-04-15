@@ -22,7 +22,8 @@
 #include "../bootloader.h"
 #include "smbios.h"
 
-const char *SMBIOS::string(const char *table, uint8_t index) {
+const char *SMBIOS::string(const char *table, uint8_t index)
+{
 	while (--index)
 		table += strlen(table) + 1;
 	return table;

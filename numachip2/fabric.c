@@ -106,7 +106,8 @@ void Numachip2::fabric_train(void)
 	printf(" ready\n");
 }
 
-uint8_t Numachip2::next(sci_t src, sci_t dst) const {
+uint8_t Numachip2::next(sci_t src, sci_t dst) const
+{
 	uint8_t dim = 0;
 
 	while ((src ^ dst) & ~0xf) {
