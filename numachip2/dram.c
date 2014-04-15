@@ -42,7 +42,7 @@ void Numachip2::dram_init(void)
 		mtag = (total - ncache - ctag) & ~((1 << 19) - 1);
 		warning("Limiting local memory from %s to %s", lib::pr_size(hosttotal), lib::pr_size(mtag >> 5));
 		if (total < (32ULL << 30)) /* FIXME: check */
-			warning("Please use larger NumaConnect adapters for full memory support");
+			warning("Please use NumaConnect adapters supporting more server memory");
 	} else {
 		// check if nCache can use more space
 		while (ncache + ctag + mtag < total) {
