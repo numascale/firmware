@@ -23,7 +23,7 @@ void Numachip2::dram_init(void)
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
-	const uint64_t total = 1 << (spd_eeprom.density_banks - 2 + 30); /* bytes */
+	const uint64_t total = 1 << ((spd_eeprom.density_banks & 0xf) + 25); // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
 	uint64_t ncache = 1 << 30; /* Minimum */
@@ -55,8 +55,8 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
 
 	assert(read32(NCACHE_CTRL) & (1 << 6));
-	printf("%lldGB %s partitions: %lluMB nCache",
-	  total >> 10, nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
+	printf("%s %s partitions: %lluMB nCache",
+	  lib::pr_size(total), nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 
 	for (int port = 0; port < 2; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,

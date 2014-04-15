@@ -115,5 +115,6 @@ namespace lib
 	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
 	uint32_t cht_read32(const ht_t ht, const reg_t reg);
 	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
+	const char *pr_size(uint64_t size);
 }
 #endif

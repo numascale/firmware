@@ -278,4 +278,22 @@ namespace lib
 	{
 		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 	}
+
+	const char *pr_size(uint64_t size)
+	{
+		static char pretty[16];
+		const char units[] = {0, 'K', 'M', 'G', 'T', 'P'};
+
+		unsigned i = 0;
+		while (size >= 1024 && i < sizeof(units)) {
+			size /= 1024;
+			i++;
+		}
+
+		if (units[i])
+			snprintf(pretty, sizeof(pretty), "%llu%cB", size, units[i]);
+		else
+			snprintf(pretty, sizeof(pretty), "%lluB", size);
+		return pretty;
+	}
 }
