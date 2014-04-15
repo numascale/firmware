@@ -58,8 +58,10 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
-	static const int training_period = 20000;
-	static const int stability_period = 500000;
+	static const unsigned training_period = 20000;
+	static const unsigned stability_period = 500000;
+	static const unsigned i2c_timeout = 1000;
+	static const unsigned spi_timeout = 1000;
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];

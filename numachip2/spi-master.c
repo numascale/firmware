@@ -61,7 +61,7 @@ void Numachip2::spi_master_enable(void)
 	const uint8_t espr = 4;
 
 	/* Set extended control register first */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4b, (espr & 0xC) >> 2);
+	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4b, (espr & 0xc) >> 2);
 
 	/* Set clock prescaler, chip enable etc. */
 	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
@@ -76,12 +76,16 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 {
 	uint8_t val;
 
-	do {
+	// wait for read-fifo non-empty
+	for (unsigned i = spi_timeout; i; i--) {
 		val = lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x49);
-		cpu_relax();
-	} while (val & SPI_MASTER_SR_RFEMPTY);  /* Wait for read-fifo non-empty */
+		if (!(val & SPI_MASTER_SR_RFEMPTY))
+			return lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x4a);
 
-	return lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x4a);
+		cpu_relax();
+	};
+
+	fatal("Timeout waiting for SPI read FIFO to empty");
 }
 
 void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)

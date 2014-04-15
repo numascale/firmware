@@ -46,22 +46,32 @@ uint8_t Numachip2::i2c_master_irqwait(void)
 {
 	uint8_t val;
 
-	do {
+	// wait for completion
+	for (unsigned i = i2c_timeout; i; i--) {
 		val = read8(I2C_REG1);
-		cpu_relax();
-	} while (!(val & I2C_MASTER_SR_IRQ)); /* Wait for completion */
+		if (val & I2C_MASTER_SR_IRQ)
+			return val;
 
-	return val;
+		cpu_relax();
+	}
+
+	fatal("Timeout waiting for I2C completion");
 }
 
 void Numachip2::i2c_master_busywait(void)
 {
 	uint8_t val;
 
-	do {
+	// wait for busy to de-assert
+	for (unsigned i = i2c_timeout; i; i--) {
 		val = read8(I2C_REG1);
+		if (!(val & I2C_MASTER_SR_BUSY))
+			return;
+
 		cpu_relax();
-	} while (val & I2C_MASTER_SR_BUSY); /* Wait for busy to de-assert */
+	}
+
+	fatal("Timeout waiting for I2C busy deassertion");
 }
 
 void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data)
@@ -120,4 +130,3 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 	write8(I2C_REG1, I2C_MASTER_CR_IACK); /* Ack last interrupt */
 	i2c_master_busywait();
 }
-
