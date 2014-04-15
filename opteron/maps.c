@@ -271,8 +271,9 @@ void Opteron::MmioMap::add(int range, uint64_t base, uint64_t limit, const ht_t 
 	}
 
 	assert(range < 24);
-	assert((base & 0xffffffff) == 0);
-	assert((limit & 0xffffffff) == 0xffffffff);
+	// Fam10h extended MMIO 128MB granularity
+	assert((base & 0x7ffffff) == 0);
+	assert((limit & 0x7ffffff) ==  0x7ffffff);
 	assert(poweroftwo(limit - base) + 1);
 	range -= 8;
 
