@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
+
 #include "lc5.h"
 #include "../bootloader.h"
 
@@ -29,6 +31,7 @@ void LC5::clear(void)
 	numachip.write32(addr + Numachip2::LC_LINKSTAT, 7);
 }
 
-LC5::LC5(Numachip2& _numachip, const uint16_t _addr): numachip(_numachip), addr(_addr)
+LC5::LC5(Numachip2& _numachip, const uint16_t _addr, const char *_name): numachip(_numachip), addr(_addr)
 {
+	strncpy(name, _name, sizeof(name));
 }
