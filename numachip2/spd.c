@@ -55,5 +55,7 @@ void ddr3_spd_check(const struct ddr3_spd_eeprom *spd)
 	if (spd->crc[0] != crc_lsb || spd->crc[1] != crc_msb)
 		fatal("SPD checksum 0x%02x%02x differs from expected 0x%02x%02x",
 			crc_msb, crc_lsb, spd->crc[1], spd->crc[0]);
+
+	assert(spd->spd_rev >= 0x10);
 }
 
