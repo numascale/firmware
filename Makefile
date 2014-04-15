@@ -19,7 +19,7 @@ upload: bootloader.c32
 
 .PHONY: reset
 reset:
-	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop3336-ipmi chassis power reset
+	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop333536-ipmi chassis power reset
 
 .PHONY: check
 check:
