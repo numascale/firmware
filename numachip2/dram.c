@@ -20,27 +20,33 @@
 
 void Numachip2::dram_init(void)
 {
+#if NODIMM
+	spd_eeprom.density_banks = 0x6;
+	spd_eeprom.module_type = DDR3_SPD_MODULETYPE_72B_SO_UDIMM;
+#else
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
+#endif
 
-	const uint64_t total = 1 << ((spd_eeprom.density_banks & 0xf) + 25); // bytes
+	const uint64_t total = 1ULL << ((spd_eeprom.density_banks & 0xf) + 25); // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
-	uint64_t ncache = 1 << 30; /* Minimum */
+	uint64_t ncache = 1ULL << 30; /* Minimum */
 	uint64_t ctag = ncache >> 3;
 	/* Round up to mask constraints to allow manipulation */
 	uint64_t mtag = roundup((hosttotal >> 5) + 1, 1 << 19);
 
-	/* Check if insufficient MTag */
-	if (mtag > total - ncache - ctag) {
-		/* Round down to mask constraint */
+	// check if insufficient MTag
+	if (mtag > (total - ncache - ctag)) {
+		// round down to mask constraint
 		mtag = (total - ncache - ctag) & ~((1 << 19) - 1);
-		warning("Limiting local memory from %lluGB to %lluGB", hosttotal >> 30, mtag << (30 - 5));
+		warning("Limiting local memory from %s to %s", lib::pr_size(hosttotal), lib::pr_size(mtag >> 5));
 		if (total < (32ULL << 30)) /* FIXME: check */
 			warning("Please use larger NumaConnect adapters for full memory support");
 	} else {
-		/* Check if nCache can use more space */
+		// check if nCache can use more space
 		while (ncache + ctag + mtag < total) {
+			printf("ncache=%llu ctag=%llu mtag=%llu total=%llu\n", ncache, ctag, mtag, total);
 			ncache *= 2;
 			ctag = ncache >> 3;
 		}
@@ -58,6 +64,7 @@ void Numachip2::dram_init(void)
 	printf("%s %s partitions: %lluMB nCache",
 	  lib::pr_size(total), nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 
+	// FIXME
 	for (int port = 0; port < 2; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
 		  ((spd_eeprom.density_banks - 2) << 3) | (1 << 2) | 1);
