@@ -20,15 +20,15 @@
 
 void Numachip2::dram_init(void)
 {
-#if NODIMM
-	spd_eeprom.density_banks = 0x6;
+#ifdef NODIMM
+	spd_eeprom.density_banks = 4;
 	spd_eeprom.module_type = DDR3_SPD_MODULETYPE_72B_SO_UDIMM;
 #else
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 #endif
-
-	const uint64_t total = 1ULL << ((spd_eeprom.density_banks & 0xf) + 25); // bytes
+	const uint64_t total = (1 << ((spd_eeprom.density_banks >> 4) + 3)) *
+		(1ULL << ((spd_eeprom.density_banks & 0xf) + 25)); // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
 	uint64_t ncache = 1ULL << 30; /* Minimum */
@@ -45,11 +45,14 @@ void Numachip2::dram_init(void)
 			warning("Please use NumaConnect adapters supporting more server memory");
 	} else {
 		// check if nCache can use more space
-		while (ncache + ctag + mtag < total) {
-			printf("ncache=%llu ctag=%llu mtag=%llu total=%llu\n", ncache, ctag, mtag, total);
+		while (ncache + ctag + mtag <= total) {
 			ncache *= 2;
 			ctag = ncache >> 3;
 		}
+
+		// too large, use next size down
+		ncache /= 2;
+		ctag = ncache >> 3;
 	}
 
 	/* nCache, then CTag, then MTag */
