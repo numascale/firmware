@@ -22,14 +22,17 @@ void Numachip2::dram_init(void)
 {
 #ifdef NODIMM
 	spd_eeprom.density_banks = 4;
+	spd_epprom.organization = 1;
 	spd_eeprom.module_type = DDR3_SPD_MODULETYPE_72B_SO_UDIMM;
 #else
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 #endif
-	const uint32_t shift = (((spd_eeprom.density_banks >> 4) & 0xf) + 3) +
-	  (((spd_eeprom.density_banks & 0xf) + 25)); // log2 bytes
-	const uint64_t total = 1ULL << shift; // bytes
+	const uint32_t density_shift = ((spd_eeprom.density_banks & 0xf) + 25);
+	const uint32_t ranks_shift = (spd_eeprom.organization >> 3) & 0x7;
+	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
+	const uint32_t total_shift = density_shift + ranks_shift + devices_shift;
+	const uint64_t total = 1ULL << total_shift; // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
 	uint64_t ncache = 1ULL << 30; /* Minimum */
@@ -70,7 +73,7 @@ void Numachip2::dram_init(void)
 
 	for (int port = 0; port < 2; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
-		  ((shift - 30) << 3) | (1 << 2) | 1);
+		  ((total_shift - 30) << 3) | (1 << 2) | 1);
 
 	const char *mctls[] = {"MTag", "CTag"};
 	const uint64_t part[] = {mtag >> 20, ctag >> 20};
