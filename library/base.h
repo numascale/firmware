@@ -47,7 +47,7 @@
 
 #define lassert(cond) do { if (!(cond)) { \
         printf("Error: assertion '%s' failed in %s at %s:%d\n", \
-            #cond, __FUNCTION__, __FILE__, __LINE__); while (1); \
+            #cond, __FUNCTION__, __FILE__, __LINE__); while (1) cpu_relax(); \
     } } while (0)
 
 #define assert(cond) do { if (!(cond)) {				\
