@@ -18,62 +18,48 @@
 #include "numachip.h"
 #include "../bootloader.h"
 
+// FIXME: use 0xffff when implemented
+#define PATTERN 0x00ff
+
 void Numachip2::selftest(void)
 {
-	if (options->fast)
-		return;
-
-	int errors = 0;
-
 	printf("Selftest SIU-ATT");
 
 	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
 	for (unsigned i = 0; i < 4096; i++)
-		write32(SIU_ATT_ENTRY, i);
-		
-	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
-	for (unsigned i = 0; i < 4096; i++)
-		if (read32(SIU_ATT_ENTRY) != i) errors++;
+		write32(SIU_ATT_ENTRY, PATTERN);
 
 	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
 	for (unsigned i = 0; i < 4096; i++)
-		write32(SIU_ATT_ENTRY, 0x000);
+		assertf(read32(SIU_ATT_ENTRY) == PATTERN, "Readback at %u gave 0x%x instead of 0x%x", i, read32(SIU_ATT_ENTRY), PATTERN);
 
-	/* FIXME use Fatal() when implemented */
-	if (errors)
-		warning("%d errors", errors);
+	// FIXME: update when Y and Z LCs are implemented
+	for (int lc = 0; lc <= 2; lc++) {
+		const int regbase = lc ? (LC_BASE + (lc - 1) * LC_SIZE) : SIU_XBAR;
 
-	printf(" SIU-XBar");
-	for (unsigned i = 0; i < 16; i++) {
-		write32(SIU_XBAR_CHUNK, i);
-		for (unsigned j = 0; j < 0x40; j++) {
-			write32(SIU_XBAR_LOW + j, i + j);
-			write32(SIU_XBAR_MID + j, i + j);
-			write32(SIU_XBAR_HIGH + j, i + j);
+		printf(" LC%d", lc);
+
+		for (unsigned i = 0; i < 16; i++) {
+			write32(regbase + XBAR_CHUNK, i);
+			for (unsigned j = 0; j < 0x40; j += 4) {
+				write32(regbase + XBAR_LOW + j, PATTERN);
+				write32(regbase + XBAR_MID + j, PATTERN);
+				write32(regbase + XBAR_HIGH + j, PATTERN);
+			}
+		}
+
+		for (unsigned i = 0; i < 16; i++) {
+			write32(regbase + XBAR_CHUNK, i);
+			for (unsigned j = 0; j < 0x40; j += 4) {
+				assertf(read32(regbase + XBAR_LOW + j) == PATTERN, "Readback at low chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_LOW + j), PATTERN);
+				assertf(read32(regbase + XBAR_MID + j) == PATTERN, "Readback at mid chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_MID + j), PATTERN);
+				assertf(read32(regbase + XBAR_HIGH + j) == PATTERN, "Readback at high chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_HIGH + j), PATTERN);
+			}
 		}
 	}
-
-	for (unsigned i = 0; i < 16; i++) {
-		write32(SIU_XBAR_CHUNK, i);
-		for (unsigned j = 0; j < 0x40; j++) {
-			if (read32(SIU_XBAR_LOW + j) != i + j) errors++;
-			if (read32(SIU_XBAR_MID + j) != i + j) errors++;
-			if (read32(SIU_XBAR_HIGH + 0x80 + j) != i + j) errors++;
-		}
-	}
-
-	for (unsigned i = 0; i < 16; i++) {
-		write32(SIU_XBAR_CHUNK, i);
-		for (unsigned j = 0; j < 0x40; j++) {
-			write32(SIU_XBAR_LOW + j, 0x000);
-			write32(SIU_XBAR_MID + j, 0x000);
-			write32(SIU_XBAR_HIGH + j, 0x000);
-		}
-	}
-
-	/* FIXME use Fatal() when implemented */
-	if (errors)
-		warning("%d errors", errors);
 
 	printf(" passed\n");
 }
