@@ -44,69 +44,23 @@ void Numachip2::write8(const reg_t reg, const uint8_t val) const
 	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
-void Numachip2::routing_init(void)
-{
-	printf("Initialising XBar routing");
-#ifdef TEST
-	for (int chunk = 0; chunk < 16; chunk++) {
-		write32(SIU_XBAR_CHUNK, chunk);
-		const int port = 0; /* Self */
-		for (int entry = 0; entry < 0x40; entry++) {
-			write32(SIU_XBAR_LOW,  (port >> 0) & 1);
-			write32(SIU_XBAR_MID,  (port >> 1) & 1);
-			write32(SIU_XBAR_HIGH, (port >> 2) & 1);
-		}
-	}
-#endif
-	switch (sci) {
-	case 0x000:
-		write32(SIU_XBAR_CHUNK, 0);
-		write32(SIU_XBAR_LOW, 2);
-		write32(0x2240, 0);
-		write32(0x2280, 0);
-		write32(0x28c0, 0);
-		write32(0x2800, 2);
-		write32(0x2840, 0);
-		write32(0x2880, 0);
-		write32(0x29c0, 0);
-		write32(0x2900, 2);
-		write32(0x2940, 0);
-		write32(0x2980, 0);
-		break;
-	case 0x001:
-		write32(SIU_XBAR_CHUNK, 0);
-		write32(SIU_XBAR_LOW, 1);
-		write32(0x2240, 0);
-		write32(0x2280, 0);
-		write32(0x28c0, 0);
-		write32(0x2800, 1);
-		write32(0x2840, 0);
-		write32(0x2880, 0);
-		write32(0x29c0, 0);
-		write32(0x2900, 1);
-		write32(0x2940, 0);
-		write32(0x2980, 0);
-		break;
-	default:
-		fatal("unexpected");
-	}
-
-	printf("\n");
-}
-
 // check NC2 position in remote system and readiness
 ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
-	assertf(vendev == Opteron::VENDEV_OPTERON, "Expected Opteron but found 0x%08x", vendev);
+	assertf(vendev == Opteron::VENDEV_OPTERON, "Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
 	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
 
 	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
 	assert(vendev == VENDEV_NC2);
 
+	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + ht, 0, SIU_NODEID);
+	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
+
 	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CTRL);
-	if (control & (1 << 31))
+	assertf(control == (1U << 30), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
+	if (control & (1 << 30))
 		return ht;
 
 	return 0;
@@ -139,11 +93,14 @@ Numachip2::Numachip2(const ht_t _ht):
 
 	// 1.31ms transaction timeout
 	write32(RMPE_CTRL, (1 << 31) | (2 << 28) | (2 << 26));
+
+	// safeguard
+	write32(FABRIC_CTRL, 3 << 30);
 }
 
 void Numachip2::set_sci(const sci_t _sci)
 {
 	write32(SIU_NODEID, _sci);
 	sci = _sci;
-	routing_init();
+	fabric_routing();
 }

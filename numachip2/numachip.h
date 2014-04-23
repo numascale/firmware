@@ -86,7 +86,10 @@ class Numachip2 {
 	/* dram.c */
 	void dram_init(void);
 
-	void routing_init(void);
+	uint8_t next(sci_t src, sci_t dst) const;
+	void update(const uint16_t dest, const uint8_t bxbarid, const uint8_t link);
+	void route(const uint8_t in, const sci_t sci, const uint8_t out);
+	void fabric_routing(void);
 	void fabric_init(void);
 public:
 	/* Registers; function in bits 15:12 */
@@ -115,6 +118,7 @@ public:
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 
 	static const reg_t LC_BASE           = 0x2800;
+	static const reg_t LC_XBAR           = 0x2800;
 	static const reg_t LC_SIZE           = 0x0100;
 	static const reg_t LC_LINKSTAT       = 0x00c4;
 	static const reg_t I2C_REG0          = 0x2040;
@@ -133,10 +137,11 @@ public:
 	static const reg_t TAG_CPU_DATA      = 0x18;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
-	static const reg_t SIU_XBAR_LOW      = 0x2200;
-	static const reg_t SIU_XBAR_MID      = 0x2240;
-	static const reg_t SIU_XBAR_HIGH     = 0x2280;
-	static const reg_t SIU_XBAR_CHUNK    = 0x22c0;
+	static const reg_t SIU_XBAR          = 0x2200;
+	static const reg_t XBAR_LOW          = 0x00;
+	static const reg_t XBAR_MID          = 0x40;
+	static const reg_t XBAR_HIGH         = 0x80;
+	static const reg_t XBAR_CHUNK        = 0xc0;
 	static const reg_t SIU_NODEID        = 0x22c4;
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
@@ -175,4 +180,5 @@ public:
 	void fabric_train(void);
 	void fabric_status(void);
 	void fabric_reset(void);
+	void routing_dump(void);
 };

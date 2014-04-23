@@ -22,7 +22,7 @@ void Numachip2::dram_init(void)
 {
 #ifdef NODIMM
 	spd_eeprom.density_banks = 4;
-	spd_epprom.organization = 1;
+	spd_eeprom.organization = 1;
 	spd_eeprom.module_type = DDR3_SPD_MODULETYPE_72B_SO_UDIMM;
 #else
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);

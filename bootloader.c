@@ -59,7 +59,7 @@ void Node::init(void)
 		cores += nb->cores;
 	}
 
-	printf("SCI%03x (%lldGB, %d cores)\n", sci, dram_size >> 30, cores);
+	printf("SCI%03x (%lluGB, %u cores)\n", sci, dram_size >> 30, cores);
 }
 
 // instantiated for remote nodes
@@ -235,8 +235,8 @@ int main(const int argc, const char *argv[])
 	local_node->numachip->fabric_train();
 
 	if (!config->master_local) {
-		// set go-ahead for master
-		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 31);
+		// set ready flag for master
+		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 30);
 
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
 
