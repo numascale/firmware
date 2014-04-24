@@ -158,7 +158,7 @@ void scan(void)
 			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
 		}
 
-		// route DRAM access in NumaConnect fabric
+		// route DRAM access in fabric
 		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
 			(*node)->numachip->dramatt.range(
 			  (*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
@@ -221,7 +221,7 @@ int main(const int argc, const char *argv[])
 {
 	syslinux = new Syslinux(); // needed first for console access
 
-	printf(CLEAR BANNER "NumaConnect unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
+	printf(CLEAR BANNER "NumaConnect2 unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  lib::rtc_read(RTC_YEAR), lib::rtc_read(RTC_MONTH), lib::rtc_read(RTC_DAY),
 	  lib::rtc_read(RTC_HOURS), lib::rtc_read(RTC_MINUTES), lib::rtc_read(RTC_SECONDS));
 
@@ -270,7 +270,7 @@ int main(const int argc, const char *argv[])
 		while (!(local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31)))
 			cpu_relax();
 
-		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect system\n"
+		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
 		  config->nnodes, config->master->sci, config->master->hostname);
 
