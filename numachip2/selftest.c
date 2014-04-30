@@ -35,28 +35,28 @@ void Numachip2::selftest(void)
 
 	// FIXME: update when Y and Z LCs are implemented
 	for (int lc = 0; lc <= 2; lc++) {
-		const int regbase = lc ? (LC_BASE + (lc - 1) * LC_SIZE) : SIU_XBAR;
+		const int regbase = lc ? (LC_XBAR + (lc - 1) * LC_SIZE) : SIU_XBAR;
 
 		printf(" LC%d", lc);
 
 		for (unsigned i = 0; i < 16; i++) {
 			write32(regbase + XBAR_CHUNK, i);
 			for (unsigned j = 0; j < 0x40; j += 4) {
-				write32(regbase + XBAR_LOW + j, PATTERN);
-				write32(regbase + XBAR_MID + j, PATTERN);
-				write32(regbase + XBAR_HIGH + j, PATTERN);
+				write32(regbase + XBAR_TABLE_SIZE * 0 + j, PATTERN);
+				write32(regbase + XBAR_TABLE_SIZE * 1 + j, PATTERN);
+				write32(regbase + XBAR_TABLE_SIZE * 2 + j, PATTERN);
 			}
 		}
 
 		for (unsigned i = 0; i < 16; i++) {
 			write32(regbase + XBAR_CHUNK, i);
 			for (unsigned j = 0; j < 0x40; j += 4) {
-				assertf(read32(regbase + XBAR_LOW + j) == PATTERN, "Readback at low chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_LOW + j), PATTERN);
-				assertf(read32(regbase + XBAR_MID + j) == PATTERN, "Readback at mid chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_MID + j), PATTERN);
-				assertf(read32(regbase + XBAR_HIGH + j) == PATTERN, "Readback at high chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_HIGH + j), PATTERN);
+				assertf(read32(regbase + XBAR_TABLE_SIZE * 0 + j) == PATTERN, "Readback at low chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_TABLE_SIZE * 0 + j), PATTERN);
+				assertf(read32(regbase + XBAR_TABLE_SIZE * 1 + j) == PATTERN, "Readback at mid chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_TABLE_SIZE * 1 + j), PATTERN);
+				assertf(read32(regbase + XBAR_TABLE_SIZE * 2 + j) == PATTERN, "Readback at high chunk %u, offset %u gave 0x%x instead of 0x%x",
+					i, j, read32(regbase + XBAR_TABLE_SIZE * 2 + j), PATTERN);
 			}
 		}
 	}
