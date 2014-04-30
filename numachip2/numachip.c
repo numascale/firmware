@@ -63,7 +63,8 @@ ht_t Numachip2::probe(const sci_t sci)
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
 	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CTRL);
-	if (control == (1 << 30))
+	assertf(control == (1 << 30), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
+	if (control & (1 << 30))
 		return ht;
 
 	return 0;
