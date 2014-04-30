@@ -49,7 +49,11 @@ ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
-	assertf(vendev == Opteron::VENDEV_OPTERON, "Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
+	if (vendev != Opteron::VENDEV_OPTERON) {
+		local_node->numachip->fabric_status();
+		fatal("Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
+	}
+
 	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
 
 	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
@@ -90,9 +94,8 @@ Numachip2::Numachip2(const ht_t _ht):
 	dram_init();
 	fabric_init();
 
-	write32(TIMEOUT_RESP, TIMEOUT_VAL);
-	// 1.31ms transaction timeout
-	write32(RMPE_CTRL, (1 << 31) | (2 << 28) | (2 << 26));
+	// 335ms transaction timeout
+	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26));
 }
 
 void Numachip2::set_sci(const sci_t _sci)

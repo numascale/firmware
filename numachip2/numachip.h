@@ -116,12 +116,9 @@ public:
 	static const reg_t DRAM_LIMIT        = 0x1074;
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
-	static const reg_t TIMEOUT_RESP      = 0x1080;
+	static const reg_t PIU_APIC          = 0x1080;
+	static const reg_t PIU_APIC_SHIFT    = 0x1084;
 
-	static const reg_t LC_BASE           = 0x2800;
-	static const reg_t LC_XBAR           = 0x2800;
-	static const reg_t LC_SIZE           = 0x0100;
-	static const reg_t LC_LINKSTAT       = 0x00c4;
 	static const reg_t I2C_REG0          = 0x2040;
 	static const reg_t I2C_REG1          = 0x2044;
 	static const reg_t SPI_REG0          = 0x2048;
@@ -129,6 +126,8 @@ public:
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;
+	static const reg_t NCACHE_MCTR_OFFSET= 0x20c4;
+	static const reg_t NCACHE_MCTR_MASK  = 0x20c8;
 	static const reg_t MCTL_SIZE         = 0x20;
 	static const reg_t TAG_CTRL          = 0x00;
 	static const reg_t TAG_ADDR_MASK     = 0x04;
@@ -139,14 +138,15 @@ public:
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
 	static const reg_t SIU_XBAR          = 0x2200;
-	static const reg_t XBAR_LOW          = 0x00;
-	static const reg_t XBAR_MID          = 0x40;
-	static const reg_t XBAR_HIGH         = 0x80;
+	static const reg_t XBAR_TABLE_SIZE   = 0x40;
 	static const reg_t XBAR_CHUNK        = 0xc0;
 	static const reg_t SIU_NODEID        = 0x22c4;
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_STATUS        = 0x2308;
+	static const reg_t LC_XBAR           = 0x2800;
+	static const reg_t LC_SIZE           = 0x100;
+	static const reg_t LC_LINKSTAT       = 0xc4;
 	static const reg_t HSS_PLLCTL        = 0x2f00;
 
 	static const int SIU_ATT_SHIFT = 32;

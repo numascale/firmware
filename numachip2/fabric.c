@@ -25,7 +25,7 @@ void Numachip2::fabric_reset(void)
 	if (options->debug.fabric)
 		printf("<reset>");
 
-	write32(Numachip2::HSS_PLLCTL, 3);
+	write32(Numachip2::HSS_PLLCTL, 0x3f);
 	write32(Numachip2::HSS_PLLCTL, 0);
 }
 
@@ -134,7 +134,7 @@ void Numachip2::route(const uint8_t in, const uint16_t dest, const uint8_t out)
 	// dest[7:4] corresponds to register offset
 	// dest[11:8] corresponds to chunk offset
 
-	const int regbase = in ? (LC_BASE + (in - 1) * LC_SIZE) : SIU_XBAR;
+	const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
 	const int regoffset = ((dest >> 4) & 0xf) << 2;
 	const int chunk = dest >> 8;
 	const int bitoffset = dest & 0xf;
@@ -142,10 +142,10 @@ void Numachip2::route(const uint8_t in, const uint16_t dest, const uint8_t out)
 	write32(regbase + XBAR_CHUNK, chunk);
 
 	for (int bit = 0; bit < 3; bit++) {
-		uint32_t val = read32(regbase + regoffset + bit * 0x40);
+		uint32_t val = read32(regbase + regoffset + bit * XBAR_TABLE_SIZE);
 		val &= ~(1 << bitoffset);
 		val |= ((out >> bit) & 1) << bitoffset;
-		write32(regbase + regoffset + bit * 0x40, val);
+		write32(regbase + regoffset + bit * XBAR_TABLE_SIZE, val);
 	}
 }
 
@@ -154,7 +154,7 @@ void Numachip2::routing_dump(void)
 	printf("Routing tables:\n");
 
 	for (int in = 0; in <= 6; in++) {
-		const int regbase = in ? (LC_BASE + (in - 1) * LC_SIZE) : SIU_XBAR;
+		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
 
 		for (int dest = 0; dest < config->nnodes; dest++) {
 			const int regoffset = ((dest >> 4) & 0xf) << 2;
@@ -165,7 +165,7 @@ void Numachip2::routing_dump(void)
 			write32(regbase + XBAR_CHUNK, chunk);
 
 			for (int bit = 0; bit < 3; bit++)
-				out |= ((read32(regbase + regoffset + bit * 0x40) >> bitoffset) & 1) << bit;
+				out |= ((read32(regbase + regoffset + bit * XBAR_TABLE_SIZE) >> bitoffset) & 1) << bit;
 
 			if (out)
 				printf("- on LC%d, SCI%03x via LC%d\n", in, dest, out);
@@ -196,6 +196,6 @@ void Numachip2::fabric_init(void)
 		if (!config->size[lc / 2])
 			continue;
 
-		lcs[nlcs++] = new LC5(*this, LC_BASE + lc * LC_SIZE, names[lc]);
+		lcs[nlcs++] = new LC5(*this, LC_XBAR + lc * LC_SIZE, names[lc]);
 	}
 }

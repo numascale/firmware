@@ -261,6 +261,7 @@ int main(const int argc, const char *argv[])
 	local_node->set_sci(config->local_node->sci);
 	local_node->numachip->fabric_train();
 
+	// slaves
 	if (!config->master_local) {
 		// set ready flag for master
 		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 30);

@@ -60,6 +60,8 @@ void Numachip2::dram_init(void)
 	}
 
 	/* nCache, then CTag, then MTag */
+	write32(NCACHE_MCTR_OFFSET, 0 >> 19);
+	write32(NCACHE_MCTR_MASK, (ncache - 1) >> 19);
 	write32(CTAG_BASE + TAG_ADDR_MASK, (ncache >> 30) - 1);
 	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     /* No Tag comparison mask for MTag */
 	write32(CTAG_BASE + TAG_MCTR_OFFSET, ncache >> 19);

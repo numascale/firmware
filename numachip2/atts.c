@@ -68,6 +68,7 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 	assert((base & mask) == 0);
 	assert((limit & mask) == mask);
 
+	// FIXME: check
 	for (uint32_t k = base >> MMIO32_ATT_SHIFT; k < ((limit + 1) >> MMIO32_ATT_SHIFT); k++) {
 		numachip.write32(PIU_ATT_INDEX, (1 << 4) | (k / 256));
 		numachip.write32(PIU_ATT_ENTRY + (k % 256) * 4, dest);
