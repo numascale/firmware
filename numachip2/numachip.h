@@ -147,6 +147,8 @@ public:
 	static const reg_t LC_XBAR           = 0x2800;
 	static const reg_t LC_SIZE           = 0x100;
 	static const reg_t LC_LINKSTAT       = 0xc4;
+	static const reg_t LC_EVENTSTAT      = 0xc8;
+	static const reg_t LC_ERRORCNT       = 0xcc;
 	static const reg_t HSS_PLLCTL        = 0x2f00;
 
 	static const int SIU_ATT_SHIFT = 32;

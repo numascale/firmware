@@ -36,7 +36,7 @@ void Numachip2::fabric_status(void)
 		if (!config->size[lc / 2])
 			continue;
 
-		printf(" %08x", lcs[lc]->status());
+		printf(" %016x", lcs[lc]->status());
 	}
 	printf("\n");
 }

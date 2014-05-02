@@ -20,9 +20,11 @@
 #include "lc5.h"
 #include "../bootloader.h"
 
-uint32_t LC5::status(void)
+uint64_t LC5::status(void)
 {
-	return numachip.read32(addr + Numachip2::LC_LINKSTAT);
+	uint64_t val = numachip.read32(addr + Numachip2::LC_LINKSTAT);
+	val |= (uint64_t)numachip.read32(addr + Numachip2::LC_EVENTSTAT) << 32;
+	return val;
 }
 
 void LC5::clear(void)
