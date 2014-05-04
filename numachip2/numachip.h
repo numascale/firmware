@@ -143,7 +143,7 @@ public:
 	static const reg_t SIU_NODEID        = 0x22c4;
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
-	static const reg_t SIU_STATUS        = 0x2308;
+	static const reg_t SIU_EVENTSTAT     = 0x2308;
 	static const reg_t LC_XBAR           = 0x2800;
 	static const reg_t LC_SIZE           = 0x100;
 	static const reg_t LC_LINKSTAT       = 0xc4;

@@ -1,0 +1,57 @@
+/*
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdio.h>
+
+#include "utils.h"
+#include "../opteron/opteron.h"
+
+#define PRETTY_SIZE 16
+#define PRETTY_COUNT 4
+
+namespace lib
+{
+	void udelay(const uint32_t usecs)
+	{
+		uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
+
+		while (lib::rdtscll() < limit)
+			cpu_relax();
+	}
+
+	const char *pr_size(uint64_t size)
+	{
+		static char pretty[PRETTY_COUNT][PRETTY_SIZE];
+		static unsigned index = 0;
+		const char units[] = {0, 'K', 'M', 'G', 'T', 'P'};
+
+		unsigned i = 0;
+		while (size >= 1024 && i < sizeof(units)) {
+			size /= 1024;
+			i++;
+		}
+
+		if (units[i])
+			snprintf(pretty[index], PRETTY_SIZE, "%llu%cB", size, units[i]);
+		else
+			snprintf(pretty[index], PRETTY_SIZE, "%lluB", size);
+
+		const char *ret = pretty[index];
+		index = (index + 1) % PRETTY_COUNT;
+		return ret;
+	}
+}

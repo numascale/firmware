@@ -47,59 +47,6 @@ Node **nodes;
 ACPI *acpi;
 char *asm_relocated;
 
-void Node::init(void)
-{
-	dram_base = -1;
-
-	for (ht_t n = 0; n < nopterons; n++) {
-		Opteron *nb = opterons[n];
-		if (nb->dram_base < dram_base)
-			dram_base = nb->dram_base;
-
-		dram_size += nb->dram_size;
-		cores += nb->cores;
-	}
-
-	printf("SCI%03x (%lluGB, %u cores)\n", sci, dram_size >> 30, cores);
-}
-
-// instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
-{
-	for (ht_t n = 0; n < nopterons; n++)
-		opterons[n] = new Opteron(sci, n);
-
-	numachip = new Numachip2(sci, ht);
-	init();
-}
-
-// instantiated for local nodes
-Node::Node(void): sci(SCI_LOCAL)
-{
-	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
-	assertf(nc, "NumaChip2 not found");
-
-	// set SCI ID later once mapping is setup
-	numachip = new Numachip2(nc);
-	nopterons = nc;
-
-	// Opterons are on all HT IDs before Numachip
-	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(nb);
-
-	init();
-}
-
-void Node::set_sci(const sci_t _sci)
-{
-	sci = _sci;
-
-	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb]->sci = sci;
-
-	numachip->set_sci(sci);
-}
-
 void scan(void)
 {
 	printf("Map scan:\n");
@@ -268,8 +215,10 @@ int main(const int argc, const char *argv[])
 
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
 
-		while (!(local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31)))
-			cpu_relax();
+		while (!(local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31))) {
+				lib::udelay(2000000);
+				local_node->status();
+		}
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,

@@ -17,27 +17,22 @@
 
 #pragma once
 
-#include <inttypes.h>
-#include <stdbool.h>
-
-#include "platform/config.h"
-#include "platform/syslinux.h"
-#include "platform/options.h"
-#include "platform/e820.h"
-#include "library/access.h"
+#include "library/base.h"
 #include "opteron/opteron.h"
 #include "numachip2/numachip.h"
-#include "node.h"
 
-#define foreach_node(x) for (Node **(x) = &nodes[0]; (x) < &nodes[config->nnodes]; (x)++)
-#define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
+class Node {
+public:
+	sci_t sci;
+	unsigned nopterons;
+	unsigned cores;
+	Opteron *opterons[7];
+	Numachip2 *numachip;
+	uint64_t dram_base, dram_size, dram_end;
 
-/* Global constants found in initialization */
-extern Syslinux *syslinux;
-extern Options *options;
-extern Config *config;
-extern Opteron *opteron;
-extern Numachip2 *numachip;
-extern E820 *e820;
-extern Node *local_node;
-extern Node **nodes;
+	void init(void);
+	void status(void);
+	Node(void);
+	Node(const sci_t _sci, const ht_t ht);
+	void set_sci(const sci_t _sci);
+};

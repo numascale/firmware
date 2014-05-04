@@ -33,8 +33,10 @@ void Numachip2::selftest(void)
 	for (unsigned i = 0; i < 4096; i++)
 		assertf(read32(SIU_ATT_ENTRY) == PATTERN, "Readback at %u gave 0x%x instead of 0x%x", i, read32(SIU_ATT_ENTRY), PATTERN);
 
-	// FIXME: update when Y and Z LCs are implemented
-	for (int lc = 0; lc <= 2; lc++) {
+	for (int lc = 0; lc <= 6; lc++) {
+		if (!config->size[lc / 2])
+			continue;
+
 		const int regbase = lc ? (LC_XBAR + (lc - 1) * LC_SIZE) : SIU_XBAR;
 
 		printf(" LC%d", lc);

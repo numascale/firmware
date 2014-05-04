@@ -36,7 +36,7 @@ void Numachip2::fabric_status(void)
 		if (!config->size[lc / 2])
 			continue;
 
-		printf(" %016x", lcs[lc]->status());
+		printf(" %016llx", lcs[lc]->status());
 	}
 	printf("\n");
 }
@@ -69,7 +69,7 @@ void Numachip2::fabric_train(void)
 			if (options->debug.fabric) {
 				printf("<links not up:");
 				for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-					printf(" %x", (*lc)->status());
+					printf(" %llx", (*lc)->status());
 				printf(">");
 			}
 			continue;
@@ -91,7 +91,7 @@ void Numachip2::fabric_train(void)
 				if (options->debug.fabric) {
 					printf("<errors:");
 					for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-						printf(" %08x", (*lc)->status());
+						printf(" %016llx", (*lc)->status());
 					printf(">");
 				}
 				break;
@@ -154,6 +154,9 @@ void Numachip2::routing_dump(void)
 	printf("Routing tables:\n");
 
 	for (int in = 0; in <= 6; in++) {
+		if (!config->size[in / 2])
+			continue;
+
 		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
 
 		for (int dest = 0; dest < config->nnodes; dest++) {
@@ -167,7 +170,7 @@ void Numachip2::routing_dump(void)
 			for (int bit = 0; bit < 3; bit++)
 				out |= ((read32(regbase + regoffset + bit * XBAR_TABLE_SIZE) >> bitoffset) & 1) << bit;
 
-			if (out)
+			if (out != 7)
 				printf("- on LC%d, SCI%03x via LC%d\n", in, dest, out);
 		}
 	}
@@ -177,14 +180,62 @@ void Numachip2::fabric_routing(void)
 {
 	printf("Initialising XBar routing:\n");
 
+	switch(sci) {
+	case 0x000:
+		route(0, 0x000, 0);
+		route(0, 0x002, 1);
+		route(0, 0x001, 2);
+
+		route(1, 0x000, 0);
+		route(1, 0x001, 2);
+		route(1, 0x002, 2);
+
+		route(2, 0x000, 0);
+		route(2, 0x001, 1);
+		route(2, 0x002, 1);
+		break;
+	case 0x001:
+		route(0, 0x001, 0);
+		route(0, 0x000, 1);
+		route(0, 0x002, 2);
+
+		route(1, 0x001, 0);
+		route(1, 0x000, 2);
+		route(1, 0x002, 2);
+
+		route(2, 0x001, 0);
+		route(2, 0x000, 1);
+		route(2, 0x002, 1);
+		break;
+	case 0x002:
+		route(0, 0x002, 0);
+		route(0, 0x001, 1);
+		route(0, 0x000, 2);
+
+		route(1, 0x002, 0);
+		route(1, 0x000, 2);
+		route(1, 0x001, 2);
+
+		route(2, 0x002, 0);
+		route(2, 0x000, 1);
+		route(2, 0x001, 1);
+		break;
+	default:
+		error("unexpected");
+	}
+
+#ifdef GENERATE
 	for (int node = 0; node < config->nnodes; node++) {
 		uint8_t out = next(sci, config->nodes[node].sci);
 		printf("- to SCI%03x via LC%d\n", config->nodes[node].sci, out);
 
 		for (int lc = 0; lc <= 6; lc++)
+			if (!config->size[lc / 2])
+				continue;
+
 			route(lc, config->nodes[node].sci, out);
 	}
-
+#endif
 	routing_dump();
 }
 
