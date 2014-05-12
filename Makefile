@@ -87,7 +87,7 @@ version.h: library/access.h platform/acpi.h bootloader.h library/access.c bootlo
 
 bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o platform/syslinux.o platform/e820.o platform/trampoline.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
-bootloader.o: $(mjson_dir)/src/json.h bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
+bootloader.o: bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 node.o: node.h
 
 opteron/ht-scan.o: opteron/ht-scan.c bootloader.h library/access.h
@@ -108,6 +108,7 @@ numachip2/i2c-master.o: numachip2/i2c-master.c bootloader.h library/access.h
 numachip2/spi-master.o: numachip2/spi-master.c bootloader.h library/access.h
 numachip2/lc5.o: numachip2/lc5.c numachip2/lc5.h
 numachip2/selftest.o: numachip2/selftest.c
+numachip2/fabric.h: $(mjson_dir)/src/json.h
 numachip2/fabric.o: numachip2/fabric.c
 numachip2/dram.o: numachip2/dram.c
 numachip2/maps.o: numachip2/maps.c
