@@ -99,6 +99,7 @@ public:
 	static const reg_t HEADER_TYPE       = 0x000c;
 	static const reg_t BASE_ADDR_0       = 0x0010;
 	static const reg_t FABRIC_CTRL       = 0x0014; // FIXME correct when implemented later
+	static const reg_t SCRATCH_0         = 0x0014; // FIXME correct when implemented later
 	static const reg_t CAP_PTR           = 0x0034;
 	static const reg_t LINK_CTRL         = 0x0084;
 	static const reg_t LINK_FREQ_REV     = 0x0088;

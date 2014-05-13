@@ -23,7 +23,15 @@
 
 void Numachip2::selftest(void)
 {
-	printf("Selftest SIU-ATT");
+	printf("Selftest HT");
+
+	for (uint32_t i = 0; i < 2000000; i++) {
+		write32(SCRATCH_0, i);
+		assertf(read32(SCRATCH_0) == i, "Failed");
+	}
+	write32(SCRATCH_0, 0);
+
+	printf(" SIU-ATT");
 
 	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
 	for (unsigned i = 0; i < 4096; i++)
