@@ -324,7 +324,7 @@ Config::Config(const char *filename)
 	partition = &partitions[local_node->partition];
 	master = find(partition->master);
 	master_local = local_node == master;
-	printf("; partition %d; %s\n", local_node->partition, master ? "master" : "slave");
+	printf("; partition %d; %s\n", local_node->partition, master_local ? "master" : "slave");
 
 	partition = &partitions[local_node->partition];
 }
