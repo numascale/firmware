@@ -17,11 +17,15 @@
 
 #pragma once
 
+extern "C" {
+	#include <syslinux/pxe.h>
+}
 #include <netinet/in.h>
 
 class Syslinux
 {
 	struct e820entry *ent;
+	com32sys_t state;
 
 	void get_hostname(void);
 public:
@@ -32,6 +36,6 @@ public:
 	Syslinux(void);
 	char *read_file(const char *filename, int *const len);
 	void exec(const char *label);
-	void e820_first(uint64_t *base, uint64_t *length, uint64_t *type);
-	bool e820_next(uint64_t *base, uint64_t *length, uint64_t *type);
+	void memmap_start(void);
+	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
 };

@@ -182,10 +182,9 @@ E820::E820(void)
 
 	// read existing E820 entries
 	uint64_t base, length, type;
-	syslinux->e820_first(&base, &length, &type);
-	add(base, length, type);
+	syslinux->memmap_start();
 
-	while (syslinux->e820_next(&base, &length, &type))
+	while (syslinux->memmap_entry(&base, &length, &type))
 		add(base, length, type);
 
 	printf("BIOS-provided e820 map:\n");
@@ -249,14 +248,12 @@ void E820::test(void)
 
 	// read existing E820 entries
 	uint64_t base, length, type;
-	syslinux->e820_first(&base, &length, &type);
-	printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
-	if (type == RAM)
-		test_range(base, base + length);
+	syslinux->memmap_start();
 
-	while (syslinux->e820_next(&base, &length, &type)) {
+	while (syslinux->memmap_entry(&base, &length, &type)) {
 		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
 		if (type == RAM)
 			test_range(base, base + length);
+		printf("\n");
 	}
 }

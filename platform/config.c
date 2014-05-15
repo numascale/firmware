@@ -319,8 +319,7 @@ Config::Config(const char *filename)
 		}
 	}
 
-	assertf(local_node, "Failed to find entry matching this node with UUID %08X or hostname %s",
-	  ::local_node->numachip->uuid, syslinux->hostname ? syslinux->hostname : "<none>");
+	assertf(local_node, "Failed to find entry matching this node with UUID, MAC address or hostname");
 
 	partition = &partitions[local_node->partition];
 	master = find(partition->master);

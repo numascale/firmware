@@ -73,8 +73,6 @@ Syslinux::Syslinux(void)
 	lib::udelay(100000);
 	console_ansi_std();
 	get_hostname();
-
-	ent = (struct e820entry *)lzalloc(sizeof(*ent));
 }
 
 char *Syslinux::read_file(const char *filename, int *const len)
@@ -120,6 +118,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 void Syslinux::exec(const char *label)
 {
 	com32sys_t rm;
+	memset(&rm, 0, sizeof(rm));
 
 	strcpy((char *)__com32.cs_bounce, label);
 	rm.eax.w[0] = 0x0003;
@@ -129,41 +128,26 @@ void Syslinux::exec(const char *label)
 	__intcall(0x22, &rm, NULL);
 }
 
-void Syslinux::e820_first(uint64_t *base, uint64_t *length, uint64_t *type)
+void Syslinux::memmap_start(void)
 {
-	com32sys_t rm;
-
-	rm.eax.l = 0xe820;
-	rm.edx.l = STR_DW_N("SMAP");
-	rm.ebx.l = 0;
-	rm.ecx.l = sizeof(*ent);
-	rm.edi.w[0] = OFFS(ent);
-	rm.es = SEG(ent);
-	__intcall(0x15, &rm, &rm);
-	assert(rm.eax.l == STR_DW_N("SMAP"));
-	assert(ent->length);
-
-	*base = ent->base;
-	*length = ent->length;
-	*type = ent->type;
+	memset(&state, 0, sizeof(state));
 }
 
-bool Syslinux::e820_next(uint64_t *base, uint64_t *length, uint64_t *type)
+bool Syslinux::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 {
-	com32sys_t rm;
+	state.eax.l = 0xe820;
+	state.edx.l = STR_DW_N("SMAP");
+	state.ecx.l = sizeof(*ent);
+	state.edi.w[0] = OFFS(ent);
+	state.es = SEG(ent);
 
-	rm.eax.l = 0xe820;
-	rm.edx.l = STR_DW_N("SMAP");
-	rm.ecx.l = sizeof(*ent);
-	rm.edi.w[0] = OFFS(ent);
-	rm.es = SEG(ent);
-	__intcall(0x15, &rm, &rm);
-	assert(rm.eax.l == STR_DW_N("SMAP"));
+	__intcall(0x15, &state, &state);
+	assert(state.eax.l == STR_DW_N("SMAP"));
 	assert(ent->length);
 
 	*base = ent->base;
 	*length = ent->length;
 	*type = ent->type;
 
-	return rm.ebx.l > 0;
+	return state.ebx.l > 0;
 }
