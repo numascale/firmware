@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __OPTIONS_H
-#define __OPTIONS_H
+#pragma once
 
 class Options {
 	/* Static needed so we can pass the function address */
@@ -43,6 +42,3 @@ public:
 };
 
 extern Options *options;
-
-#endif
-

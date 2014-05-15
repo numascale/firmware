@@ -179,31 +179,14 @@ E820::E820(void)
 	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
 	map = (e820entry *)REL32(new_e820_map);
 	used = REL16(new_e820_len);
-	struct e820entry *ent = (struct e820entry *)lmalloc(sizeof(*ent));
 
 	// read existing E820 entries
-	com32sys_t rm;
-	memset(&rm, 0, sizeof(rm));
-	rm.eax.l = 0xe820;
-	rm.edx.l = STR_DW_N("SMAP");
-	rm.ecx.l = sizeof(*ent);
-	rm.edi.w[0] = OFFS(ent);
-	rm.es = SEG(ent);
-	__intcall(0x15, &rm, &rm);
-	assert(rm.eax.l == STR_DW_N("SMAP"));
-	add(ent->base, ent->length, ent->type);
+	uint64_t base, length, type;
+	syslinux->e820_first(&base, &length, &type);
+	add(base, length, type);
 
-	while (rm.ebx.l > 0) {
-		rm.eax.l = 0xe820;
-		rm.edx.l = STR_DW_N("SMAP");
-		rm.ecx.l = sizeof(*ent);
-		rm.edi.w[0] = OFFS(ent);
-		rm.es = SEG(ent);
-		__intcall(0x15, &rm, &rm);
-		add(ent->base, ent->length, ent->type);
-	}
-
-	lfree(ent);
+	while (syslinux->e820_next(&base, &length, &type))
+		add(base, length, type);
 
 	printf("BIOS-provided e820 map:\n");
 	dump();
@@ -262,46 +245,18 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 
 void E820::test(void)
 {
-	struct e820entry *ent = (struct e820entry *)lmalloc(sizeof(*ent));
-
 	printf("Testing e820 handler and access:\n");
 
-	com32sys_t rm;
-	memset(&rm, 0, sizeof(rm));
-	rm.eax.l = 0xe820;
-	rm.edx.l = STR_DW_N("SMAP");
-	rm.ecx.l = sizeof(*ent);
-	rm.edi.w[0] = OFFS(ent);
-	rm.es = SEG(ent);
-	__intcall(0x15, &rm, &rm);
-	assert(rm.eax.l == STR_DW_N("SMAP"));
+	// read existing E820 entries
+	uint64_t base, length, type;
+	syslinux->e820_first(&base, &length, &type);
+	printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
+	if (type == RAM)
+		test_range(base, base + length);
 
-	printf("%011llx:%011llx (%011llx) %s",
-	  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
-	assert(ent->length);
-	if (ent->type == RAM)
-		test_range(ent->base, ent->base + ent->length);
-	printf("\n");
-
-	while (rm.ebx.l > 0) {
-		rm.eax.l = 0xe820;
-		rm.edx.l = STR_DW_N("SMAP");
-		rm.ecx.l = sizeof(*ent);
-		rm.edi.w[0] = OFFS(ent);
-		rm.es = SEG(ent);
-		__intcall(0x15, &rm, &rm);
-
-		printf("%011llx:%011llx (%011llx) %s",
-		  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
-		if (ent->type == RAM)
-			test_range(ent->base, ent->base + ent->length);
-
-		if (options->tracing)
-			if (ent->type == RESERVED && ent->length == options->tracing)
-				printf(" [tracing]");
-
-		printf("\n");
+	while (syslinux->e820_next(&base, &length, &type)) {
+		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
+		if (type == RAM)
+			test_range(base, base + length);
 	}
-
-	lfree(ent);
 }

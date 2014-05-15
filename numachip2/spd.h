@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SPD_H
-#define __SPD_H
+#pragma once
 
 #include <inttypes.h>
 
@@ -190,6 +189,3 @@ static inline const char *nc2_ddr3_module_type(const uint8_t module_type)
 }
 
 extern void ddr3_spd_check(const struct ddr3_spd_eeprom *spd);
-
-#endif
-

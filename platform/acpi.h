@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ACPI_H
-#define __ACPI_H
+#pragma once
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -153,5 +152,3 @@ public:
 	ACPI(void);
 	void replace(const AcpiTable &table);
 };
-
-#endif

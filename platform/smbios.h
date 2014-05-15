@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SMBIOS_H
-#define __SMBIOS_H
+#pragma once
 
 #include <inttypes.h>
 
@@ -36,5 +35,3 @@ public:
 
 	SMBIOS(void);
 };
-
-#endif

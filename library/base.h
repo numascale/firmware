@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __BASE_H
-#define __BASE_H
+#pragma once
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -156,6 +155,3 @@ public:
 		limit = &elements[used];
 	}
 };
-
-#endif
-

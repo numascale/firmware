@@ -21,6 +21,7 @@
 #include "../bootloader.h"
 #include "../platform/options.h"
 #include "../opteron/msrs.h"
+#include "../library/utils.h"
 #include "acpi.h"
 
 #define SHADOW_BASE 0xf0000

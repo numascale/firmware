@@ -20,7 +20,6 @@
 #include <console.h>
 
 extern "C" {
-//	#include <com32.h>
 	#include <syslinux/pxe.h>
 	#include <consoles.h>
 }
@@ -28,6 +27,7 @@ extern "C" {
 #include "syslinux.h"
 #include "../bootloader.h"
 #include "../library/base.h"
+#include "../library/utils.h"
 
 void Syslinux::get_hostname(void)
 {
@@ -73,6 +73,8 @@ Syslinux::Syslinux(void)
 	lib::udelay(100000);
 	console_ansi_std();
 	get_hostname();
+
+	ent = (struct e820entry *)lzalloc(sizeof(*ent));
 }
 
 char *Syslinux::read_file(const char *filename, int *const len)
@@ -125,4 +127,43 @@ void Syslinux::exec(const char *label)
 	rm.es = SEG(__com32.cs_bounce);
 
 	__intcall(0x22, &rm, NULL);
+}
+
+void Syslinux::e820_first(uint64_t *base, uint64_t *length, uint64_t *type)
+{
+	com32sys_t rm;
+
+	rm.eax.l = 0xe820;
+	rm.edx.l = STR_DW_N("SMAP");
+	rm.ebx.l = 0;
+	rm.ecx.l = sizeof(*ent);
+	rm.edi.w[0] = OFFS(ent);
+	rm.es = SEG(ent);
+	__intcall(0x15, &rm, &rm);
+	assert(rm.eax.l == STR_DW_N("SMAP"));
+	assert(ent->length);
+
+	*base = ent->base;
+	*length = ent->length;
+	*type = ent->type;
+}
+
+bool Syslinux::e820_next(uint64_t *base, uint64_t *length, uint64_t *type)
+{
+	com32sys_t rm;
+
+	rm.eax.l = 0xe820;
+	rm.edx.l = STR_DW_N("SMAP");
+	rm.ecx.l = sizeof(*ent);
+	rm.edi.w[0] = OFFS(ent);
+	rm.es = SEG(ent);
+	__intcall(0x15, &rm, &rm);
+	assert(rm.eax.l == STR_DW_N("SMAP"));
+	assert(ent->length);
+
+	*base = ent->base;
+	*length = ent->length;
+	*type = ent->type;
+
+	return rm.ebx.l > 0;
 }

@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ACCESS_H
-#define __ACCESS_H
+#pragma once
 
 #include <inttypes.h>
 #include <sys/io.h>
@@ -57,14 +56,6 @@
 
 namespace lib
 {
-	static inline uint64_t rdtscll(void)
-	{
-		uint64_t val;
-		/* rdtscp doesn't work on Fam10h, so use mfence to serialise */
-		asm volatile("mfence; rdtsc" : "=A"(val));
-		return val;
-	}
-
 	static inline uint32_t uint32_tbswap(uint32_t val)
 	{
 		asm volatile("bswap %0" : "+r"(val));
@@ -93,7 +84,6 @@ namespace lib
 	}
 
 	void wait_key(const char *msg);
-	void udelay(const uint32_t usecs);
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	void     pmio_write8(const uint16_t offset, const uint8_t val);
@@ -113,10 +103,14 @@ namespace lib
 	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
-	uint32_t cht_read32(const ht_t ht, const reg_t reg);
-	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
-	const char *pr_size(uint64_t size);
-	void dump(const void *addr, const unsigned len);
-	void memcpy(void *dst, const void *src, size_t n);
+
+	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
+	{
+		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
+	static inline void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
+	{
+		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
 }
-#endif

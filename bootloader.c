@@ -29,6 +29,7 @@ extern "C" {
 #include "bootloader.h"
 #include "library/base.h"
 #include "library/access.h"
+#include "library/utils.h"
 #include "platform/acpi.h"
 #include "platform/options.h"
 #include "platform/syslinux.h"

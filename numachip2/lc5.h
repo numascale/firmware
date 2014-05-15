@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __LC5_H
-#define __LC5_H
+#pragma once
 
 #include "../library/base.h"
 #include "numachip.h"
@@ -31,5 +30,3 @@ public:
 	uint64_t status(void);
 	LC5(Numachip2& _numachip, const uint16_t _addr, const char *name);
 };
-
-#endif

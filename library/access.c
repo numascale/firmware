@@ -51,14 +51,6 @@ namespace lib
 		} while (ch != 0x0a); // enter
 	}
 
-	void udelay(const uint32_t usecs)
-	{
-		uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
-
-		while (lib::rdtscll() < limit)
-			cpu_relax();
-	}
-
 	uint8_t rtc_read(const int addr)
 	{
 		outb(addr, 0x70);
@@ -268,60 +260,5 @@ namespace lib
 		mem_write64((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
-	}
-
-	uint32_t cht_read32(const ht_t ht, const reg_t reg)
-	{
-		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
-	}
-
-	void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
-	{
-		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
-	}
-
-	#define PRETTY_SIZE 16
-	#define PRETTY_COUNT 4
-
-	const char *pr_size(uint64_t size)
-	{
-		static char pretty[PRETTY_COUNT][PRETTY_SIZE];
-		static unsigned index = 0;
-		const char units[] = {0, 'K', 'M', 'G', 'T', 'P'};
-
-		unsigned i = 0;
-		while (size >= 1024 && i < sizeof(units)) {
-			size /= 1024;
-			i++;
-		}
-
-		if (units[i])
-			snprintf(pretty[index], PRETTY_SIZE, "%llu%cB", size, units[i]);
-		else
-			snprintf(pretty[index], PRETTY_SIZE, "%lluB", size);
-
-		const char *ret = pretty[index];
-		index = (index + 1) % PRETTY_COUNT;
-		return ret;
-	}
-
-	void dump(const void *addr, const unsigned len)
-	{
-		const unsigned char *addr2 = (const unsigned char *)addr;
-		unsigned i = 0;
-
-		while (i < len) {
-			for (int j = 0; j < 8 && (i + j) < len; j++)
-				printf(" %02x", addr2[i + j]);
-			i += 8;
-			printf("\n");
-		}
-	}
-
-	void memcpy(void *dst, const void *src, size_t n)
-	{
-		printf("Copying %u bytes from %p to %p:\n", n, src, dst);
-		dump(src, n);
-		::memcpy(dst, src, n);
 	}
 }

@@ -15,8 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CONFIG_H
-#define __CONFIG_H
+#pragma once
 
 #include "../json-1.5/src/json.h"
 #include "../library/base.h"
@@ -53,5 +52,3 @@ public:
 	Config(void);
 	Config(const char *filename);
 };
-
-#endif

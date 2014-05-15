@@ -15,13 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SYSLINUX_H
-#define __SYSLINUX_H
+#pragma once
 
 #include <netinet/in.h>
 
 class Syslinux
 {
+	struct e820entry *ent;
+
 	void get_hostname(void);
 public:
 	struct in_addr ip;
@@ -31,6 +32,6 @@ public:
 	Syslinux(void);
 	char *read_file(const char *filename, int *const len);
 	void exec(const char *label);
+	void e820_first(uint64_t *base, uint64_t *length, uint64_t *type);
+	bool e820_next(uint64_t *base, uint64_t *length, uint64_t *type);
 };
-
-#endif

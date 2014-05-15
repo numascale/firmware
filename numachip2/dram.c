@@ -17,6 +17,7 @@
 
 #include "numachip.h"
 #include "../bootloader.h"
+#include "../library/utils.h"
 
 void Numachip2::dram_init(void)
 {

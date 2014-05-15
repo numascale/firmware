@@ -19,7 +19,7 @@
 #include "msrs.h"
 #include "../library/base.h"
 #include "../library/access.h"
-#include "../platform/trampoline.h"
+#include "../library/utils.h"
 
 // approximation before probing
 uint32_t Opteron::tsc_mhz = 2200;

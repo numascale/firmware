@@ -25,6 +25,7 @@
 #include "../bootloader.h"
 #include "../platform/options.h"
 #include "../library/access.h"
+#include "../library/utils.h"
 
 void Opteron::reset(const enum reset mode, const int last)
 {
