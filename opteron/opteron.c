@@ -205,6 +205,9 @@ void Opteron::init(void)
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_OPTERON);
 
+	uint32_t val = read32(PROBEFILTER_CTRL);
+	assertf(val & 3, "NumaChip2 requires Probe Filter to be enabled");
+
 	// detect amount of memory
 	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
@@ -234,7 +237,7 @@ void Opteron::init(void)
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
-		uint32_t val = read32(DRAM_HOLE);
+		val = read32(DRAM_HOLE);
 		if (val & 1) {
 			dram_size -= (val & 0xff00) << (23 - 7);
 			write32(DRAM_HOLE, val & ~0xff81);
@@ -244,7 +247,7 @@ void Opteron::init(void)
 	// detect number of cores
 	cores = 1;
 	if (family < 0x15) {
-		uint32_t val = read32(LINK_TRANS_CTRL);
+		val = read32(LINK_TRANS_CTRL);
 		if (val & 0x20)
 			cores++; /* Cpu1En */
 
@@ -253,7 +256,7 @@ void Opteron::init(void)
 			if (val & (1 << i))
 				cores++;
 	} else {
-		uint32_t val = read32(NB_CAP_2);
+		val = read32(NB_CAP_2);
 		cores += val & 0xff;
 
 		val = read32(DOWNCORE_CTRL);

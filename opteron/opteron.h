@@ -105,6 +105,7 @@ public:
 	static const reg_t MC_NB_L3C           = 0x3170;
 	static const reg_t MC_NB_CONF_EXT      = 0x3180;
 	static const reg_t DOWNCORE_CTRL       = 0x3190;
+	static const reg_t PROBEFILTER_CTRL    = 0x31d4;
 	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
 
