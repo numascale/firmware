@@ -21,14 +21,9 @@
 
 void Numachip2::dram_init(void)
 {
-#ifdef NODIMM
-	spd_eeprom.density_banks = 4;
-	spd_eeprom.organization = 1;
-	spd_eeprom.module_type = DDR3_SPD_MODULETYPE_72B_SO_UDIMM;
-#else
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
-#endif
+
 	const uint32_t density_shift = ((spd_eeprom.density_banks & 0xf) + 25);
 	const uint32_t ranks_shift = (spd_eeprom.organization >> 3) & 0x7;
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);

@@ -48,24 +48,28 @@ void Numachip2::write8(const reg_t reg, const uint8_t val) const
 ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
-	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x0);
+	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, VENDEV >> 12, VENDEV & 0xfff);
 	if (vendev != Opteron::VENDEV_OPTERON) {
 		local_node->status();
 		fatal("Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
 	}
 
-	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, 0, 0x60) >> 4) & 7;
+	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, Opteron::HT_NODE_ID >> 12, Opteron::HT_NODE_ID & 0xfff) >> 4) & 7;
 
-	vendev = lib::mcfg_read32(sci, 0, 24 + ht, 0, 0x0);
-	assert(vendev == VENDEV_NC2);
+	vendev = lib::mcfg_read32(sci, 0, 24 + ht, VENDEV >> 12, VENDEV & 0xfff);
+	assertf(vendev == VENDEV_NC2, "Expected Numachip2 at SCI%03x#%d but found 0x%08x", sci, ht, vendev);
 
-	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + ht, 0, SIU_NODEID);
+	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + ht, SIU_NODEID >> 12, SIU_NODEID & 0xfff);
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
-	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CTRL);
-	assertf(control == (1 << 30), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
-	if (control & (1 << 30))
+	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff);
+	assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
+	if (control == 1 << 29) {
+		printf("Found SCI%03x\n", sci);
+		// tell slave to proceed
+		lib::mcfg_write32(sci, 0, 24 + ht, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff, 3 << 29);
 		return ht;
+	}
 
 	return 0;
 }
@@ -75,7 +79,11 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
   local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
 	assert(ht > 0);
-	write32(FABRIC_CTRL, 3 << 30);
+
+	printf("Waiting for slave to become ready");
+	while (read32(FABRIC_CTRL) != 7U << 29)
+		cpu_relax();
+	printf("\n");
 }
 
 // used for local card

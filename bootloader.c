@@ -216,15 +216,12 @@ int main(const int argc, const char *argv[])
 
 	// slaves
 	if (!config->master_local) {
-		// set ready flag for master
-		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 30);
-
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
+		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 29);
 
-		while (!(local_node->numachip->read32(Numachip2::FABRIC_CTRL) & (1 << 31))) {
-				lib::udelay(2000000);
-				local_node->status();
-		}
+		// wait for 'ready'
+		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) != 3 << 29)
+			cpu_relax();
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
@@ -232,12 +229,16 @@ int main(const int argc, const char *argv[])
 
 		Opteron::disable_smi();
 
+		// set 'go-ahead'
+		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 7 << 29);
+
 		while (1) {
 			cli();
 			asm volatile("hlt" ::: "memory");
 			printf("wake ");
 		}
-	}
+	} else
+		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 0xdeadbeef);
 
 	nodes = (Node **)zalloc(sizeof(void *) * config->nnodes);
 	assert(nodes);
