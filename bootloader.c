@@ -199,6 +199,12 @@ int main(const int argc, const char *argv[])
 	e820 = new E820();
 	local_node = new Node();
 
+	if (options->init_only) {
+		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
+		syslinux->exec(options->next_label);
+		return 0;
+	}
+
 	// add global MCFG maps
 	for (unsigned i = 0; i < local_node->nopterons; i++)
 		local_node->opterons[i]->mmiomap.add(9, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
