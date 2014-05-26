@@ -36,6 +36,8 @@ private:
 
 	struct e820entry *position(const uint64_t base);
 	void insert(struct e820entry *pos);
+	void remove(struct e820entry *start, struct e820entry *end);
+	bool overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const;
 	void test_range(const uint64_t start, const uint64_t end);
 public:
 	static const uint64_t RAM = 1;

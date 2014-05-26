@@ -38,20 +38,21 @@ void E820::dump(void)
 		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
 		if (i) {
-			assert(map[i].base >= (last_base + last_length));
-			assert(map[i].length);
+			lassert(map[i].base >= (last_base + last_length));
+			lassert(map[i].length);
+			lassert(map[i].length < (16ULL << 40));
 			last_base = map[i].base;
 			last_length = map[i].length;
 		}
 	}
 }
 
-struct e820entry *E820::position(const uint64_t base)
+struct e820entry *E820::position(const uint64_t addr)
 {
 	int i;
 
 	for (i = 0; i < *used; i++)
-		if (map[i].base + map[i].length >= base)
+		if (addr < map[i].base + map[i].length)
 			break;
 
 	if (options->debug.e820) {
@@ -77,8 +78,27 @@ void E820::insert(struct e820entry *pos)
 	if (n > 0)
 		memmove(pos + 1, pos, sizeof(*pos) * n);
 
-	(*used)++;
+	*used += 1;
 	assert(*used < E820_MAP_MAX);
+}
+
+void E820::remove(struct e820entry *start, struct e820entry *end)
+{
+	const struct e820entry *last = map + *used;
+	memmove(start, end, (size_t)last - (size_t)end);
+	*used -= end - start;
+}
+
+bool E820::overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const
+{
+	if (a2 > b1 && a1 < b2)
+		return 1;
+	if (a1 <= b1 && a2 >= b2)
+		return 1;
+	if (a1 >= b1 && a2 <= b2)
+		return 1;
+
+	return 0;
 }
 
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
@@ -88,66 +108,62 @@ void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 
 	assert(base < (base + length));
 
-	struct e820entry *end = map + *used;
-	struct e820entry *pos = position(base);
-#ifdef FIXME
-	uint64_t orig_base, orig_length;
-	uint32_t orig_type;
-#endif
-	if (type == pos->type) {
-		// extend end of existing range if adjacent
-		if (base == pos->base + pos->length) {
-			if (options->debug.e820 > 1)
-				printf(", extending length");
-			pos->length += length;
-			goto out;
-		}
+	struct e820entry *last = map + *used;
+	struct e820entry *spos = position(base);
 
-		// extend start of existing range if adjacent
-		if (base + length == pos->base) {
-			if (options->debug.e820 > 1)
-				printf(", lowering base");
-			pos->base -= length;
-			pos->length += length;
-			goto out;
+	// if valid entries
+	if (last > map && spos < last) {
+		// split head
+		if (overlap(base, base + length, spos->base, spos->base + spos->length) && base != spos->base) {
+			insert(spos);
+			spos++;
+			last++;
+			spos->base = base;
+			spos->length = (spos-1)->base + (spos-1)->length - base;
+			spos->type = (spos-1)->type;
+			(spos-1)->length = base - (spos-1)->base;
 		}
 	}
 
-#ifdef FIXME
-	orig_base = pos->base;
-	orig_length = pos->length;
-	orig_type = pos->type;
-#endif
+	struct e820entry *epos = position(base + length);
 
-	// split start of existing memory range
-	if (pos < end && base > pos->base) {
-		if (options->debug.e820 > 1)
-			printf(", splitting");
-		pos->length = base - pos->base;
-		pos++;
+	// if valid entries
+	if (last > map && epos < last) {
+		// split tail
+		if (overlap(base, base + length, epos->base, epos->base + epos->length) && base + length != epos->base + epos->length) {
+			epos++;
+			insert(epos);
+			last++;
+			epos->type = (epos-1)->type;
+			epos->base = base + length;
+			epos->length = (epos-1)->base + (epos-1)->length - epos->base;
+			(epos-1)->length = base + length - (epos-1)->base;
+		}
 	}
 
-	// add new range
-	insert(pos);
-	pos->base = base;
-	pos->length = length;
-	pos->type = type;
-	pos++;
+	// delete all covered entries
+	remove(spos, epos);
 
-	// need to split end of existing memory range
-#ifdef FIXME
-	if (pos < end && (base + length) < (orig_base + orig_length)) {
-		insert(pos);
-		pos->base = base + length;
-		pos->length = (orig_base + orig_length) - pos->base;
-		pos->type = orig_type;
-	}
-#endif
-out:
-	if (options->debug.e820 > 1) {
-		printf("\nUpdated e820 map:\n");
-		dump();
-		printf("\n");
+	// insert new entry
+	insert(spos);
+	spos->base = base;
+	spos->length = length;
+	spos->type = type;
+
+	// merge adjacent entries of the same type
+	unsigned pos = *used - 1;
+	while (pos > 0) {
+		struct e820entry *cur = map + pos;
+		struct e820entry *bef = cur - 1;
+
+		if (bef->base + bef->length == cur->base && bef->type == cur->type) {
+			cur->length += bef->length;
+			cur->base = bef->base;
+			remove(bef, cur);
+			continue;
+		}
+
+		pos--;
 	}
 }
 
@@ -164,7 +180,7 @@ E820::E820(void)
 	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
 	map = (e820entry *)REL32(new_e820_map);
 	used = REL16(new_e820_len);
-	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
+	struct e820entry *ent = (struct e820entry *)lmalloc(sizeof(*ent));
 
 	// read existing E820 entries
 	com32sys_t rm;
