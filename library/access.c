@@ -16,6 +16,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "../bootloader.h"
@@ -315,5 +316,12 @@ namespace lib
 			i += 8;
 			printf("\n");
 		}
+	}
+
+	void memcpy(void *dst, const void *src, size_t n)
+	{
+		printf("Copying %d bytes from %p to %p:\n", n, src, dst);
+		dump(src, n);
+		::memcpy(dst, src, n);
 	}
 }
