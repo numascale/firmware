@@ -184,9 +184,9 @@ E820::E820(void)
 
 	// read existing E820 entries
 	com32sys_t rm;
+	memset(&rm, 0, sizeof(rm));
 	rm.eax.l = 0xe820;
 	rm.edx.l = STR_DW_N("SMAP");
-	rm.ebx.l = 0;
 	rm.ecx.l = sizeof(*ent);
 	rm.edi.w[0] = OFFS(ent);
 	rm.es = SEG(ent);
@@ -266,9 +266,9 @@ void E820::test(void)
 	printf("Testing e820 handler and access:\n");
 
 	com32sys_t rm;
+	memset(&rm, 0, sizeof(rm));
 	rm.eax.l = 0xe820;
 	rm.edx.l = STR_DW_N("SMAP");
-	rm.ebx.l = 0;
 	rm.ecx.l = sizeof(*ent);
 	rm.edi.w[0] = OFFS(ent);
 	rm.es = SEG(ent);
