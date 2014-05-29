@@ -261,4 +261,14 @@ namespace lib
 		if (options->debug.access)
 			printf("\n");
 	}
+
+	uint32_t cht_read32(const ht_t ht, const reg_t reg)
+	{
+		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
+	void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
+	{
+		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
 }

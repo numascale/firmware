@@ -16,6 +16,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 namespace lib
 {
@@ -29,4 +30,6 @@ namespace lib
 
 	void udelay(const uint32_t usecs);
 	const char *pr_size(uint64_t size);
+	void dump(const void *addr, const unsigned len);
+	void memcpy(void *dst, const void *src, size_t n);
 }

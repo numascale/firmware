@@ -163,6 +163,9 @@ void finalise(void)
 	acpi->check();
 
 	e820->test();
+
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+		(*node)->numachip->fabric_status();
 }
 
 int main(const int argc, const char *argv[])

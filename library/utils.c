@@ -54,4 +54,24 @@ namespace lib
 		index = (index + 1) % PRETTY_COUNT;
 		return ret;
 	}
+
+	void dump(const void *addr, const unsigned len)
+	{
+		const unsigned char *addr2 = (const unsigned char *)addr;
+		unsigned i = 0;
+
+		while (i < len) {
+			for (int j = 0; j < 8 && (i + j) < len; j++)
+				printf(" %02x", addr2[i + j]);
+			i += 8;
+			printf("\n");
+		}
+	}
+
+	void memcpy(void *dst, const void *src, size_t n)
+	{
+		printf("Copying %u bytes from %p to %p:\n", n, src, dst);
+		dump(src, n);
+		::memcpy(dst, src, n);
+	}
 }

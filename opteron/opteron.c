@@ -20,6 +20,8 @@
 #include "../library/base.h"
 #include "../library/access.h"
 #include "../library/utils.h"
+#include "../platform/trampoline.h"
+#include "../platform/options.h"
 
 // approximation before probing
 uint32_t Opteron::tsc_mhz = 2200;
@@ -219,7 +221,8 @@ Opteron::Opteron(const ht_t _ht):
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
 
-//	clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
+	if (options->debug.northbridge)
+		clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
 }
 
 Opteron::~Opteron(void)

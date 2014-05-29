@@ -103,14 +103,6 @@ namespace lib
 	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
-
-	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
-	{
-		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
-	}
-
-	static inline void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
-	{
-		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
-	}
+	uint32_t cht_read32(const ht_t ht, const reg_t reg);
+	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
 }

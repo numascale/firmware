@@ -214,6 +214,19 @@ uint64_t E820::memlimit(void)
 	return limit;
 }
 
+void E820::test_location(const uint64_t addr)
+{
+	uint64_t val = lib::mem_read64(addr);
+	lib::mem_write64(addr, PATTERN);
+	assert(lib::mem_read64(addr) == PATTERN);
+	lib::mem_write64(addr, ~PATTERN);
+	assert(lib::mem_read64(addr) == ~PATTERN);
+	lib::mem_write64(addr, ~0ULL);
+	assert(lib::mem_read64(addr) == ~0ULL);
+	lib::mem_write64(addr, val);
+	assert(lib::mem_read64(addr) == val);
+}
+
 void E820::test_range(const uint64_t start, const uint64_t end)
 {
 	// memory under 4GB is actively used
@@ -225,21 +238,25 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
 
+	if (start >= 0x00900000000)
+		options->debug.access = 2;
+
 	printf(" [");
 	while (pos < mid) {
-		lib::mem_write64(pos, PATTERN);
-		assert(lib::mem_read64(pos) == PATTERN);
+		test_location(pos);
 		pos = (pos + step) & ~3;
 		step = min(step << 1, STEP_MAX);
 	}
 
 	while (pos < end) {
-		lib::mem_write64(pos, PATTERN);
-		assert(lib::mem_read64(pos) == PATTERN);
+		test_location(pos);
 		step = min((end - pos) / 2, STEP_MAX);
 		pos += max(step, STEP_MIN) & ~3;
 	}
 	printf("accessible]");
+
+	if (start >= 0x00900000000)
+		options->debug.access = 0;
 }
 
 void E820::test(void)
@@ -250,10 +267,17 @@ void E820::test(void)
 	uint64_t base, length, type;
 	syslinux->memmap_start();
 
-	while (syslinux->memmap_entry(&base, &length, &type)) {
+	bool left;
+
+	do {
+		left = syslinux->memmap_entry(&base, &length, &type);
 		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
 		if (type == RAM)
 			test_range(base, base + length);
+
+		if (options->tracing)
+			if (type == RESERVED && length == options->tracing)
+				printf(" [tracing]");
 		printf("\n");
-	}
+	} while (left);
 }
