@@ -188,6 +188,26 @@ void finalise(void)
 	printf("\n");
 
 	e820->test();
+
+	AcpiTable mcfg("MCFG");
+
+	// MCFG 'reserved field'
+	const uint64_t reserved = 0;
+	mcfg.append((const char *)&reserved, sizeof(reserved));
+
+	uint16_t segment = 0;
+	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
+		struct acpi_mcfg ent = {
+			.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL),
+			.pci_segment = segment++,
+			.start_bus_number = 0,
+			.end_bus_number = 255,
+			.reserved = 0,
+		};
+		mcfg.append((const char *)&ent, sizeof(ent));
+	}
+	acpi->replace(mcfg);
+	acpi->check();
 }
 
 int main(const int argc, const char *argv[])
