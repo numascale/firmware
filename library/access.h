@@ -116,5 +116,6 @@ namespace lib
 	uint32_t cht_read32(const ht_t ht, const reg_t reg);
 	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
 	const char *pr_size(uint64_t size);
+	void dump(const void *addr, const unsigned len);
 }
 #endif
