@@ -116,6 +116,7 @@ public:
 	static const reg_t DRAM_LIMIT        = 0x1074;
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
+	static const reg_t TIMEOUT_RESP      = 0x1080;
 
 	static const reg_t LC_BASE           = 0x2800;
 	static const reg_t LC_XBAR           = 0x2800;
@@ -152,6 +153,7 @@ public:
 	static const int MMIO32_ATT_SHIFT = 20;
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
+	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
 
 	const static char *ringnames[6];
 

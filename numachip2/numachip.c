@@ -59,8 +59,7 @@ ht_t Numachip2::probe(const sci_t sci)
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
 	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, 0, FABRIC_CTRL);
-	assertf(control == (1U << 30), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
-	if (control & (1 << 30))
+	if (control == (1 << 30))
 		return ht;
 
 	return 0;
@@ -91,11 +90,9 @@ Numachip2::Numachip2(const ht_t _ht):
 	dram_init();
 	fabric_init();
 
+	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 	// 1.31ms transaction timeout
 	write32(RMPE_CTRL, (1 << 31) | (2 << 28) | (2 << 26));
-
-	// safeguard
-	write32(FABRIC_CTRL, 3 << 30);
 }
 
 void Numachip2::set_sci(const sci_t _sci)
