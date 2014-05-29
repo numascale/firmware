@@ -28,9 +28,6 @@
 #define RSDT_MAX 1024
 #define FMTRR_WRITETHROUGH 0x1c1c1c1c1c1c1c1cULL
 
-static struct acpi_rsdp *rptr = NULL;
-static bool bios_shadowed = 0;
-
 void ACPI::shadow_bios(void)
 {
 	printf("Shadowing BIOS...");
@@ -50,20 +47,22 @@ void ACPI::shadow_bios(void)
 	bios_shadowed = 1;
 }
 
-uint8_t ACPI::checksum(const acpi_sdt_p addr, const int len)
+uint8_t ACPI::checksum(const char *addr, const int len)
 {
 	uint8_t sum = 0;
-	int i;
-
-	for (i = 0; i < len; i++)
-		sum -= *((uint8_t *)addr + i);
+	for (int i = 0; i < len; i++)
+		sum -= addr[i];
 
 	return sum;
 }
 
-void ACPI::checksum_ok(acpi_sdt_p table, const int len)
+void ACPI::assert_checksum(const acpi_sdt *table, const int len)
 {
-	assertf(checksum(table, len) == 0, "ACPI table %.4s at 0x%p has bad checksum", table->sig.s, table);
+	if (checksum((const char *)table, len) == 0)
+		return;
+
+	dump(table, 256);
+	fatal("ACPI table %.4s at 0x%p has bad checksum", table->sig.s, table);
 }
 
 acpi_rsdp *ACPI::find_rsdp(const char *start, int len)
@@ -82,29 +81,15 @@ acpi_rsdp *ACPI::find_rsdp(const char *start, int len)
 	return ret;
 }
 
-bool ACPI::rdsp_exists(void)
-{
-	const char *ebda = (char *)(*((unsigned short *)0x40e) * 16);
-	rptr = find_rsdp(ebda, 1024);
-
-	if (!rptr)
-		rptr = find_rsdp((char *)0x0e0000, 128 * 1024);
-
-	if (!rptr)
-		return 0;
-
-	return 1;
-}
-
-acpi_sdt_p ACPI::find_child(const char *sig, acpi_sdt_p parent, const int ptrsize)
+acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const int ptrsize)
 {
 	uint64_t childp;
-	acpi_sdt_p table;
+	acpi_sdt *table;
 	int i;
 
-	/* DSDT is linked from FACP table */
+	// DSDT is linked from FACP table
 	if (!strcmp("DSDT", sig)) {
-		acpi_sdt_p dsdt, facp = find_child("FACP", parent, ptrsize);
+		acpi_sdt *dsdt, *facp = find_child("FACP", parent, ptrsize);
 		assert(facp);
 		memcpy(&dsdt, &facp->data[4], sizeof(facp));
 		return dsdt;
@@ -121,7 +106,7 @@ acpi_sdt_p ACPI::find_child(const char *sig, acpi_sdt_p parent, const int ptrsiz
 		}
 
 		memcpy(&table, &childp, sizeof(table));
-		checksum_ok(table, table->len);
+		assert_checksum(table, table->len);
 
 		if (table->sig.l == STR_DW_H(sig))
 			return table;
@@ -130,57 +115,40 @@ acpi_sdt_p ACPI::find_child(const char *sig, acpi_sdt_p parent, const int ptrsiz
 	return NULL;
 }
 
-/* Return the number of bytes after an ACPI table before the next */
-uint32_t ACPI::slack(acpi_sdt_p parent)
+// return the number of bytes after an ACPI table before the next
+uint32_t ACPI::slack(acpi_sdt *parent)
 {
-	acpi_sdt_p next_table = (acpi_sdt_p)0xffffffff;
-	acpi_sdt_p rsdt = (acpi_sdt_p)rptr->rsdt_addr;
+	acpi_sdt *next_table = (acpi_sdt *)0xffffffff;
 	uint32_t *rsdt_entries = (uint32_t *) & (rsdt->data);
-	uint64_t xsdtp;
-	acpi_sdt_p xsdt;
-	uint64_t *xsdt_entries;
-	int i;
 
-	for (i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
-		acpi_sdt_p table = (acpi_sdt_p)rsdt_entries[i];
-		checksum_ok(table, table->len);
+	for (int i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
+		acpi_sdt *table = (acpi_sdt *)rsdt_entries[i];
+		assert_checksum(table, table->len);
 
-		/* Find the nearest table after parent */
+		// find the nearest table after parent
 		if (table > parent && table < next_table)
 			next_table = table;
 
-		/* Check the FACP table for the DSDT table entry as well */
+		// check the FACP table for the DSDT table entry as well
 		if (table->sig.l == STR_DW_H("FACP")) {
-			acpi_sdt_p dsdt;
+			acpi_sdt *dsdt;
 			memcpy(&dsdt, &table->data[4], sizeof(dsdt));
-			checksum_ok(dsdt, dsdt->len);
+			assert_checksum(dsdt, dsdt->len);
 
 			if (dsdt > parent && dsdt < next_table)
 				next_table = dsdt;
 		}
 	}
 
-	/* Check location of RSDT table also */
+	// check location of RSDT table also
 	if (rsdt > parent && rsdt < next_table)
 		next_table = rsdt;
 
-	xsdtp = rptr->xsdt_addr;
+	uint64_t *xsdt_entries = (uint64_t *) & (xsdt->data);
 
-	if ((xsdtp == 0) || (xsdtp == ~0ULL))
-		goto out;
-
-	if (xsdtp > 0xffffffffULL) {
-		printf("Error: XSDT ptr at (%p) outside 32-bit range (0x%llx)",
-		       &rptr->xsdt_addr, xsdtp);
-		goto out;
-	}
-
-	memcpy(&xsdt, &xsdtp, sizeof(xsdt));
-	xsdt_entries = (uint64_t *) & (xsdt->data);
-
-	for (i = 0; i * 8 + sizeof(*xsdt) < xsdt->len; i++) {
+	for (int i = 0; i * 8 + sizeof(*xsdt) < xsdt->len; i++) {
 		uint64_t childp = xsdt_entries[i];
-		acpi_sdt_p table;
+		acpi_sdt *table;
 
 		if (childp > 0xffffffffULL) {
 			printf("Error: XSDT child pointer at %d (%p) outside 32-bit range (0x%llx)",
@@ -189,38 +157,37 @@ uint32_t ACPI::slack(acpi_sdt_p parent)
 		}
 
 		memcpy(&table, &childp, sizeof(table));
-		checksum_ok(table, table->len);
+		assert_checksum(table, table->len);
 
-		/* Find the nearest table after parent */
+		// find the nearest table after parent
 		if (table > parent && table < next_table)
 			next_table = table;
 
-		/* Check the FACP table for the DSDT table entry as well */
+		// check the FACP table for the DSDT table entry as well
 		if (table->sig.l == STR_DW_H("FACP")) {
-			acpi_sdt_p dsdt;
+			acpi_sdt *dsdt;
 			memcpy(&dsdt, &table->data[4], sizeof(dsdt));
-			checksum_ok(dsdt, dsdt->len);
+			assert_checksum(dsdt, dsdt->len);
 
 			if (dsdt > parent && dsdt < next_table)
 				next_table = dsdt;
 		}
 	}
 
-	/* Check location of XSDT table also */
+	// check location of XSDT table also
 	if (xsdt > parent && xsdt < next_table)
 		next_table = xsdt;
 
-out:
-	/* Calculate gap between end of parent and next table */
+	// calculate gap between end of parent and next table
 	return (uint32_t)next_table - (uint32_t)parent - parent->len;
 }
 
-bool ACPI::replace_child(const char *sig, const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
+bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned int ptrsize)
 {
 	uint64_t newp, childp;
-	acpi_sdt_p table;
+	acpi_sdt *table;
 
-	checksum_ok(replacement, replacement->len);
+	assert_checksum(replacement, replacement->len);
 
 	newp = 0;
 	memcpy(&newp, &replacement, sizeof(replacement));
@@ -237,34 +204,34 @@ bool ACPI::replace_child(const char *sig, const acpi_sdt_p replacement, const ac
 		}
 
 		memcpy(&table, &childp, sizeof(table));
-		checksum_ok(table, table->len);
+		assert_checksum(table, table->len);
 
 		if (table->sig.l == STR_DW_H(sig)) {
 			memcpy(&parent->data[i], &newp, ptrsize);
 
-			/* Check if writing succeeded */
+			// check if writing succeeded
 			if (memcmp(&parent->data[i], &newp, ptrsize))
 				goto again;
 
-			parent->checksum += checksum(parent, parent->len);
+			parent->checksum += checksum((const char *)parent, parent->len);
 			return 1;
 		}
 	}
 
-	/* Handled by caller */
+	// handled by caller
 	if (slack(parent) < ptrsize)
 		return 0;
 
-	/* Append entry to end of table */
+	// append entry to end of table
 	memcpy(&parent->data[i], &newp, ptrsize);
 
-	/* Check if writing succeeded */
+	// check if writing succeeded
 	if (memcmp(&parent->data[i], &newp, ptrsize))
 		goto again;
 
 	parent->len += ptrsize;
 	assert(parent->len < RSDT_MAX);
-	parent->checksum += checksum(parent, parent->len);
+	parent->checksum += checksum((const char *)parent, parent->len);
 	return 1;
 
 again:
@@ -276,9 +243,9 @@ again:
 	fatal("ACPI tables immutable when replacing child at 0x%p", &parent->data[i]);
 }
 
-void ACPI::add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, const unsigned int ptrsize)
+void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *parent, const unsigned int ptrsize)
 {
-	/* If insufficient space, replace unimportant tables */
+	// if insufficient space, replace unimportant tables
 	if (slack(parent) < ptrsize) {
 		const char *expendable[] = {"FPDT", "EINJ", "TCPA", "BERT", "ERST", "HEST"};
 		for (unsigned int i = 0; i < (sizeof expendable / sizeof expendable[0]); i++) {
@@ -291,7 +258,7 @@ void ACPI::add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, cons
 		fatal("Out of space when adding entry for ACPI table %s to %s", replacement->sig.s, parent->sig.s);
 	}
 
-	checksum_ok(replacement, replacement->len);
+	assert_checksum(replacement, replacement->len);
 	uint64_t newp = 0;
 	memcpy(&newp, &replacement, sizeof replacement);
 	int i = parent->len - sizeof(*parent);
@@ -301,7 +268,7 @@ void ACPI::add_child(const acpi_sdt_p replacement, const acpi_sdt_p parent, cons
 
 	parent->len += ptrsize;
 	assert(parent->len < RSDT_MAX);
-	parent->checksum += checksum(parent, parent->len);
+	parent->checksum += checksum((const char *)parent, parent->len);
 	return;
 
 again:
@@ -314,60 +281,49 @@ again:
 	fatal("ACPI tables immutable when adding child at 0x%p", &parent->data[i]);
 }
 
-acpi_sdt_p ACPI::find_root(const char *sig)
+acpi_sdt *ACPI::find_root(const char *sig)
 {
-	if (!rdsp_exists())
-		return NULL;
-
-	checksum_ok((acpi_sdt_p)rptr, 20);
+	assert_checksum((acpi_sdt *)rptr, 20);
 
 	if (STR_DW_H(sig) == STR_DW_H("RSDT"))
-		return (acpi_sdt_p)rptr->rsdt_addr;
+		return (acpi_sdt *)rptr->rsdt_addr;
 
 	if (STR_DW_H(sig) == STR_DW_H("XSDT")) {
 		if (rptr->len >= 33) {
-			checksum_ok((acpi_sdt_p)rptr, rptr->len);
+			assert_checksum((acpi_sdt *)rptr, rptr->len);
 			uint64_t xsdtp = rptr->xsdt_addr;
 			if ((xsdtp == 0) || (xsdtp == ~0ULL))
 				return NULL;
 
-			if (xsdtp > 0xffffffffULL) {
-				printf("Error: XSDT pointer at (%p) outside 32-bit range (0x%llx)",
-				       &rptr->xsdt_addr, xsdtp);
-				return NULL;
-			}
-
-			acpi_sdt_p xsdt;
-			memcpy(&xsdt, &xsdtp, sizeof(xsdt));
-			return xsdt;
+			assert(xsdtp < 0x100000000);
+			acpi_sdt *val;
+			memcpy(&val, &xsdtp, sizeof(xsdt));
+			return val;
 		}
 	}
 
 	return NULL;
 }
 
-bool ACPI::replace_root(const char *sig, const acpi_sdt_p replacement)
+bool ACPI::replace_root(const char *sig, const acpi_sdt *replacement)
 {
-	if (!rdsp_exists())
-		return 0;
-
-	checksum_ok((acpi_sdt_p)rptr, 20);
+	assert_checksum((acpi_sdt *)rptr, 20);
 
 	if (STR_DW_H(sig) == STR_DW_H("RSDT")) {
 		rptr->rsdt_addr = (uint32_t)replacement;
-		rptr->checksum += checksum((acpi_sdt_p)rptr, 20);
+		rptr->checksum += checksum((const char *)rptr, 20);
 
 		if (rptr->len > 20)
-			rptr->echecksum += checksum((acpi_sdt_p)rptr, rptr->len);
+			rptr->echecksum += checksum((const char *)rptr, rptr->len);
 
 		return 1;
 	}
 
 	if (STR_DW_H(sig) == STR_DW_H("XSDT")) {
 		if (rptr->len >= 33) {
-			checksum_ok((acpi_sdt_p)rptr, rptr->len);
+			assert_checksum((acpi_sdt *)rptr, rptr->len);
 			rptr->xsdt_addr = (uint32_t)replacement;
-			rptr->echecksum += checksum((acpi_sdt_p)rptr, rptr->len);
+			rptr->echecksum += checksum((const char *)rptr, rptr->len);
 			return 1;
 		}
 	}
@@ -375,73 +331,62 @@ bool ACPI::replace_root(const char *sig, const acpi_sdt_p replacement)
 	return 0;
 }
 
-acpi_sdt_p ACPI::find_sdt(const char *sig)
+acpi_sdt *ACPI::find_sdt(const char *sig)
 {
-	acpi_sdt_p root = find_root("XSDT");
-	if (root)
-		return find_child(sig, root, 8);
+	if (xsdt)
+		return find_child(sig, xsdt, 8);
 
-	root = find_root("RSDT");
-	if (root)
-		return find_child(sig, root, 4);
+	if (rsdt)
+		return find_child(sig, rsdt, 4);
 
 	return NULL;
 }
 
-void ACPI::acpi_dump(const acpi_sdt_p table)
+void ACPI::dump(const acpi_sdt *table, const unsigned limit)
 {
-	int i;
-	unsigned char *data = (unsigned char *)table;
 	printf("Dumping %.4s:\n", table->sig.s);
 
-	while (data < ((unsigned char *)table + table->len)) {
-		for (i = 0; i < 8; i++) {
-			uint32_t val = *(uint32_t *)data;
-			printf(" 0x%08x,", val);
-			data += sizeof(val);
-		}
+	unsigned n = table->len;
+	if (limit)
+		n = min(n, limit);
 
-		printf("\n");
-	}
-
+	lib::dump(table, n);
+	if (limit < table->len)
+		printf("[...]");
 	printf("\n");
 }
 
-bool ACPI::acpi_append(const acpi_sdt_p parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
+bool ACPI::append(const acpi_sdt *parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
 {
-	/* Check if enough space to append to SSDT */
-	acpi_sdt_p table = find_child(sig, parent, ptrsize);
+	// check if enough space to append to SSDT
+	acpi_sdt *table = find_child(sig, parent, ptrsize);
 
 	if (!table || slack(table) < extra_len)
 		return 0;
 
 	memcpy((unsigned char *)table + table->len, extra, extra_len);
 	table->len += extra_len;
-	table->checksum += checksum(table, table->len);
+	table->checksum += checksum((const char *)table, table->len);
 
 	if (options->debug.acpi)
-		acpi_dump(table);
+		dump(table, 0);
 
 	return 1;
 }
 
-void ACPI::debug_acpi(void)
+void ACPI::check(void)
 {
-	if (!rdsp_exists())
-		return;
-
 	printf("ACPI tables:\n");
 
-	checksum_ok((acpi_sdt_p)rptr, 20);
+	assert_checksum((acpi_sdt *)rptr, 20);
 	printf(" ptr:   %p, RSDP, %.6s, %d, %08x, %d\n",
 	       rptr,
 	       rptr->oemid,
 	       rptr->revision,
 	       rptr->rsdt_addr,
 	       rptr->len);
-	acpi_sdt_p rsdt = (acpi_sdt_p)rptr->rsdt_addr;
 
-	checksum_ok(rsdt, rsdt->len);
+	assert_checksum(rsdt, rsdt->len);
 	printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
 	       rsdt,
 	       rsdt->sig.l,
@@ -452,12 +397,12 @@ void ACPI::debug_acpi(void)
 	       rsdt->revision,
 	       rsdt->len,
 	       sizeof(*rsdt));
-	uint32_t *rsdt_entries = (uint32_t *) & (rsdt->data);
+	uint32_t *rsdt_entries = (uint32_t *)&(rsdt->data);
 
 	for (int i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
-		acpi_sdt_p table = (acpi_sdt_p)rsdt_entries[i];
+		acpi_sdt *table = (acpi_sdt *)rsdt_entries[i];
+		assert_checksum(table, table->len);
 
-		checksum_ok(table, table->len);
 		printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
 		       table,
 		       table->sig.l,
@@ -468,12 +413,12 @@ void ACPI::debug_acpi(void)
 		       table->revision,
 		       table->len);
 
-		/* Find the DSDT table also */
+		// find the DSDT table also
 		if (table->sig.l == STR_DW_H("FACP")) {
-			acpi_sdt_p dsdt;
+			acpi_sdt *dsdt;
 			memcpy(&dsdt, &table->data[4], sizeof(dsdt));
+			assert_checksum(dsdt, dsdt->len);
 
-			checksum_ok(dsdt, dsdt->len);
 			printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
 			       dsdt,
 			       dsdt->sig.l,
@@ -483,6 +428,11 @@ void ACPI::debug_acpi(void)
 			       dsdt->checksum,
 			       dsdt->revision,
 			       dsdt->len);
+
+			for (int j = 0; j < 4; j++) {
+				char c = (dsdt->sig.l >> (j * 8)) & 0xff;
+				assertf(c >= 65 && c <= 90, "Non-printable characters in table name");
+			}
 		}
 
 #ifdef UNUSED
@@ -495,31 +445,30 @@ void ACPI::debug_acpi(void)
 	}
 
 	if (rptr->len >= 33) {
-		checksum_ok((acpi_sdt_p)rptr, rptr->len);
+		assert_checksum((acpi_sdt *)rptr, rptr->len);
 
 		if ((rptr->xsdt_addr != 0ULL) && (rptr->xsdt_addr != ~0ULL)) {
-			acpi_sdt_p xsdt;
-			memcpy(&xsdt, &rptr->xsdt_addr, sizeof(xsdt));
+			acpi_sdt *xsdtp;
+			memcpy(&xsdtp, &rptr->xsdt_addr, sizeof(xsdtp));
+			assert_checksum(xsdtp, xsdtp->len);
 
-			checksum_ok(xsdt, xsdt->len);
 			printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
-			       xsdt,
-			       xsdt->sig.l,
-			       xsdt->sig.s,
-			       xsdt->oemid,
-			       xsdt->oemtableid,
-			       xsdt->checksum,
-			       xsdt->revision,
-			       xsdt->len,
-			       sizeof(*xsdt));
-			uint64_t *xsdt_entries = (uint64_t *) &(xsdt->data);
-			int i;
+			       xsdtp,
+			       xsdtp->sig.l,
+			       xsdtp->sig.s,
+			       xsdtp->oemid,
+			       xsdtp->oemtableid,
+			       xsdtp->checksum,
+			       xsdtp->revision,
+			       xsdtp->len,
+			       sizeof(*xsdtp));
+			uint64_t *xsdt_entries = (uint64_t *)&(xsdtp->data);
 
-			for (i = 0; i * 8 + sizeof(*xsdt) < xsdt->len; i++) {
-				acpi_sdt_p table;
+			for (int i = 0; i * 8 + sizeof(*xsdtp) < xsdtp->len; i++) {
+				acpi_sdt *table;
 				memcpy(&table, &xsdt_entries[i], sizeof(table));
+				assert_checksum(table, table->len);
 
-				checksum_ok(table, table->len);
 				printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
 				       table,
 				       table->sig.l,
@@ -530,12 +479,12 @@ void ACPI::debug_acpi(void)
 				       table->revision,
 				       table->len);
 
-				/* Find the DSDT table also */
+				// find the DSDT table also
 				if (table->sig.l == STR_DW_H("FACP")) {
-					acpi_sdt_p dsdt;
+					acpi_sdt *dsdt;
 					memcpy(&dsdt, &table->data[4], sizeof(dsdt));
+					assert_checksum(dsdt, dsdt->len);
 
-					checksum_ok(dsdt, dsdt->len);
 					printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
 					       dsdt,
 					       dsdt->sig.l,
@@ -548,7 +497,6 @@ void ACPI::debug_acpi(void)
 				}
 
 #ifdef UNUSED
-
 				if (table->sig.l == STR_DW_H("SRAT")) {
 					debug_acpi_srat(table);
 				} else if (table->sig.l == STR_DW_H("APIC")) {
@@ -563,7 +511,7 @@ void ACPI::debug_acpi(void)
 void ACPI::handover(void)
 {
 	printf("ACPI handoff: ");
-	acpi_sdt_p fadt = find_sdt("FACP");
+	acpi_sdt *fadt = find_sdt("FACP");
 
 	if (!fadt) {
 		printf("ACPI FACP table not found\n");
@@ -598,9 +546,9 @@ void ACPI::handover(void)
 
 ACPI::ACPI(void)
 {
-	/* Skip if already set */
+	// skip if already set
 	if (!options->handover_acpi) {
-		/* Systems where ACPI must be handed off early */
+		// systems where ACPI must be handed off early
 		const char *acpi_blacklist[] = {"H8QGL", NULL};
 
 		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
@@ -613,4 +561,70 @@ ACPI::ACPI(void)
 	}
 
 	printf("\n");
+
+	// find table root in EBDA
+	rptr = find_rsdp((const char *)(*((unsigned short *)0x40e) * 16), 1024);
+
+	// find table root in alternative location
+	if (!rptr)
+		rptr = find_rsdp((const char *)0xe0000, 131072);
+	assert(rptr);
+
+	xsdt = find_root("XSDT");
+	assert(xsdt);
+
+	rsdt = find_root("RSDT");
+	assert(rsdt);
+
+	if (options->debug.acpi)
+		printf("RSDT at %p; XSDT at %p\n", rsdt, xsdt);
+}
+
+AcpiTable::AcpiTable(const char *name): payload(0), used(0)
+{
+	memcpy(&header.sig.s, name, 4);
+	header.len = sizeof(header);
+	header.revision = acpi_rev;
+	memcpy(&header.oemid, "NUMASC", 6);
+	memcpy(&header.oemtableid, "N313NUMA", 8);
+	header.oemrev = 0;
+	memcpy(&header.creatorid, "1B47", 4);
+	header.creatorrev = 1;
+	header.checksum = 0;
+}
+
+void AcpiTable::append(const char *data, const unsigned len)
+{
+	if (used + len > allocated) {
+		allocated = roundup(used + len, chunk);
+		payload = (char *)realloc((void *)payload, allocated);
+		assert(payload);
+	}
+
+	if (options->debug.acpi) {
+		printf("ACPI append: ");
+		lib::memcpy(payload + used, data, len);
+	} else
+		memcpy(payload + used, data, len);
+
+	header.len += len;
+	used += len;
+}
+
+void ACPI::replace(const AcpiTable &table)
+{
+	acpi_sdt *table2 = (acpi_sdt *)0x000d7fb0000;
+
+	memcpy(table2, &table.header, sizeof(struct acpi_sdt));
+	memcpy((char *)table2 + sizeof(struct acpi_sdt), table.payload, table.used);
+
+	table2->checksum = 0;
+	table2->checksum = checksum((const char *)table2, table2->len);
+
+	if (rsdt)
+		assert(replace_child(table2->sig.s, table2, rsdt, 4));
+	if (xsdt)
+		assert(replace_child(table2->sig.s, table2, xsdt, 8));
+
+	e820->add((uint64_t)(uint32_t)table2, 0x10000, E820::ACPI);
 }
