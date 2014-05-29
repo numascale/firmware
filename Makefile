@@ -19,7 +19,8 @@ upload: bootloader.c32
 
 .PHONY: reset
 reset:
-	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop333536-ipmi chassis power reset
+	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop-35-ipmi chassis power cycle
+	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop-36-ipmi chassis power cycle
 
 .PHONY: check
 check:
@@ -92,9 +93,8 @@ opteron/ht-scan.o: opteron/ht-scan.c bootloader.h library/access.h
 opteron/maps.o: opteron/maps.c
 opteron/opteron.o: opteron/opteron.c opteron/opteron.h
 
-platform/options.o: platform/options.c bootloader.h library/access.h
-platform/acpi.o: platform/acpi.c platform/acpi.h
-platform/smbios.o: platform/smbios.c bootloader.h
+platform/options.o: platform/options.c platform/options.h bootloader.h library/access.h
+platform/smbios.o: platform/smbios.c platform/smbios.h bootloader.h
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
 platform/config.o: platform/config.c platform/config.h
 platform/e820.o: platform/e820.c platform/e820.h

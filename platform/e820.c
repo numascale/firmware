@@ -27,7 +27,6 @@ extern "C" {
 }
 
 const char *E820::names[] = {"", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
-char *E820::asm_relocated = 0;
 
 void E820::dump(void)
 {
@@ -173,7 +172,7 @@ E820::E820(void)
 	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);
 	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
 	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
-	char *asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
+	asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
 	printf("Trampoline at 0x%x:0x%x\n", (unsigned)asm_relocated, (unsigned)(asm_relocated + relocate_size));
 
 	// copy trampoline data
@@ -235,24 +234,26 @@ uint64_t E820::memlimit(void)
 
 void E820::test_range(const uint64_t start, const uint64_t end)
 {
+	// memory under 4GB is actively used
+	if (start < 4ULL << 30)
+		return;
+
 	const unsigned STEP_MIN = 64, STEP_MAX = 1024 << 20; // FIXME: put back to 4MB
 	uint64_t pos = start;
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
 
-	// FIXME: remove later
-	if (start == 0x900000000)
-		options->debug.access = 2;
-
 	printf(" [");
 	while (pos < mid) {
-		lib::mem_write32(pos, lib::mem_read32(pos));
+		lib::mem_write64(pos, PATTERN);
+		assert(lib::mem_read64(pos) == PATTERN);
 		pos = (pos + step) & ~3;
 		step = min(step << 1, STEP_MAX);
 	}
 
 	while (pos < end) {
-		lib::mem_write32(pos, lib::mem_read32(pos));
+		lib::mem_write64(pos, PATTERN);
+		assert(lib::mem_read64(pos) == PATTERN);
 		step = min((end - pos) / 2, STEP_MAX);
 		pos += max(step, STEP_MIN) & ~3;
 	}
@@ -261,7 +262,7 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 
 void E820::test(void)
 {
-	struct e820entry *ent = (struct e820entry *)lzalloc(sizeof(*ent));
+	struct e820entry *ent = (struct e820entry *)lmalloc(sizeof(*ent));
 
 	printf("Testing e820 handler and access:\n");
 
@@ -292,8 +293,13 @@ void E820::test(void)
 
 		printf("%011llx:%011llx (%011llx) %s",
 		  ent->base, ent->base + ent->length, ent->length, names[ent->type]);
-		if (ent->type == E820::RAM)
+		if (ent->type == RAM)
 			test_range(ent->base, ent->base + ent->length);
+
+		if (options->tracing)
+			if (ent->type == RESERVED && ent->length == options->tracing)
+				printf(" [tracing]");
+
 		printf("\n");
 	}
 

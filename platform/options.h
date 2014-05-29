@@ -34,6 +34,7 @@ public:
 	bool reentrant;
 	bool singleton;
 	bool fast;
+	uint64_t tracing;
 	struct debug_flags {
 		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820;
 	} debug;

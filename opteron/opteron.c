@@ -19,6 +19,7 @@
 #include "msrs.h"
 #include "../library/base.h"
 #include "../library/access.h"
+#include "../platform/trampoline.h"
 
 // approximation before probing
 uint32_t Opteron::tsc_mhz = 2200;
@@ -66,8 +67,8 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 
 	// enable 64-bit config access
-	msr = lib::rdmsr(MSR_CU_CFG2);
-	lib::wrmsr(MSR_CU_CFG2, msr | (1ULL << 50));
+	*REL64(new_cucfg2_msr) = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
+	lib::wrmsr(MSR_CU_CFG2, *REL64(new_cucfg2_msr));
 
 	// detect processor family
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
@@ -151,8 +152,6 @@ void Opteron::init(void)
 			write32(DRAM_HOLE, val & ~0xff81);
 		}
 	}
-
-	printf("dram_base=0x%llx dram_limit=0x%llx dram_size=0x%llx\n", dram_base, dram_limit, dram_size);
 
 	// detect number of cores
 	cores = 1;

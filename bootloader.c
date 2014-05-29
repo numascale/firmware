@@ -45,6 +45,7 @@ E820 *e820;
 Node *local_node;
 Node **nodes;
 ACPI *acpi;
+char *asm_relocated;
 
 void Node::init(void)
 {
@@ -112,10 +113,14 @@ void scan(void)
 			(*nb)->dram_base = dram_top;
 			dram_top += (*nb)->dram_size;
 
-			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
+			uint64_t limit = (*nb)->dram_base + (*nb)->dram_size;
+			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, limit - 1, (*nb)->ht);
 
 			if ((*node)->sci != config->master->sci)
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
+
+			if (options->tracing)
+				e820->add(limit - options->tracing, options->tracing, E820::RESERVED);
 		}
 
 		// setup Numachip DRAM decoding
@@ -165,29 +170,29 @@ void scan(void)
 
 void finalise(void)
 {
-#ifdef FIXME
 	printf("Clearing DRAM");
 	// start clearing DRAM
 	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_start();
 
-	printf(".");
 	// wait for clear to complete
 	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
-#endif
-	printf("Enabling scrubbers");
-
-	// enable DRAM scrubbers
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->dram_scrub_enable();
 
 	printf("\n");
 
-	e820->test();
+	if (!options->tracing) {
+		printf("Enabling scrubbers");
+
+		// enable DRAM scrubbers
+		for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+				(*nb)->dram_scrub_enable();
+
+		printf("\n");
+	}
 
 	AcpiTable mcfg("MCFG");
 
@@ -208,6 +213,8 @@ void finalise(void)
 	}
 	acpi->replace(mcfg);
 	acpi->check();
+
+	e820->test();
 }
 
 int main(const int argc, const char *argv[])

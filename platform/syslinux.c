@@ -81,7 +81,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	char *buf = (char *)lmalloc(strlen(filename) + 1);
 	strcpy(buf, filename);
 
-	printf("From %s ", filename);
+	printf("Config %s", filename);
 	memset(&inargs, 0, sizeof inargs);
 	inargs.eax.w[0] = 0x0006; /* Open file */
 	inargs.esi.w[0] = OFFS(buf);

@@ -36,7 +36,7 @@
 #define REL64(sym) ((uint64_t *)((volatile uint8_t *)asm_relocated + ((volatile uint8_t *)&sym ## _relocate - (volatile uint8_t *)&asm_relocate_start)))
 
 extern unsigned char asm_relocate_start, asm_relocate_end;
-extern char *asm_related;
+extern char *asm_relocated;
 
 IMPORT_RELOCATED(init_dispatch);
 IMPORT_RELOCATED(cpu_status);

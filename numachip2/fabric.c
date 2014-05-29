@@ -23,7 +23,7 @@
 void Numachip2::fabric_reset(void)
 {
 	if (options->debug.fabric)
-		printf("<reset>\n");
+		printf("<reset>");
 
 	write32(Numachip2::HSS_PLLCTL, 3);
 	write32(Numachip2::HSS_PLLCTL, 0);

@@ -144,6 +144,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
 		{"fast",            &Options::parse_bool,   &fast},            /* Skip slow phases */
+		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
 	};
 
 	int errors = 0;
@@ -176,5 +177,9 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 	}
 	printf("\n");
 	assertf(!errors, "Invalid arguments specified");
-}
 
+	if (tracing == 1) {
+		printf("Defaulting to 512MB trace buffers\n");
+		tracing = 512 << 20;
+	}
+}
