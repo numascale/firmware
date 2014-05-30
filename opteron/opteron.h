@@ -124,6 +124,7 @@ public:
 	void clear32(const reg_t reg, const uint32_t mask) const;
 
 	static void prepare(void);
+	static void restore(void);
 	void dram_scrub_disable(void);
 	void dram_scrub_enable(void);
 	void init(void);

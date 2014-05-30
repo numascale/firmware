@@ -48,7 +48,7 @@ Node **nodes;
 ACPI *acpi;
 char *asm_relocated;
 
-void scan(void)
+static void scan(void)
 {
 	printf("Map scan:\n");
 	uint64_t dram_top = 0;
@@ -116,7 +116,7 @@ void scan(void)
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
 }
 
-void finalise(void)
+static void finalise(void)
 {
 	printf("Clearing DRAM");
 	// start clearing DRAM
@@ -166,6 +166,8 @@ void finalise(void)
 
 	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
 		(*node)->numachip->fabric_status();
+
+	Opteron::restore();
 }
 
 int main(const int argc, const char *argv[])

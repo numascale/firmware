@@ -27,6 +27,7 @@
 uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 int Opteron::family;
+static uint64_t msr_nb_cfg;
 
 uint32_t Opteron::read32(const reg_t reg) const
 {
@@ -61,12 +62,12 @@ void Opteron::prepare(void)
 	assert(lib::rdmsr(MSR_MCFG_BASE) &~ 0xfffff);
 
 	// enable CF8 extended access
-	uint64_t msr = lib::rdmsr(MSR_NB_CFG);
-	lib::wrmsr(MSR_NB_CFG, msr | (1ULL << 46));
+	msr_nb_cfg = lib::rdmsr(MSR_NB_CFG);
+	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg | (1ULL << 46));
 
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
-	msr = lib::rdmsr(MSR_HWCR);
-	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
+	*REL64(new_hwcr_msr) = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
+	lib::wrmsr(MSR_HWCR, *REL64(new_hwcr_msr));
 
 	// enable 64-bit config access
 	*REL64(new_cucfg2_msr) = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
@@ -101,6 +102,11 @@ void Opteron::prepare(void)
 	default:
 		fatal("Unknown IOH");
 	}
+}
+
+void Opteron::restore(void)
+{
+	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg);
 }
 
 void Opteron::dram_scrub_disable(void)
@@ -223,13 +229,6 @@ Opteron::Opteron(const ht_t _ht):
 
 	if (options->debug.northbridge)
 		clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
-}
-
-Opteron::~Opteron(void)
-{
-	// restore 32-bit only access
-	uint64_t val = lib::rdmsr(MSR_HWCR);
-	lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 }
 
 void Opteron::dram_clear_start(void)
