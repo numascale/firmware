@@ -17,6 +17,7 @@
 
 #include "opteron.h"
 #include "msrs.h"
+#include "../bootloader.h"
 #include "../library/base.h"
 #include "../library/access.h"
 #include "../library/utils.h"
@@ -28,6 +29,63 @@ uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 int Opteron::family;
 static uint64_t msr_nb_cfg;
+
+void Opteron::check(void)
+{
+	const char *sig[] = {
+	  NULL, "CRC Error", "Sync Error", "Mst Abort", "Tgt Abort",
+	  "GART Error", "RMW Error", "WDT Error", "ECC Error", NULL,
+	  "Link Data Error", "Protocol Error", "NB Array Error",
+	  "DRAM Parity Error", "Link Retry", "GART Table Walk Data Error",
+	  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	  "L3 Cache Data Error", "L3 Cache Tag Error", "L3 Cache LRU Error",
+	  "Probe Filter Error", "Compute Unit Data Error"};
+
+	uint64_t s = read64(MC_NB_STAT);
+	if (s & (1ULL << 63)) {
+		warning("%s on SCI%03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
+		printf("- ErrorCode=0x%llx Syndrome=0x%llx\n",
+		  s & 0xffff, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
+		printf("- Link=%llu Scrub=%llu SubLink=%llu McaStatSubCache=%llu\n",
+		  (s >> 26) & 0xf, (s >> 40) & 1, (s >> 41) & 1, (s >> 42) & 3);
+		printf("- UECC=%llu CECC=%llu PCC=%llu\n",
+		  (s >> 45) & 1, (s >> 46) & 1, (s >> 57) & 1);
+		printf("- MiscV=%llu En=%llu UC=%llu Overflow=%llu\n",
+		  (s >> 59) & 1, (s >> 60) & 1, (s >> 61) & 1, (s >> 62) & 1);
+
+		if ((s >> 56) & 1) // ErrCoreIdVal
+			printf(" ErrCoreId=%llu", (s >> 32) & 0xf);
+
+		if ((s >> 58) & 1) // AddrV
+			printf(" Address=0x%016llx", read64(MC_NB_ADDR));
+
+		write64(MC_NB_ADDR, 0);
+		write64(MC_NB_STAT, 0);
+	}
+
+	uint32_t v = read32(MC_NB_DRAM);
+	if (v & (1 << 31)) {
+		warning("DRAM machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		write32(MC_NB_DRAM, 0);
+	}
+
+	v = read32(MC_NB_LINK);
+	if (v & (1 << 31)) {
+		warning("HT Link machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		write32(MC_NB_LINK, 0);
+	}
+
+	v = read32(MC_NB_L3C);
+	if (v & (1 << 31)) {
+		warning("L3 Cache machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		write32(MC_NB_L3C, 0);
+	}
+}
+
+uint64_t Opteron::read64(const reg_t reg) const
+{
+	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
 
 uint32_t Opteron::read32(const reg_t reg) const
 {
@@ -118,9 +176,9 @@ void Opteron::dram_scrub_disable(void)
 		write32(DCT_CONF_SEL, 0);
 
 	// disable DRAM scrubbers
-	scrub = read32(SCRUB_RATE_CTL);
+	scrub = read32(SCRUB_RATE_CTRL);
 	if (scrub & 0x1f) {
-		write32(SCRUB_RATE_CTL, scrub & ~0x1f);
+		write32(SCRUB_RATE_CTRL, scrub & ~0x1f);
 		lib::udelay(40); // allow outstanding scrub requests to finish
 	}
 
@@ -138,7 +196,7 @@ void Opteron::dram_scrub_enable(void)
 	if (family >= 0x15)
 		write32(DCT_CONF_SEL, 0);
 
-	write32(SCRUB_RATE_CTL, scrub);
+	write32(SCRUB_RATE_CTRL, scrub);
 	set32(SCRUB_ADDR_LOW, 1);
 }
 
@@ -151,6 +209,28 @@ void Opteron::init(void)
 	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
+
+	if (options->debug.northbridge) {
+		uint32_t val = read32(MC_NB_CONF);
+		val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
+		val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
+		val |= 1 << 4;     // SyncPktPropDis: sync packet propagation disable
+		val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
+		val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
+		val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
+		write32(MC_NB_CONF, val);
+
+		val = read32(MC_NB_CONF_EXT);
+		val &= ~(1 << 1);  // SyncFloodOnUsPwDataErr: sync flood on upstream posted write data error
+		val &= ~(1 << 6);  // SyncFloodOnDatErr
+		val &= ~(1 << 7);  // SyncFloodOnTgtAbtErr
+		val &= ~(1 << 8);  // SyncOnProtEn: sync flood on protocol error enable
+		val &= ~(1 << 9);  // SyncOnUncNbAryEn: sync flood on uncorrectable NB array error enable
+		val &= ~(1 << 20); // SyncFloodOnL3LeakErr: sync flood on L3 cache leak error enable
+		val &= ~(1 << 21); // SyncFloodOnCpuLeakErr: sync flood on CPU leak error enable
+		val &= ~(1 << 22); // SyncFloodOnTblWalkErr: sync flood on table walk error enable
+		write32(MC_NB_CONF_EXT, val);
+	}
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
@@ -226,9 +306,6 @@ Opteron::Opteron(const ht_t _ht):
 		if (!(val & (1 << 15)))
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
-
-	if (options->debug.northbridge)
-		clear32(MCA_NB_CONF, 3 << 20); // prevent watchdog timeout causing syncflood
 }
 
 void Opteron::dram_clear_start(void)

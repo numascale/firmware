@@ -91,13 +91,19 @@ public:
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
 	static const reg_t MCTL_SEL_LOW        = 0x2110;
 	static const reg_t MCTL_CONF_HIGH      = 0x211c;
-	static const reg_t MCA_NB_CONF         = 0x3044;
-	static const reg_t SCRUB_RATE_CTL      = 0x3058;
+	static const reg_t MC_NB_CONF          = 0x3044;
+	static const reg_t MC_NB_STAT          = 0x3048;
+	static const reg_t MC_NB_ADDR          = 0x3050;
+	static const reg_t SCRUB_RATE_CTRL     = 0x3058;
 	static const reg_t SCRUB_ADDR_LOW      = 0x305c;
 	static const reg_t SCRUB_ADDR_HIGH     = 0x3060;
 	static const reg_t NB_CONF_1H          = 0x308c;
 	static const reg_t CLK_CTRL_0          = 0x30d4;
 	static const reg_t NB_CPUID            = 0x30fc;
+	static const reg_t MC_NB_DRAM          = 0x3160;
+	static const reg_t MC_NB_LINK          = 0x3168;
+	static const reg_t MC_NB_L3C           = 0x3170;
+	static const reg_t MC_NB_CONF_EXT      = 0x3180;
 	static const reg_t DOWNCORE_CTRL       = 0x3190;
 	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
@@ -117,6 +123,8 @@ public:
 	friend class MmioMap;
 	friend class DramMap;
 
+	void check(void);
+	uint64_t read64(const reg_t reg) const;
 	uint32_t read32(const reg_t reg) const;
 	void write64(const reg_t reg, const uint64_t val) const;
 	void write32(const reg_t reg, const uint32_t val) const;
