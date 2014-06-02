@@ -64,19 +64,19 @@ void Opteron::check(void)
 	}
 
 	uint32_t v = read32(MC_NB_DRAM);
-	if (v & (1 << 31)) {
+	if (v & 0xfff) {
 		warning("DRAM machine check 0x%08x on SCI%03x#%u", v, sci, ht);
 		write32(MC_NB_DRAM, 0);
 	}
 
 	v = read32(MC_NB_LINK);
-	if (v & (1 << 31)) {
+	if (v & 0xfff) {
 		warning("HT Link machine check 0x%08x on SCI%03x#%u", v, sci, ht);
 		write32(MC_NB_LINK, 0);
 	}
 
 	v = read32(MC_NB_L3C);
-	if (v & (1 << 31)) {
+	if (v & 0xfff) {
 		warning("L3 Cache machine check 0x%08x on SCI%03x#%u", v, sci, ht);
 		write32(MC_NB_L3C, 0);
 	}
@@ -214,7 +214,7 @@ void Opteron::init(void)
 	dram_size = dram_limit - dram_base + 1;
 
 	if (options->debug.northbridge) {
-		uint32_t val = read32(MC_NB_CONF);
+		val = read32(MC_NB_CONF);
 		val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
 		val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
 		val |= 1 << 4;     // SyncPktPropDis: sync packet propagation disable
