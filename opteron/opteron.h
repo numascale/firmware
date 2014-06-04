@@ -26,31 +26,31 @@ struct reg {
 class Opteron {
 	class MmioMap {
 		const Opteron &opteron;
-		int ranges;
+		unsigned ranges;
 
-		struct reg setup(const int range);
-		int unused(void);
+		struct reg setup(const unsigned range);
+		unsigned unused(void);
 	public:
-		void print(const int range);
+		void print(const unsigned range);
 		MmioMap(Opteron &_opteron);
-		void remove(int range);
-		bool read(int range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
-		void add(int range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		void remove(const unsigned range);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
 		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 	};
 
 	class DramMap {
 		const Opteron &opteron;
 
-		int unused(void);
+		unsigned unused(void);
 	public:
-		static const int ranges = 8;
+		static const unsigned ranges = 8;
 
 		DramMap(Opteron &_opteron);
-		void remove(const int range);
-		bool read(const int range, uint64_t *base, uint64_t *limit, ht_t *dest);
-		void print(const int range);
-		void add(const int range, const uint64_t base, const uint64_t limit, const ht_t dest);
+		void remove(const unsigned range);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest);
+		void print(const unsigned range);
+		void add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest);
 	};
 
 	enum reset {Warm, Cold};
