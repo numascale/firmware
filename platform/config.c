@@ -274,7 +274,7 @@ Config::Config(const char *filename)
 	lfree((char *)data);
 
 	if (options->debug.config) {
-		printf("geometry %dx%xx%d\n", size[0], size[1], size[2]);
+		printf("; geometry %dx%xx%d\n", size[0], size[1], size[2]);
 
 		for (int i = 0; i < nnodes; i++) {
 			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",

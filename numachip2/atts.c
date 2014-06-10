@@ -49,7 +49,7 @@ void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const 
 
 	numachip.write32(SIU_ATT_INDEX, (1 << 31) | (base >> SIU_ATT_SHIFT));
 
-	for (uint64_t addr = base; addr < (limit + 1); addr += 1ULL << SIU_ATT_SHIFT)
+	for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << SIU_ATT_SHIFT)
 		numachip.write32(SIU_ATT_ENTRY, dest);
 
 	printf("\n");

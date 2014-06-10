@@ -36,6 +36,7 @@ extern "C" {
 #include "platform/e820.h"
 #include "platform/config.h"
 #include "platform/acpi.h"
+#include "platform/trampoline.h"
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 

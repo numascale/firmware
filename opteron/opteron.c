@@ -32,17 +32,17 @@ static uint64_t msr_nb_cfg;
 
 void Opteron::check(void)
 {
-	const char *sig[] = {
-	  NULL, "CRC Error", "Sync Error", "Mst Abort", "Tgt Abort",
-	  "GART Error", "RMW Error", "WDT Error", "ECC Error", NULL,
-	  "Link Data Error", "Protocol Error", "NB Array Error",
-	  "DRAM Parity Error", "Link Retry", "GART Table Walk Data Error",
-	  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	  "L3 Cache Data Error", "L3 Cache Tag Error", "L3 Cache LRU Error",
-	  "Probe Filter Error", "Compute Unit Data Error"};
-
 	uint64_t s = read64(MC_NB_STAT);
 	if (s & (1ULL << 63)) {
+		const char *sig[] = {
+		  NULL, "CRC Error", "Sync Error", "Mst Abort", "Tgt Abort",
+		  "GART Error", "RMW Error", "WDT Error", "ECC Error", NULL,
+		  "Link Data Error", "Protocol Error", "NB Array Error",
+		  "DRAM Parity Error", "Link Retry", "GART Table Walk Data Error",
+		  NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		  "L3 Cache Data Error", "L3 Cache Tag Error", "L3 Cache LRU Error",
+		  "Probe Filter Error", "Compute Unit Data Error"};
+
 		warning("%s on SCI%03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
 		printf("- ErrorCode=0x%llx Syndrome=0x%llx\n",
 		  s & 0xffff, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
@@ -214,6 +214,7 @@ void Opteron::init(void)
 	dram_size = dram_limit - dram_base + 1;
 
 	if (options->debug.northbridge) {
+		warning_once("Disabling sync-flood");
 		val = read32(MC_NB_CONF);
 		val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
 		val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable

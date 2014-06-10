@@ -154,7 +154,7 @@ void Numachip2::routing_dump(void)
 	printf("Routing tables:\n");
 
 	for (int in = 0; in <= 6; in++) {
-		if (!config->size[in / 2])
+		if (!config->size[(in - 1) / 2])
 			continue;
 
 		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
@@ -230,7 +230,7 @@ void Numachip2::fabric_routing(void)
 		printf("- to SCI%03x via LC%d\n", config->nodes[node].sci, out);
 
 		for (int lc = 0; lc <= 6; lc++)
-			if (!config->size[lc / 2])
+			if (!config->size[(lc - 1) / 2])
 				continue;
 
 			route(lc, config->nodes[node].sci, out);
@@ -244,7 +244,7 @@ void Numachip2::fabric_init(void)
 	const char *names[6] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
 
 	for (int lc = 0; lc < 6; lc++) {
-		if (!config->size[lc / 2])
+		if (!config->size[lc/ 2])
 			continue;
 
 		lcs[nlcs++] = new LC5(*this, LC_XBAR + lc * LC_SIZE, names[lc]);

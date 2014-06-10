@@ -69,6 +69,15 @@
 	printf(COL_DEFAULT "\n");					\
    } while (0)
 
+#define warning_once(format, args...) do {      \
+	static bool printed = 0;                    \
+	if (!printed) {                             \
+	printf(COL_YELLOW "Warning: ");             \
+	printf(format, ## args);                    \
+	printf(COL_DEFAULT "\n");                   \
+	printed = 1;                                \
+   }} while (0)
+
 #define error(format, args...) do {					\
 	printf(COL_RED "Error: ");					\
 	printf(format, ## args);					\
@@ -125,6 +134,7 @@ template<class T> class Vector {
 public:
 	unsigned used;
 	T *elements, *limit;
+
 	Vector(void): lim(0), used(0), elements(NULL), limit(NULL) {}
 	~Vector(void) {
 		free(elements);

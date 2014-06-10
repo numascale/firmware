@@ -54,7 +54,7 @@ struct reg Opteron::MmioMap::setup(const unsigned range)
 void Opteron::MmioMap::remove(const unsigned range)
 {
 	if (options->debug.maps)
-		printf("Deleting NB MMIO range %d on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
+		printf("Deleting NB MMIO range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
 
 	struct reg reg = setup(range);
 
@@ -157,7 +157,7 @@ void Opteron::MmioMap::print(const unsigned range)
 	assert(range < ranges);
 
 	if (read(range, &base, &limit, &dest, &link, &lock))
-		printf("NB MMIO range %d on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d\n",
+		printf("NB MMIO range %u on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest, link);
 }
 
@@ -184,7 +184,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 	const bool ovw = 1;
 
 	if (options->debug.maps)
-		printf("Adding NB MMIO range %d on SCI%03x#%x: 0x%08llx:0x%08llx to %d.%d\n",
+		printf("Adding NB MMIO range %u on SCI%03x#%x: 0x%08llx:0x%08llx to %d.%d\n",
 			range, opteron.sci, opteron.ht, base, limit, dest, link);
 
 	assert(limit > base);
@@ -207,7 +207,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 			link_t link2;
 			bool lock2;
 			read(range, &base2, &limit2, &dest2, &link2, &lock2);
-			fatal("Overwriting NB MMIO range %d 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
+			fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 		}
 
 		uint32_t val2 = ((base >> 16) << 8) | 3;
@@ -224,7 +224,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 			bool old_lock;
 
 			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-			warning("Unable to overwrite locked NB MMIO range %d on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+			warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
 				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
 			return;
 		}
@@ -245,7 +245,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 			link_t link2;
 			bool lock2;
 			read(range, &base2, &limit2, &dest2, &link2, &lock2);
-			fatal("Overwriting NB MMIO range %d 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
+			fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 		}
 
 		uint32_t val2 = ((base >> 16) << 8) | 3;
@@ -260,7 +260,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 			bool old_lock;
 
 			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-			warning("Unable to overwrite locked NB MMIO range %d on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+			warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
 				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
 			return;
 		}
@@ -296,7 +296,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 	struct reg reg = setup(range);
 
 	if (options->debug.maps)
-		printf("Adding NB MMIO range %d on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d\n",
+		printf("Adding NB MMIO range %u on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d\n",
 			range, opteron.sci, opteron.ht, base, limit, dest, link);
 
 	assert(limit > base);
@@ -311,7 +311,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 		link_t link2;
 		bool lock2;
 		read(range, &base2, &limit2, &dest2, &link2, &lock2);
-		fatal("Overwriting NB MMIO range %d on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d%s",
+		fatal("Overwriting NB MMIO range %u on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d%s",
 		  range, opteron.sci, opteron.ht, base2, limit2, dest2, link2, lock2 ? " locked" : "");
 	}
 
@@ -329,7 +329,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 		bool old_lock;
 
 		read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-		warning("Unable to overwrite locked NB MMIO range %d on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+		warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
 			range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
 		return;
 	}
@@ -353,7 +353,7 @@ Opteron::DramMap::DramMap(Opteron &_opteron): opteron(_opteron)
 void Opteron::DramMap::remove(unsigned range)
 {
 	if (options->debug.maps)
-		printf("Deleting NB DRAM range %d on SCI%03x#%x\n", range, opteron.sci, opteron.ht);
+		printf("Deleting NB DRAM range %u on SCI%03x#%x\n", range, opteron.sci, opteron.ht);
 
 	if (family >= 0x15) {
 		assert(range < 12);
@@ -388,7 +388,7 @@ void Opteron::DramMap::remove(unsigned range)
 #ifdef NEWWORLD
 	assert(range < ranges);
 	if (options->debug.maps)
-		printf("Deleting NB DRAM range %d on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
+		printf("Deleting NB DRAM range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
 
 	opteron.write32(DRAM_MAP_BASE_LIMIT_HIGH + range * 8, 0);
 	opteron.write32(DRAM_MAP_LIMIT + range * 8, 0);
@@ -439,14 +439,14 @@ void Opteron::DramMap::print(const unsigned range)
 	assert(range < ranges);
 
 	if (read(range, &base, &limit, &dest))
-		printf("NB DRAM range %d on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
+		printf("NB DRAM range %u on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 }
 
 void Opteron::DramMap::add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest)
 {
 	if (options->debug.maps)
-		printf("Adding NB DRAM range %d on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
+		printf("Adding NB DRAM range %u on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 
 	assert(range < ranges);

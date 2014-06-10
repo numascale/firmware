@@ -70,7 +70,7 @@ namespace lib
 
 	void memcpy(void *dst, const void *src, size_t n)
 	{
-		printf("Copying %u bytes from %p to %p:\n", n, src, dst);
+		printf("Copying %zu bytes from %p to %p:\n", n, src, dst);
 		dump(src, n);
 		::memcpy(dst, src, n);
 	}

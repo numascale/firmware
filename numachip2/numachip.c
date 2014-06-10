@@ -26,21 +26,25 @@ const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
 
 uint32_t Numachip2::read32(const reg_t reg) const
 {
+	assert(ht);
 	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
+	assert(ht);
 	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const reg_t reg) const
 {
+	assert(ht);
 	return lib::mcfg_read8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const reg_t reg, const uint8_t val) const
 {
+	assert(ht);
 	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
@@ -78,19 +82,21 @@ ht_t Numachip2::probe(const sci_t sci)
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
   local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
-	assert(ht > 0);
+	assert(ht);
 
 	printf("Waiting for slave to become ready");
 	while (read32(FABRIC_CTRL) != 7U << 29)
 		cpu_relax();
 	printf("\n");
+
+	fabric_init();
 }
 
 // used for local card
 Numachip2::Numachip2(const ht_t _ht):
   local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
-	assert(ht > 0);
+	assert(ht);
 
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_NC2);
