@@ -32,7 +32,7 @@ private:
 	struct e820entry *map;
 	uint16_t *used;
 	static const char *names[6];
-	static const uint64_t PATTERN = 0xa0a1a2a3a4a5a6a7;
+	static const uint64_t PATTERN = 0xa0a1a2a3a4a5a6a7ULL;
 
 	struct e820entry *position(const uint64_t base);
 	void insert(struct e820entry *pos);
@@ -50,6 +50,7 @@ public:
 	E820(void);
 	void dump(void);
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
+	uint64_t expand(const uint64_t type, const uint64_t size);
 	uint64_t memlimit(void);
 	void test(void);
 };

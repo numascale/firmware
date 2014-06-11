@@ -166,6 +166,35 @@ void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 	}
 }
 
+uint64_t E820::expand(const uint64_t type, const uint64_t size)
+{
+	uint64_t base;
+
+	for (int i = 0; i < *used; i++) {
+		if (map[i].type != type)
+			continue;
+
+		// check next extry is adjacent and is usable
+		if (i < *used-1 && map[i+1].base == map[i].base + map[i].length && map[i+1].type == RAM) {
+			base = map[i+1].base;
+			goto out;
+		}
+
+		// check previous extry is adjacent and is usable
+		if (i > 0 && map[i-1].base + map[i-1].length == map[i].base && map[i-1].type == RAM) {
+			base = map[i].base - size;
+			goto out;
+		}
+	}
+
+	fatal("Unable to find region of type %llu with adjacent space", type);
+out:
+	if (options->debug.e820)
+		printf("Expanding: ");
+	add(base, size, type);
+	return base;
+}
+
 E820::E820(void)
 {
 	// setup relocated area
