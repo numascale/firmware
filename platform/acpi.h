@@ -100,7 +100,7 @@ struct acpi_local_apic {
 struct acpi_local_x2apic {
 	uint8_t type;
 	uint8_t len;
-	char reserved1[2];
+	uint16_t reserved;
 	uint32_t x2apic_id;
 	uint32_t flags;
 	uint32_t proc_uid;
@@ -138,7 +138,11 @@ class ACPI {
 	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const int ptrsize);
 	uint32_t slack(acpi_sdt *parent);
 	static void dump(const acpi_sdt *table, const unsigned limit);
+	void get_cores(void);
 public:
+	uint8_t apics[256];
+	uint8_t napics;
+
 	static void assert_checksum(const acpi_sdt *table, const int len);
 	static checked uint8_t checksum(const char *addr, const int len);
 	void check(void);

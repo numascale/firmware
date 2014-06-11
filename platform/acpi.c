@@ -545,7 +545,35 @@ void ACPI::handover(void)
 	printf("ACPI handoff timed out\n");
 }
 
-ACPI::ACPI(void)
+void ACPI::get_cores(void)
+{
+	memset(apics, 0, sizeof(apics));
+	acpi_sdt *srat = find_sdt("SRAT");
+	unsigned i = 12;
+	napics = 0;
+
+	while (i + sizeof(*srat) < srat->len) {
+		if (srat->data[i] == 0) {
+			struct acpi_core_affinity *af =
+			    (struct acpi_core_affinity *)&(srat->data[i]);
+
+			if (af->enabled) {
+				assert(af->apic_id != 0xff); /* Ensure ID is valid */
+				apics[napics] = af->apic_id;
+				napics++;
+			}
+
+			i += af->len;
+		} else if (srat->data[i] == 1) {
+			struct acpi_mem_affinity *af =
+			    (struct acpi_mem_affinity *)&(srat->data[i]);
+			i += af->len;
+		} else
+			break;
+	}
+}
+
+ACPI::ACPI(void): bios_shadowed(0)
 {
 	// skip if already set
 	if (!options->handover_acpi) {
@@ -579,14 +607,17 @@ ACPI::ACPI(void)
 
 	if (options->debug.acpi)
 		printf("RSDT at %p; XSDT at %p\n", rsdt, xsdt);
+
+	get_cores();
 }
 
-AcpiTable::AcpiTable(const char *name): payload(0), used(0)
+AcpiTable::AcpiTable(const char *name): payload(0), allocated(0), used(0)
 {
+	memset(&header, 0, sizeof(header));
 	memcpy(&header.sig.s, name, 4);
 	header.len = sizeof(header);
 	header.revision = acpi_rev;
-	memcpy(&header.oemid, "NUMASC", 6);
+	memcpy(&header.oemid, "NUMAS2", 6);
 	memcpy(&header.oemtableid, "N313NUMA", 8);
 	header.oemrev = 0;
 	memcpy(&header.creatorid, "1B47", 4);
@@ -614,7 +645,7 @@ void AcpiTable::append(const char *data, const unsigned len)
 
 void ACPI::replace(const AcpiTable &table)
 {
-	acpi_sdt *table2 = (acpi_sdt *)0x000d7fb0000;
+	acpi_sdt *table2 = (acpi_sdt *)e820->expand(E820::ACPI, table.header.len);
 
 	memcpy(table2, &table.header, sizeof(struct acpi_sdt));
 	memcpy((char *)table2 + sizeof(struct acpi_sdt), table.payload, table.used);
@@ -626,6 +657,4 @@ void ACPI::replace(const AcpiTable &table)
 		assert(replace_child(table2->sig.s, table2, rsdt, 4));
 	if (xsdt)
 		assert(replace_child(table2->sig.s, table2, xsdt, 8));
-
-	e820->add((uint64_t)(uint32_t)table2, 0x10000, E820::ACPI);
 }
