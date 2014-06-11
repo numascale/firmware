@@ -41,16 +41,6 @@
 
 namespace lib
 {
-	void wait_key(const char *msg)
-	{
-		puts(msg);
-		char ch;
-
-		do {
-			fread(&ch, 1, 1, stdin);
-		} while (ch != 0x0a); // enter
-	}
-
 	uint8_t rtc_read(const int addr)
 	{
 		outb(addr, 0x70);
@@ -283,8 +273,18 @@ namespace lib
 		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
 	}
 
+	uint64_t cht_read64(const ht_t ht, const reg_t reg)
+	{
+		return mcfg_read64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
 	void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
 	{
 		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
+
+	void cht_write64(const ht_t ht, const reg_t reg, const uint64_t val)
+	{
+		mcfg_write64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 	}
 }

@@ -83,7 +83,6 @@ namespace lib
 		asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
 	}
 
-	void wait_key(const char *msg);
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	void     pmio_write8(const uint16_t offset, const uint8_t val);
@@ -104,5 +103,7 @@ namespace lib
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
 	uint32_t cht_read32(const ht_t ht, const reg_t reg);
+	uint64_t cht_read64(const ht_t ht, const reg_t reg);
 	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
+	void     cht_write64(const ht_t ht, const reg_t reg, const uint64_t val);
 }

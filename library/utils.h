@@ -28,6 +28,7 @@ namespace lib
 		return val;
 	}
 
+	void wait_key(const char *msg);
 	void udelay(const uint32_t usecs);
 	const char *pr_size(uint64_t size);
 	void dump(const void *addr, const unsigned len);

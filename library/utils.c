@@ -25,6 +25,16 @@
 
 namespace lib
 {
+	void wait_key(const char *msg)
+	{
+		puts(msg);
+		char ch;
+
+		do {
+			fread(&ch, 1, 1, stdin);
+		} while (ch != 0x0a); // enter
+	}
+
 	void udelay(const uint32_t usecs)
 	{
 		uint64_t limit = lib::rdtscll() + (uint64_t)usecs * Opteron::tsc_mhz;
