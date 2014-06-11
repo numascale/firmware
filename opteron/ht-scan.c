@@ -340,7 +340,6 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 		printf("\n");
 	}
 
-	// may cause syncflood on loop-36
 	val = lib::cht_read32(0, HT_NODE_ID);
 	lib::cht_write32(nc, Numachip2::HT_NODE_ID,
 		   (((val >> 12) & 7) << 24) | /* LkNode */

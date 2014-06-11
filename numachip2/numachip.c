@@ -58,21 +58,21 @@ ht_t Numachip2::probe(const sci_t sci)
 		fatal("Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
 	}
 
-	ht_t ht = (lib::mcfg_read32(sci, 0, 24 + 0, Opteron::HT_NODE_ID >> 12, Opteron::HT_NODE_ID & 0xfff) >> 4) & 7;
+	uint8_t val = (lib::mcfg_read32(sci, 0, 24 + 0, Opteron::HT_NODE_ID >> 12, Opteron::HT_NODE_ID & 0xfff) >> 4) & 7;
 
-	vendev = lib::mcfg_read32(sci, 0, 24 + ht, VENDEV >> 12, VENDEV & 0xfff);
-	assertf(vendev == VENDEV_NC2, "Expected Numachip2 at SCI%03x#%d but found 0x%08x", sci, ht, vendev);
+	vendev = lib::mcfg_read32(sci, 0, 24 + val, VENDEV >> 12, VENDEV & 0xfff);
+	assertf(vendev == VENDEV_NC2, "Expected Numachip2 at SCI%03x#%d but found 0x%08x", sci, val, vendev);
 
-	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + ht, SIU_NODEID >> 12, SIU_NODEID & 0xfff);
+	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + val, SIU_NODEID >> 12, SIU_NODEID & 0xfff);
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
-	uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff);
+	uint32_t control = lib::mcfg_read32(sci, 0, 24 + val, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff);
 	assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
 	if (control == 1 << 29) {
 		printf("Found SCI%03x\n", sci);
 		// tell slave to proceed
-		lib::mcfg_write32(sci, 0, 24 + ht, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff, 3 << 29);
-		return ht;
+		lib::mcfg_write32(sci, 0, 24 + val, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff, 3 << 29);
+		return val;
 	}
 
 	return 0;

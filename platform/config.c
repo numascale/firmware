@@ -141,9 +141,6 @@ void Config::parse_json(json_t *root)
 		errors++;
 	}
 
-	if (!parse_json_bool(fab->child, "strict", &strict, 1))
-		strict = 0;
-
 	const json_t *list = json_find_first_label(fab->child, "nodes");
 	if (!(list && list->child && list->child->type == JSON_ARRAY)) {
 		error("Label <nodes> not found in fabric configuration file");
@@ -154,7 +151,7 @@ void Config::parse_json(json_t *root)
 	for (nnodes = 0, obj = list->child->child; obj; obj = obj->next)
 		nnodes++;
 
-	nodes = (struct node *)malloc(nnodes * sizeof(*nodes));
+	nodes = (struct node *)zalloc(nnodes * sizeof(*nodes));
 	assert(nodes);
 
 	int i;
@@ -203,7 +200,7 @@ void Config::parse_json(json_t *root)
 	for (npartitions = 0, obj = list->child->child; obj; obj = obj->next)
 		npartitions++;
 
-	partitions = (struct partition *)malloc(npartitions * sizeof(*partitions));
+	partitions = (struct partition *)zalloc(npartitions * sizeof(*partitions));
 	assert(partitions);
 
 	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
@@ -225,9 +222,11 @@ void Config::parse_json(json_t *root)
 Config::Config(void)
 {
 	size[0] = 1;
+	size[1] = 0;
+	size[2] = 0;
 
 	nnodes = 1;
-	nodes = (struct node *)malloc(sizeof(*nodes));
+	nodes = (struct node *)zalloc(sizeof(*nodes));
 	assert(nodes);
 
 	nodes->uuid = ::local_node->numachip->uuid;
@@ -236,7 +235,7 @@ Config::Config(void)
 	strcpy(nodes->hostname, "self");
 	nodes->sync_only = 1;
 	npartitions = 1;
-	partitions = (struct partition *)malloc(sizeof(*partitions));
+	partitions = (struct partition *)zalloc(sizeof(*partitions));
 	assert(partitions);
 	partitions->master = 0;
 	partitions->builder = 0;
@@ -249,7 +248,7 @@ Config::Config(void)
 
 struct Config::node *Config::find(const sci_t sci)
 {
-	for (int n = 0; n < nnodes; n++)
+	for (unsigned n = 0; n < nnodes; n++)
 		if (nodes[n].sci == sci)
 			return &nodes[n];
 
@@ -276,7 +275,7 @@ Config::Config(const char *filename)
 	if (options->debug.config) {
 		printf("; geometry %dx%xx%d\n", size[0], size[1], size[2]);
 
-		for (int i = 0; i < nnodes; i++) {
+		for (unsigned i = 0; i < nnodes; i++) {
 			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
 			  i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
 			  nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5]);
@@ -288,13 +287,13 @@ Config::Config(const char *filename)
 		      nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
 		}
 
-		for (int i = 0; i < npartitions; i++)
+		for (unsigned i = 0; i < npartitions; i++)
 			printf("Partition %d: master SCI%03x, builder SCI%03x\n",
 		      i, partitions[i].master, partitions[i].builder);
 	}
 
 	/* Locate UUID or hostname */
-	for (int i = 0; i < nnodes; i++) {
+	for (unsigned i = 0; i < nnodes; i++) {
 #ifdef FIXME /* Uncomment when Numachip EEPROM has UUID */
 		if (local_node->numachip->uuid == nodes[i].uuid) {
 			if (options->debug.config)

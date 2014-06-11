@@ -67,7 +67,7 @@ void Syslinux::get_hostname(void)
 	}
 }
 
-Syslinux::Syslinux(void)
+Syslinux::Syslinux(void): ent(0), hostname(NULL)
 {
 	/* Ensure console drains before opening */
 	lib::udelay(100000);

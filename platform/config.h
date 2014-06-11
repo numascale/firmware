@@ -43,10 +43,9 @@ class Config {
 	void parse_json(json_t *root);
 public:
 	uint32_t size[3];
-	uint32_t strict;
 
 	bool master_local;
-	int nnodes, npartitions;
+	unsigned nnodes, npartitions;
 	struct node *local_node, *nodes, *master;
 	struct partition *partition, *partitions;
 

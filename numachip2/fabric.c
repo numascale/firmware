@@ -159,7 +159,7 @@ void Numachip2::routing_dump(void)
 
 		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
 
-		for (int dest = 0; dest < config->nnodes; dest++) {
+		for (unsigned dest = 0; dest < config->nnodes; dest++) {
 			const int regoffset = ((dest >> 4) & 0xf) << 2;
 			const int chunk = dest >> 8;
 			const int bitoffset = dest & 0xf;
