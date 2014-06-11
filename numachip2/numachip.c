@@ -80,7 +80,7 @@ ht_t Numachip2::probe(const sci_t sci)
 
 // used for remote card
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
-  local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
+  local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
 	assert(ht);
 
@@ -94,7 +94,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
 
 // used for local card
 Numachip2::Numachip2(const ht_t _ht):
-  local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
+  local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
 	assert(ht);
 

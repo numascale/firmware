@@ -58,6 +58,13 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
+	class ApicAtt {
+		const Numachip2 &numachip;
+	public:
+		ApicAtt(Numachip2 &_numachip);
+		void range(const uint16_t base, const uint16_t limit, const sci_t dest);
+	};
+
 	static const unsigned training_period = 20000;
 	static const unsigned stability_period = 500000;
 	static const unsigned i2c_timeout = 1000;
@@ -154,6 +161,7 @@ public:
 
 	static const int SIU_ATT_SHIFT = 32;
 	static const int MMIO32_ATT_SHIFT = 20;
+	static const int APIC_ATT_SHIFT = 6; // max 64 cores per server
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
@@ -171,6 +179,8 @@ public:
 	friend class DramAtt;
 	MmioAtt mmioatt;
 	friend class MmioAtt;
+	ApicAtt apicatt;
+	friend class ApicAtt;
 
 	uint32_t uuid;
 
