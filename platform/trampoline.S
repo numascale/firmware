@@ -75,14 +75,14 @@ init_trampoline:
 	jna	1b
 
 	// set default memory type
-	mov	%cs:SYM_OFFSET(new_mtrr_default), %eax
-	mov	%cs:SYM_OFFSET(new_mtrr_default + 4), %edx
+	mov	%cs:SYM_OFFSET(mtrr_default), %eax
+	mov	%cs:SYM_OFFSET(mtrr_default + 4), %edx
 	mov	$MSR_MTRR_DEFAULT, %ecx
 	wrmsr
 
 	// set fixed MTRRs
 	mov	$SYM_OFFSET(fixed_mtrr_regs), %edi // 32-bit MSR to use
-	mov	$SYM_OFFSET(new_mtrr_fixed), %esi  // 64-bit value to write
+	mov	$SYM_OFFSET(mtrr_fixed), %esi  // 64-bit value to write
 1:
 	mov	%cs:(%edi), %ecx // MSR number
 	add	$4, %edi
@@ -101,8 +101,8 @@ init_trampoline:
 break:
 	// set variable MTRRs
 	mov	$MSR_MTRR_PHYS_BASE0, %ecx
-	mov	$SYM_OFFSET(new_mtrr_var_base), %esi
-	mov	$SYM_OFFSET(new_mtrr_var_mask), %edi
+	mov	$SYM_OFFSET(mtrr_var_base), %esi
+	mov	$SYM_OFFSET(mtrr_var_mask), %edi
 1:
 	mov	%cs:(%esi), %eax
 	add	$4, %esi
@@ -129,27 +129,27 @@ break:
 	// copy old TOP_MEM value, set global value
 	mov	$MSR_TOPMEM, %ecx
 	rdmsr
-	mov	%eax, %cs:SYM_OFFSET(rem_topmem_msr)
-	mov	%edx, %cs:SYM_OFFSET(rem_topmem_msr + 4)
-	mov	%cs:SYM_OFFSET(new_topmem_msr), %eax
-	mov	%cs:SYM_OFFSET(new_topmem_msr + 4), %edx
+	mov	%eax, %cs:SYM_OFFSET(msr_topmem_rem)
+	mov	%edx, %cs:SYM_OFFSET(msr_topmem_rem + 4)
+	mov	%cs:SYM_OFFSET(msr_topmem), %eax
+	mov	%cs:SYM_OFFSET(msr_topmem + 4), %edx
 	wrmsr
 
 	// set TOP_MEM2
-	mov	%cs:SYM_OFFSET(new_topmem2_msr), %eax
-	mov	%cs:SYM_OFFSET(new_topmem2_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_topmem2), %eax
+	mov	%cs:SYM_OFFSET(msr_topmem2 + 4), %edx
 	mov	$MSR_TOPMEM2, %ecx
 	wrmsr
 
 	// set SYSCFG MSR
-	mov	%cs:SYM_OFFSET(new_syscfg_msr), %eax
-	mov	%cs:SYM_OFFSET(new_syscfg_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_syscfg), %eax
+	mov	%cs:SYM_OFFSET(msr_syscfg + 4), %edx
 	mov	$MSR_SYSCFG, %ecx
 	wrmsr
 
 	// set CPU WDT MSR
-	mov	%cs:SYM_OFFSET(new_cpuwdt_msr), %eax
-	mov	%cs:SYM_OFFSET(new_cpuwdt_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_cpuwdt), %eax
+	mov	%cs:SYM_OFFSET(msr_cpuwdt + 4), %edx
 	mov	$MSR_CPUWDT, %ecx
 	wrmsr
 
@@ -160,58 +160,58 @@ break:
 	wrmsr
 
 	// set HWCR MSR
-	mov	%cs:SYM_OFFSET(new_hwcr_msr), %eax
-	mov	%cs:SYM_OFFSET(new_hwcr_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_hwcr), %eax
+	mov	%cs:SYM_OFFSET(msr_hwcr + 4), %edx
 	mov	$MSR_HWCR, %ecx
 	wrmsr
 
 	// set MC4_MISC0 MSR
-	mov	%cs:SYM_OFFSET(new_mc4_misc0_msr), %eax
-	mov	%cs:SYM_OFFSET(new_mc4_misc0_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_mc4_misc0), %eax
+	mov	%cs:SYM_OFFSET(msr_mc4_misc0 + 4), %edx
 	mov	$MSR_MC4_MISC0, %ecx
 	wrmsr
 
 	// set MC4_MISC1 MSR
-	mov	%cs:SYM_OFFSET(new_mc4_misc1_msr), %eax
-	mov	%cs:SYM_OFFSET(new_mc4_misc1_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_mc4_misc1), %eax
+	mov	%cs:SYM_OFFSET(msr_mc4_misc1 + 4), %edx
 	mov	$MSR_MC4_MISC1, %ecx
 	wrmsr
 
 	// set MC4_MISC2 MSR
-	mov	%cs:SYM_OFFSET(new_mc4_misc2_msr), %eax
-	mov	%cs:SYM_OFFSET(new_mc4_misc2_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_mc4_misc2), %eax
+	mov	%cs:SYM_OFFSET(msr_mc4_misc2 + 4), %edx
 	mov	$MSR_MC4_MISC2, %ecx
 	wrmsr
 
 #ifdef BROKEN
 	// set OSVW_ID_LEN MSR
-	mov	%cs:SYM_OFFSET(new_osvw_id_len_msr), %eax
-	mov	%cs:SYM_OFFSET(new_osvw_id_len_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_osvw_id_len), %eax
+	mov	%cs:SYM_OFFSET(msr_osvw_id_len + 4), %edx
 	mov	$MSR_OSVW_ID_LEN, %ecx
 	wrmsr
 
 	// set OSVW_STATUS MSR
-	mov	%cs:SYM_OFFSET(new_osvw_status_msr), %eax
-	mov	%cs:SYM_OFFSET(new_osvw_status_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_osvw_status), %eax
+	mov	%cs:SYM_OFFSET(msr_osvw_status + 4), %edx
 	mov	$MSR_OSVW_STATUS, %ecx
 	wrmsr
 
 	// set Interrupt Pending and CMP-Halt Register MSR
-	mov	%cs:SYM_OFFSET(new_int_halt_msr), %eax
-	mov	%cs:SYM_OFFSET(new_int_halt_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_int_halt), %eax
+	mov	%cs:SYM_OFFSET(msr_int_halt + 4), %edx
 	mov	$MSR_HWCR, %ecx
 	wrmsr
 #endif
 
 	// set LSCFG MSR
-	mov	%cs:SYM_OFFSET(new_lscfg_msr), %eax
-	mov	%cs:SYM_OFFSET(new_lscfg_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_lscfg), %eax
+	mov	%cs:SYM_OFFSET(msr_lscfg + 4), %edx
 	mov	$MSR_LSCFG, %ecx
 	wrmsr
 
 	// set CUCFG2 MSR
-	mov	%cs:SYM_OFFSET(new_cucfg2_msr), %eax
-	mov	%cs:SYM_OFFSET(new_cucfg2_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_cucfg2), %eax
+	mov	%cs:SYM_OFFSET(msr_cucfg2 + 4), %edx
 	mov	$MSR_CU_CFG2, %ecx
 	wrmsr
 
@@ -275,14 +275,14 @@ break:
 	wrmsr
 
 	mov	$MSR_MCFG_BASE, %ecx
-	mov	%cs:SYM_OFFSET(new_mcfg_msr), %eax
-	mov	%cs:SYM_OFFSET(new_mcfg_msr + 4), %edx
+	mov	%cs:SYM_OFFSET(msr_mcfg), %eax
+	mov	%cs:SYM_OFFSET(msr_mcfg + 4), %edx
 	wrmsr
 
 	mov	$MSR_SMM_BASE, %ecx
 	rdmsr
-	mov	%eax, %cs:SYM_OFFSET(rem_smm_base_msr)
-	mov	%edx, %cs:SYM_OFFSET(rem_smm_base_msr + 4)
+	mov	%eax, %cs:SYM_OFFSET(msr_smm_base_rem)
+	mov	%edx, %cs:SYM_OFFSET(msr_smm_base_rem + 4)
 
 	mov	$SYM_OFFSET(cpu_done2), %si
 	call	print_strz
@@ -402,15 +402,15 @@ EXPORT(cpu_apic_renumber)
 	.byte 0
 EXPORT(cpu_apic_hi)
 	.byte 0
-EXPORT(new_mcfg_msr)
+EXPORT(msr_mcfg)
 	.long 0, 0
-EXPORT(new_topmem_msr)
+EXPORT(msr_topmem)
 	.long 0, 0
-EXPORT(new_topmem2_msr)
+EXPORT(msr_topmem2)
 	.long 0, 0
-EXPORT(new_cpuwdt_msr)
+EXPORT(msr_cpuwdt)
 	.long 0, 0
-EXPORT(new_mtrr_default)
+EXPORT(mtrr_default)
 	.long 0, 0
 EXPORT(fixed_mtrr_regs)
 	.long MSR_MTRR_FIX64K_00000
@@ -425,32 +425,32 @@ EXPORT(fixed_mtrr_regs)
 	.long MSR_MTRR_FIX4K_F0000
 	.long MSR_MTRR_FIX4K_F8000
 	.long 0xffffffff
-EXPORT(new_mtrr_fixed)
+EXPORT(mtrr_fixed)
 	.skip 11*8, 0
-EXPORT(new_mtrr_var_base)
+EXPORT(mtrr_var_base)
 	.skip 8*8, 0
-EXPORT(new_mtrr_var_mask)
+EXPORT(mtrr_var_mask)
 	.skip 8*8, 0
-EXPORT(new_syscfg_msr)
+EXPORT(msr_syscfg)
 	.long 0, 0
-EXPORT(rem_topmem_msr)
+EXPORT(msr_topmem_rem)
 	.long 0, 0
-EXPORT(rem_smm_base_msr)
+EXPORT(msr_smm_base_rem)
 	.long 0, 0
-EXPORT(new_hwcr_msr)
+EXPORT(msr_hwcr)
 	.long 0, 0
-EXPORT(new_mc4_misc0_msr)
+EXPORT(msr_mc4_misc0)
 	.long 0, 0
-EXPORT(new_mc4_misc1_msr)
+EXPORT(msr_mc4_misc1)
 	.long 0, 0
-EXPORT(new_mc4_misc2_msr)
+EXPORT(msr_mc4_misc2)
 	.long 0, 0
 #ifdef BROKEN
-EXPORT(new_osvw_id_len_msr)
+EXPORT(msr_osvw_id_len)
 	.long 0, 0
-EXPORT(new_osvw_status_msr)
+EXPORT(msr_osvw_status)
 	.long 0, 0
-EXPORT(new_int_halt_msr)
+EXPORT(msr_int_halt)
 	.long 0, 0
 #endif
 EXPORT(msr_readback)
@@ -459,9 +459,9 @@ EXPORT(apic_offset)
 	.long 0
 EXPORT(apic_readback)
 	.long 0
-EXPORT(new_lscfg_msr)
+EXPORT(msr_lscfg)
 	.long 0, 0
-EXPORT(new_cucfg2_msr)
+EXPORT(msr_cucfg2)
 	.long 0, 0
 
 cpu_mtrr:

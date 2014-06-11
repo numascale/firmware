@@ -124,12 +124,12 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg | (1ULL << 46));
 
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
-	*REL64(new_hwcr_msr) = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
-	lib::wrmsr(MSR_HWCR, *REL64(new_hwcr_msr));
+	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
+	lib::wrmsr(MSR_HWCR, *REL64(msr_hwcr));
 
 	// enable 64-bit config access
-	*REL64(new_cucfg2_msr) = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
-	lib::wrmsr(MSR_CU_CFG2, *REL64(new_cucfg2_msr));
+	*REL64(msr_cucfg2) = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
+	lib::wrmsr(MSR_CU_CFG2, *REL64(msr_cucfg2));
 
 	// detect processor family
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
