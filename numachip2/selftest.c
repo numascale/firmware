@@ -23,18 +23,14 @@
 
 void Numachip2::selftest(void)
 {
-	printf("Selftest SIU-ATT");
+	printf("Selftest");
 
 	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
 	for (unsigned i = 0; i < 4096; i++)
 		write32(SIU_ATT_ENTRY, PATTERN);
 
-	write32(SIU_ATT_INDEX, (1 << 28) | (1 << 31));
-	for (unsigned i = 0; i < 4096; i++)
-		assertf(read32(SIU_ATT_ENTRY) == PATTERN, "Readback at %u gave 0x%x instead of 0x%x", i, read32(SIU_ATT_ENTRY), PATTERN);
-
-	for (int lc = 0; lc <= 6; lc++) {
-		if (!config->size[lc / 2])
+	for (int lc = 1; lc <= 6; lc++) {
+		if (!config->size[(lc - 1)/ 2])
 			continue;
 
 		const int regbase = lc ? (LC_XBAR + (lc - 1) * LC_SIZE) : SIU_XBAR;
@@ -47,18 +43,6 @@ void Numachip2::selftest(void)
 				write32(regbase + XBAR_TABLE_SIZE * 0 + j, PATTERN);
 				write32(regbase + XBAR_TABLE_SIZE * 1 + j, PATTERN);
 				write32(regbase + XBAR_TABLE_SIZE * 2 + j, PATTERN);
-			}
-		}
-
-		for (unsigned i = 0; i < 16; i++) {
-			write32(regbase + XBAR_CHUNK, i);
-			for (unsigned j = 0; j < 0x40; j += 4) {
-				assertf(read32(regbase + XBAR_TABLE_SIZE * 0 + j) == PATTERN, "Readback at low chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_TABLE_SIZE * 0 + j), PATTERN);
-				assertf(read32(regbase + XBAR_TABLE_SIZE * 1 + j) == PATTERN, "Readback at mid chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_TABLE_SIZE * 1 + j), PATTERN);
-				assertf(read32(regbase + XBAR_TABLE_SIZE * 2 + j) == PATTERN, "Readback at high chunk %u, offset %u gave 0x%x instead of 0x%x",
-					i, j, read32(regbase + XBAR_TABLE_SIZE * 2 + j), PATTERN);
 			}
 		}
 	}
