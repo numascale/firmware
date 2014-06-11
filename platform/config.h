@@ -28,6 +28,7 @@ class Config {
 		char hostname[32];
 		uint8_t mac[6];
 		bool sync_only;
+		bool added;
 	};
 
 	struct partition {

@@ -160,6 +160,7 @@ static void finalise(void)
 		};
 		mcfg.append((const char *)&ent, sizeof(ent));
 	}
+
 	acpi->replace(mcfg);
 	acpi->check();
 
@@ -169,6 +170,15 @@ static void finalise(void)
 		(*node)->numachip->fabric_status();
 
 	Opteron::restore();
+}
+
+static void finished(void)
+{
+	if (options->boot_wait)
+		lib::wait_key("Press enter to boot");
+
+	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
+	syslinux->exec(options->next_label);
 }
 
 int main(const int argc, const char *argv[])
@@ -221,6 +231,11 @@ int main(const int argc, const char *argv[])
 	local_node->set_sci(config->local_node->sci);
 	local_node->numachip->fabric_train();
 
+	if (config->local_node->sync_only) {
+		finished();
+		return 1;
+	}
+
 	// slaves
 	if (!config->master_local) {
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
@@ -235,6 +250,9 @@ int main(const int argc, const char *argv[])
 		  config->nnodes, config->master->sci, config->master->hostname);
 
 		Opteron::disable_smi();
+		disable_cache();
+		asm volatile("mfence" ::: "memory");
+		cli();
 
 		// set 'go-ahead'
 		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 7 << 29);
@@ -242,10 +260,11 @@ int main(const int argc, const char *argv[])
 		while (1) {
 			cli();
 			asm volatile("hlt" ::: "memory");
-			printf("wake ");
 		}
-	} else
-		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 0xdeadbeef);
+	}
+
+	local_node->numachip->write32(Numachip2::FABRIC_CTRL, 0xdeadbeef);
+	config->local_node->added = 1;
 
 	nodes = (Node **)zalloc(sizeof(void *) * config->nnodes);
 	assert(nodes);
@@ -273,12 +292,6 @@ int main(const int argc, const char *argv[])
 
 	scan();
 	finalise();
-
-	if (options->boot_wait)
-		lib::wait_key("Press enter to boot");
-
-	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
-	syslinux->exec(options->next_label);
-
-	return 0;
+	finished();
+	return 1;
 }
