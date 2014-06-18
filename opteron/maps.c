@@ -48,7 +48,7 @@ struct reg Opteron::MmioMap::setup(const unsigned range)
 		return reg;
 	}
 
-	fatal("Out of ranges");
+	fatal("No free NB MMIO ranges");
 }
 
 void Opteron::MmioMap::remove(const unsigned range)
@@ -107,10 +107,10 @@ bool Opteron::MmioMap::read(unsigned range, uint64_t *base, uint64_t *limit, ht_
 	assert(range < 12);
 	range -= 8;
 
-	opteron.write32(EXTMMIO_MAP_CTRL, (2 << 28) | range);
-	uint32_t a = opteron.read32(EXTMMIO_MAP_DATA);
 	opteron.write32(EXTMMIO_MAP_CTRL, (3 << 28) | range);
 	uint32_t b = opteron.read32(EXTMMIO_MAP_DATA);
+	opteron.write32(EXTMMIO_MAP_CTRL, (2 << 28) | range);
+	uint32_t a = opteron.read32(EXTMMIO_MAP_DATA);
 
 	/* 128MB granularity is setup earlier */
 	*base = (a & ~0xe00000ff) << (27 - 8);
@@ -277,7 +277,7 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 	assert(poweroftwo(limit - base) + 1);
 	range -= 8;
 
-	/* Reading an uninitialised extended MMIO ranges results in MCE, so can't assert */
+	// reading an uninitialised extended MMIO ranges results in MCE, so can't assert
 
 	// FIXME: Use 2's complement
 	uint64_t mask = 0;
@@ -355,51 +355,17 @@ void Opteron::DramMap::remove(unsigned range)
 	if (options->debug.maps)
 		printf("Deleting NB DRAM range %u on SCI%03x#%x\n", range, opteron.sci, opteron.ht);
 
-	if (family >= 0x15) {
-		assert(range < 12);
+	assert(range < 8);
 
-		int loff = 0, hoff = 0;
-		if (range > 7) {
-			loff = 0xe0;
-			hoff = 0x20;
-		}
-
-		opteron.write32(MMIO_MAP_BASE + loff + range * 8, 0);
-		opteron.write32(MMIO_MAP_LIMIT + loff + range * 8, 0);
-		opteron.write32(MMIO_MAP_HIGH + hoff + range * 4, 0);
-		return;
-	}
-
-	/* Family 10h */
-	if (range < 8) {
-		opteron.write32(MMIO_MAP_LIMIT + range * 8, 0);
-		opteron.write32(MMIO_MAP_BASE + range * 8, 0);
-		return;
-	}
-
-	assert(range < 12);
-	range -= 8;
-
-	opteron.write32(EXTMMIO_MAP_CTRL, (2 << 28) | range);
-	opteron.write32(EXTMMIO_MAP_DATA, 0);
-	opteron.write32(EXTMMIO_MAP_CTRL, (3 << 28) | range);
-	opteron.write32(EXTMMIO_MAP_DATA, 0);
-
-#ifdef NEWWORLD
-	assert(range < ranges);
-	if (options->debug.maps)
-		printf("Deleting NB DRAM range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
-
-	opteron.write32(DRAM_MAP_BASE_LIMIT_HIGH + range * 8, 0);
+	opteron.write32(DRAM_MAP_LIMIT_HIGH + range * 8, 0);
 	opteron.write32(DRAM_MAP_LIMIT + range * 8, 0);
 	opteron.write32(DRAM_MAP_BASE_HIGH + range * 8, 0);
 	opteron.write32(DRAM_MAP_BASE + range * 8, 0);
-#endif
 }
 
 bool Opteron::DramMap::read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest)
 {
-	assert(range < ranges);
+	assert(range < 8);
 
 	uint32_t base_l = opteron.read32(DRAM_MAP_BASE + range * 8);
 	uint32_t limit_l = opteron.read32(DRAM_MAP_LIMIT + range * 8);
@@ -424,7 +390,7 @@ unsigned Opteron::DramMap::unused(void)
 	uint64_t base, limit;
 	ht_t dest;
 
-	for (unsigned range = 0; range < ranges; range++)
+	for (unsigned range = 0; range < 8; range++)
 		if (!read(range, &base, &limit, &dest))
 			return range;
 
@@ -436,7 +402,7 @@ void Opteron::DramMap::print(const unsigned range)
 	uint64_t base, limit;
 	ht_t dest;
 
-	assert(range < ranges);
+	assert(range < 8);
 
 	if (read(range, &base, &limit, &dest))
 		printf("NB DRAM range %u on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
@@ -449,7 +415,7 @@ void Opteron::DramMap::add(const unsigned range, const uint64_t base, const uint
 		printf("Adding NB DRAM range %u on SCI%03x#%d: 0x%012llx:0x%012llx to %d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 
-	assert(range < ranges);
+	assert(range < 8);
 	assert(limit > base);
 	assert((base & 0xffffff) == 0);
 	assert((limit & 0xffffff) == 0xffffff);
