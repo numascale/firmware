@@ -54,6 +54,9 @@
 #define RTC_YEAR        9
 #define RTC_SETTINGS    11
 
+#define PIC_MASTER_IMR          0x21
+#define PIC_SLAVE_IMR           0xa1
+
 namespace lib
 {
 	static inline uint32_t uint32_tbswap(uint32_t val)
@@ -71,7 +74,6 @@ namespace lib
 		asm volatile("rdmsr" : "=d"(val.dw[1]), "=a"(val.dw[0]) : "c"(msr));
 		return val.qw;
 	}
-
 
 	static inline void wrmsr(const msr_t msr, const uint64_t v)
 	{
@@ -102,8 +104,24 @@ namespace lib
 	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
-	uint32_t cht_read32(const ht_t ht, const reg_t reg);
-	uint64_t cht_read64(const ht_t ht, const reg_t reg);
-	void     cht_write32(const ht_t ht, const reg_t reg, const uint32_t val);
-	void     cht_write64(const ht_t ht, const reg_t reg, const uint64_t val);
+
+	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
+	{
+		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
+	static inline uint64_t cht_read64(const ht_t ht, const reg_t reg)
+	{
+		return mcfg_read64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	}
+
+	static inline void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
+	{
+		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
+
+	static inline void cht_write64(const ht_t ht, const reg_t reg, const uint64_t val)
+	{
+		mcfg_write64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	}
 }

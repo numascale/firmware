@@ -171,6 +171,15 @@ namespace lib
 			printf("\n");
 	}
 
+	uint64_t mcfg_base(const sci_t sci)
+	{
+		uint64_t base = (rdmsr(MSR_MCFG_BASE) & ~0xfffff);
+		if (base < (1ULL << 32) || sci == SCI_LOCAL)
+			return base;
+
+		return (base & ~(0xfffULL << 28)) | ((uint64_t)sci << 28);
+	}
+
 	uint8_t mcfg_read8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
 		assert(reg < 0xfff);
@@ -178,7 +187,7 @@ namespace lib
 		uint8_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		ret = mem_read8((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		ret = mem_read8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%02x\n", ret);
 		return ret;
@@ -191,7 +200,7 @@ namespace lib
 		uint16_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		ret = mem_read16((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		ret = mem_read16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%04x\n", ret);
 		return ret;
@@ -204,7 +213,7 @@ namespace lib
 		uint32_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		ret = mem_read32((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		ret = mem_read32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%08x\n", ret);
 		return ret;
@@ -217,7 +226,7 @@ namespace lib
 		uint64_t ret;
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
-		ret = mem_read64((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg));
+		ret = mem_read64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access)
 			printf("%016llx\n", ret);
 		return ret;
@@ -229,7 +238,7 @@ namespace lib
 
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
-		mem_write8((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
+		mem_write8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		sti();
 		if (options->debug.access)
 			printf("\n");
@@ -241,7 +250,7 @@ namespace lib
 
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
-		mem_write16((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
+		mem_write16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
 	}
@@ -252,7 +261,7 @@ namespace lib
 
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
-		mem_write32((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
+		mem_write32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
 	}
@@ -263,28 +272,8 @@ namespace lib
 
 		if (options->debug.access)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
-		mem_write64((rdmsr(MSR_MCFG_BASE) & ~0xfffff) | ((uint64_t)sci << 28) | PCI_MMIO_CONF(bus, dev, func, reg), val);
+		mem_write64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		if (options->debug.access)
 			printf("\n");
-	}
-
-	uint32_t cht_read32(const ht_t ht, const reg_t reg)
-	{
-		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
-	}
-
-	uint64_t cht_read64(const ht_t ht, const reg_t reg)
-	{
-		return mcfg_read64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
-	}
-
-	void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
-	{
-		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
-	}
-
-	void cht_write64(const ht_t ht, const reg_t reg, const uint64_t val)
-	{
-		mcfg_write64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 	}
 }
