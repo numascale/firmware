@@ -151,3 +151,13 @@ bool Syslinux::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 
 	return state.ebx.l > 0;
 }
+
+void Syslinux::cleanup(void)
+{
+	static com32sys_t rm;
+	rm.eax.w[0] = 0x000C;
+	rm.edx.w[0] = 0x0000;
+	printf("Unloading bootloader stack...");
+	__intcall(0x22, &rm, NULL);
+	printf("done\n");
+}

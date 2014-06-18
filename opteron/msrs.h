@@ -18,7 +18,7 @@
 #pragma once
 
 #define MSR_APIC_BAR          0x0000001b
-#define MSR_MC4_MISC0         0x00000413
+#define MSR_MC_CAP            0x00000179
 #define MSR_MTRR_PHYS_BASE0   0x00000200
 #define MSR_MTRR_PHYS_MASK0   0x00000201
 #define MSR_MTRR_PHYS_BASE1   0x00000202
@@ -47,6 +47,14 @@
 #define MSR_MTRR_FIX4K_F0000  0x0000026e
 #define MSR_MTRR_FIX4K_F8000  0x0000026f
 #define MSR_MTRR_DEFAULT      0x000002ff
+#define MSR_MC0_STATUS        0x00000401
+#define MSR_MC1_STATUS        0x00000405
+#define MSR_MC2_STATUS        0x00000409
+#define MSR_MC3_STATUS        0x0000040d
+#define MSR_MC4_STATUS        0x00000411
+#define MSR_MC5_STATUS        0x00000415
+#define MSR_MC6_STATUS        0x00000419
+#define MSR_MC4_MISC0         0x00000413
 #define MSR_FS_BASE           0xc0000100
 #define MSR_MC4_MISC1         0xc0000408
 #define MSR_MC4_MISC2         0xc0000409

@@ -37,6 +37,7 @@ extern "C" {
 #include "platform/config.h"
 #include "platform/acpi.h"
 #include "platform/trampoline.h"
+#include "platform/devices.h"
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 
@@ -49,32 +50,22 @@ Node **nodes;
 ACPI *acpi;
 char *asm_relocated;
 
+static uint64_t dram_top;
+static unsigned nnodes;
+
 static void scan(void)
 {
 	printf("Map scan:\n");
-	uint64_t dram_top = 0;
+	dram_top = 0;
 
 	// setup local DRAM windows
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		(*node)->dram_base = dram_top;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			(*nb)->dram_base = dram_top;
 			dram_top += (*nb)->dram_size;
-
-			uint64_t limit = (*nb)->dram_base + (*nb)->dram_size;
-			(*node)->numachip->drammap.add((*nb)->ht, (*nb)->dram_base, limit - 1, (*nb)->ht);
-
-			if ((*node)->sci != config->master->sci)
-				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
-
-			if (options->tracing)
-				e820->add(limit - options->tracing, options->tracing, E820::RESERVED);
 		}
-
-		// setup Numachip DRAM decoding
-		(*node)->numachip->write32(Numachip2::DRAM_BASE, (*node)->dram_base >> 24);
-		(*node)->numachip->write32(Numachip2::DRAM_LIMIT, (dram_top - 1) >> 24);
 
 		dram_top = roundup(dram_top, 1ULL << Numachip2::SIU_ATT_SHIFT);
 		(*node)->dram_end = dram_top - 1;
@@ -83,50 +74,171 @@ static void scan(void)
 			printf("SCI%03x dram_base=0x%llx dram_size=0x%llx dram_end=%llx\n",
 				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
+}
 
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
-		// route DRAM access in HT fabric
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-			unsigned range = 0;
+static void add(const Node &node)
+{
+	unsigned range;
 
-			for (Opteron **dnb = &(*node)->opterons[0]; dnb < &(*node)->opterons[(*node)->nopterons]; dnb++)
-				(*nb)->drammap.add(range++, (*dnb)->dram_base, (*dnb)->dram_base + (*dnb)->dram_size - 1, (*dnb)->ht);
+	uint64_t vga_base = Opteron::MMIO_VGA_BASE & ~((1 << Numachip2::MMIO32_ATT_SHIFT) - 1);
+	uint64_t vga_limit = Opteron::MMIO_VGA_LIMIT | ((1 << Numachip2::MMIO32_ATT_SHIFT) - 1);
 
-			// add below remote DRAM range
-			if (node > &nodes[0])
-				(*nb)->drammap.add(range++, nodes[0]->dram_base, (*(node - 1))->dram_end, (*node)->numachip->ht);
+	// 7. setup MMIO32 ATT to master
+	node.numachip->mmioatt.range(vga_base, vga_limit, local_node->sci);
+	node.numachip->mmioatt.range(*REL64(msr_topmem), 0xffffffff, local_node->sci);
 
-			if (node < &nodes[config->nnodes - 1])
-				(*nb)->drammap.add(range++, (*(node + 1))->dram_base, dram_top - 1, (*node)->numachip->ht);
+	// 8. forward VGA and MMIO32 regions to master
+	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
+		range = 0;
+		(*nb)->mmiomap.add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
+		(*nb)->mmiomap.add(range++, (uint32_t)*REL64(msr_topmem), 0xffffffff, node.numachip->ht, 0);
 
-			// clear rest of ranges
-			while (range < (*nb)->drammap.ranges)
-				(*nb)->drammap.remove(range++);
+		while (range < 8)
+			(*nb)->mmiomap.remove(range++);
 
-			(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
-			(*nb)->write32(Opteron::DRAM_LIMIT, (dram_top - 1) >> 27);
-		}
-
-		// route DRAM access in fabric
-		for (Node **dnode = &nodes[0]; dnode < &nodes[config->nnodes]; dnode++)
-			(*node)->numachip->dramatt.range(
-			  (*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
+		(*nb)->write32(Opteron::VGA_ENABLE, 0);
+		if ((*nb)->read32(Opteron::VGA_ENABLE))
+			warning_once("Legacy VGA access is locked to local server; some video card BIOSs may cause any X servers to fail to complete initialisation");
 	}
 
-	printf("New DRAM limit %lluGB\n", dram_top >> 30);
-	lib::wrmsr(MSR_TOPMEM2, dram_top);
+	uint32_t memhole = local_node->opterons[0]->read32(Opteron::DRAM_HOLE);
+
+	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
+		// 9. setup DRAM hole
+		(*nb)->write32(Opteron::DRAM_HOLE, memhole & 0xff000002);
+
+		range = 0;
+
+		// 10. add below-node DRAM ranges
+		(*nb)->drammap.add(range++, local_node->opterons[0]->dram_base, node.dram_base - 1, node.numachip->ht);
+
+		// 11. clear remaining entries
+		while (range < 8)
+			(*nb)->drammap.remove(range++);
+	}
+
+	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
+		assertf(!((*nb)->read32(Opteron::MCTL_SEL_LOW) & 1), "Unganged DRAM channels are unsupported");
+
+		// 12. reprogram local range
+		(*nb)->write32(Opteron::DRAM_BASE, (*nb)->dram_base >> 27);
+		(*nb)->write32(Opteron::DRAM_LIMIT, ((*nb)->dram_base + (*nb)->dram_size - 1) >> 27);
+	}
+
+	range = 0;
+
+	// 13. program local DRAM ranges
+	while (range < node.nopterons) {
+		uint64_t base = node.opterons[range]->dram_base;
+		uint64_t limit = base + node.opterons[range]->dram_size - 1;
+
+		node.numachip->drammap.add(range, base, limit, node.opterons[range]->ht);
+
+		for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++)
+			(*nb)->drammap.add(range + 1, base, limit, range);
+
+		range++;
+	}
+
+	// 14. redirect above last local DRAM address to NumaChip
+	if (&node < nodes[nnodes - 1])
+		for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++)
+			(*nb)->drammap.add(range, node.dram_end + 1, dram_top - 1, node.numachip->ht);
+	range++;
+
+	// 15. point IO and config maps to Numachip
+	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
+		(*nb)->write32(Opteron::IO_MAP_LIMIT, 0xfff000 | node.numachip->ht);
+		(*nb)->write32(Opteron::IO_MAP_BASE, 0x3);
+		for (unsigned r = 1; r < 4; r++) {
+			(*nb)->write32(Opteron::IO_MAP_LIMIT + r * 8, 0);
+			(*nb)->write32(Opteron::IO_MAP_BASE + r * 8, 0);
+		}
+
+		(*nb)->write32(Opteron::CONF_MAP, 0xff000003 | (node.numachip->ht << 4));
+		for (unsigned r = 1; r < 4; r++)
+			(*nb)->write32(Opteron::CONF_MAP + r * 4, 0);
+	}
+
+	// 16. set DRAM range on NumaChip
+	node.numachip->write32(Numachip2::DRAM_SHARED_BASE, node.dram_base >> 24);
+	node.numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (node.dram_end - 1) >> 24);
+}
+
+static void setup(void)
+{
+	// 1. setup local NumaChip DRAM ranges
+	unsigned range = 0;
+	for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+		local_node->numachip->drammap.add(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
+
+	// 2. route higher access to NumaChip
+	for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+		(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
+
+	// 3. setup NumaChip DRAM registers
+	local_node->numachip->write32(Numachip2::DRAM_SHARED_BASE, local_node->dram_base >> 24);
+	local_node->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (local_node->dram_end - 1) >> 24);
+
+	// 4. setup DRAM ATT routing
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++)
+			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
+
+	// 5. set top of memory
+	*REL64(msr_topmem) = lib::rdmsr(MSR_TOPMEM);
+	assert(*REL64(msr_topmem) < 0xffffffff);
+	*REL64(msr_topmem2) = dram_top;
+	lib::wrmsr(MSR_TOPMEM2, *REL64(msr_topmem2));
+
+	// 6. add NumaChip MMIO32 ranges
+	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
+	local_node->numachip->mmiomap.add(1, *REL64(msr_topmem), 0xffffffff, local_node->opterons[0]->ioh_ht);
+
+	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
+		add(**node);
+
+	// update e820 map
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+			// master always first in array
+			if (!(node == &nodes[0]))
+				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
+
+			if (options->tracing) {
+				uint64_t base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
+				uint64_t limit = base + options->tracing - 1;
+				assert((base & 0xffffff) == 0);
+				assert((limit & 0xffffff) == 0xffffff);
+
+				// disable DRAM stutter scrub
+				uint32_t val = (*nb)->read32(Opteron::CLK_CTRL_0);
+				(*nb)->write32(Opteron::CLK_CTRL_0, val & ~(1 << 15));
+
+				(*nb)->write32(0x20b8, ((base & ((1ULL << 40) - 1)) >> 24) | (((limit & ((1ULL << 40) - 1)) >> 24) << 16));
+				(*nb)->write32(0x2120, (base >> 40) | ((limit >> 40) << 8));
+				(*nb)->write32(0x20bc, base >> 6);
+				e820->add(base, limit - base + 1, E820::RESERVED);
+			} else {
+				(*nb)->write32(0x20b8, 0);
+				(*nb)->write32(0x2120, 0);
+				(*nb)->write32(0x20bc, 0);
+			}
+			(*nb)->write32(0x20c0, 0);
+		}
+	}
 }
 
 static void finalise(void)
 {
 	printf("Clearing DRAM");
 	// start clearing DRAM
-	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
+	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_start();
 
 	// wait for clear to complete
-	for (Node **node = &nodes[1]; node < &nodes[config->nnodes]; node++)
+	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
 
@@ -136,7 +248,7 @@ static void finalise(void)
 		printf("Enabling scrubbers");
 
 		// enable DRAM scrubbers
-		for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 				(*nb)->dram_scrub_enable();
 
@@ -150,7 +262,7 @@ static void finalise(void)
 	mcfg.append((const char *)&reserved, sizeof(reserved));
 
 	uint16_t segment = 0;
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		struct acpi_mcfg ent = {
 			.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL),
 			.pci_segment = segment++,
@@ -162,12 +274,29 @@ static void finalise(void)
 	}
 
 	acpi->replace(mcfg);
-	acpi->check();
 
+	// cores
+	AcpiTable apic("APIC");
+
+	for (unsigned i = 0; i < acpi->napics; i++) {
+		struct acpi_local_x2apic ent = {
+			.type = 9, .len = 16, .reserved = 0, .x2apic_id = acpi->apics[i], .flags = 1, .proc_uid = 0};
+		apic.append((const char *)&ent, sizeof(ent));
+	}
+
+	acpi->replace(apic);
+
+	AcpiTable slit("SLIT"); // FIXME
+
+	acpi->check();
 	e820->test();
 
-	for (Node **node = &nodes[0]; node < &nodes[config->nnodes]; node++)
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->numachip->fabric_status();
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->check();
 
 	Opteron::restore();
 }
@@ -178,6 +307,7 @@ static void finished(void)
 		lib::wait_key("Press enter to boot");
 
 	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
+	Opteron::restore();
 	syslinux->exec(options->next_label);
 }
 
@@ -208,7 +338,7 @@ int main(const int argc, const char *argv[])
 		config = new Config(options->config_filename);
 
 	e820 = new E820();
-	local_node = new Node();
+	local_node = new Node(config->local_node->sci);
 
 	if (options->init_only) {
 		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
@@ -218,7 +348,7 @@ int main(const int argc, const char *argv[])
 
 	// add global MCFG maps
 	for (unsigned i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(9, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap.add(8, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
 
 	// reserve HT decode and MCFG address range so Linux accepts it
 	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
@@ -228,16 +358,20 @@ int main(const int argc, const char *argv[])
 	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
 	lib::wrmsr(MSR_MCFG_BASE, val6);
 
-	local_node->set_sci(config->local_node->sci);
 	local_node->numachip->fabric_train();
 
-	if (config->local_node->sync_only) {
+	if (!config->local_node->partition) {
 		finished();
 		return 1;
 	}
 
+	nnodes = 0;
+	for (unsigned n = 0; n < config->nnodes; n++)
+		if (config->nodes[n].partition == config->local_node->partition)
+			nnodes++;
+
 	// slaves
-	if (!config->master_local) {
+	if (!config->local_node->master) {
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
 		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 29);
 
@@ -245,52 +379,81 @@ int main(const int argc, const char *argv[])
 		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) != 3 << 29)
 			cpu_relax();
 
-		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
-		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
-		  config->nnodes, config->master->sci, config->master->hostname);
+		syslinux->cleanup();
+		acpi->handover();
+		handover_legacy();
 
 		Opteron::disable_smi();
-		disable_cache();
-		asm volatile("mfence" ::: "memory");
-		cli();
+		disable_dma_all();
+
+		// clear BSP flag
+		uint64_t val = lib::rdmsr(MSR_APIC_BAR);
+		lib::wrmsr(MSR_APIC_BAR, val & ~(1ULL << 8));
+
+		// disable XT-PIC
+		inb(PIC_MASTER_IMR);
+		outb(0xff, PIC_MASTER_IMR);
+		inb(PIC_SLAVE_IMR);
+		outb(0xff, PIC_SLAVE_IMR);
+
+		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
+		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
+		  nnodes, config->master->sci, config->master->hostname);
 
 		// set 'go-ahead'
 		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 7 << 29);
 
+		disable_cache();
+		asm volatile("mfence" ::: "memory");
+
+		// reenable wrap32
+		val = lib::rdmsr(MSR_HWCR);
+		lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
+
 		while (1) {
+#ifdef DEBUG
+			for (unsigned i = 0; i < local_node->nopterons; i++)
+				local_node->opterons[i]->check();
+
+			lib::udelay(1000000);
+			printf("wake ");
+#else
 			cli();
 			asm volatile("hlt" ::: "memory");
+#endif
 		}
 	}
 
 	local_node->numachip->write32(Numachip2::FABRIC_CTRL, 0xdeadbeef);
 	config->local_node->added = 1;
 
-	nodes = (Node **)zalloc(sizeof(void *) * config->nnodes);
+	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
 	assert(nodes);
 	nodes[0] = local_node;
 
-	int left = config->nnodes - 1;
-
 	printf("Servers ready:\n");
 
-	while (left) {
-		for (int n = 0; n < config->nnodes; n++) {
-			// skip initialised nodes
-			if (nodes[n])
+	unsigned pos = 1;
+	do {
+		for (unsigned n = 0; n < config->nnodes; n++) {
+			// skip initialised nodes or nodes in other partitions
+			if (config->nodes[n].added || config->nodes[n].partition != config->local_node->partition)
 				continue;
 
 			ht_t ht = Numachip2::probe(config->nodes[n].sci);
 			if (ht) {
-				nodes[n] = new Node(config->nodes[n].sci, ht);
-				left--;
+				nodes[pos++] = new Node(config->nodes[n].sci, ht);
+				config->nodes[n].added = 1;
 			}
 
 			cpu_relax();
 		}
-	}
+
+		lib::udelay(1000000);
+	} while (pos < nnodes);
 
 	scan();
+	setup();
 	finalise();
 	finished();
 	return 1;

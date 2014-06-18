@@ -213,8 +213,11 @@ E820::E820(void)
 	uint64_t base, length, type;
 	syslinux->memmap_start();
 
-	while (syslinux->memmap_entry(&base, &length, &type))
+	bool last;
+	do {
+		last = syslinux->memmap_entry(&base, &length, &type);
 		add(base, length, type);
+	} while (last);
 
 	printf("BIOS-provided e820 map:\n");
 	dump();
@@ -243,17 +246,24 @@ uint64_t E820::memlimit(void)
 	return limit;
 }
 
+void E820::test_address(const uint64_t addr, const uint64_t val)
+{
+	lib::mem_write64(addr, val);
+	uint64_t val2 = lib::mem_read64(addr);
+
+	if (val2 != val) {
+		test_errors++;
+		warning("Readback of 0x%llx after writing 0x%016llx gives 0x%016llx", addr, val, val2);
+	}
+}
+
 void E820::test_location(const uint64_t addr)
 {
 	uint64_t val = lib::mem_read64(addr);
-	lib::mem_write64(addr, PATTERN);
-	assert(lib::mem_read64(addr) == PATTERN);
-	lib::mem_write64(addr, ~PATTERN);
-	assert(lib::mem_read64(addr) == ~PATTERN);
-	lib::mem_write64(addr, ~0ULL);
-	assert(lib::mem_read64(addr) == ~0ULL);
-	lib::mem_write64(addr, val);
-	assert(lib::mem_read64(addr) == val);
+	test_address(addr, PATTERN);
+	test_address(addr, ~PATTERN);
+	test_address(addr, ~0ULL);
+	test_address(addr, val);
 }
 
 void E820::test_range(const uint64_t start, const uint64_t end)
@@ -266,9 +276,6 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 	uint64_t pos = start;
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
-
-	if (start >= 0x00900000000)
-		options->debug.access = 2;
 
 	printf(" [");
 	while (pos < mid) {
@@ -283,9 +290,6 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 		pos += max(step, STEP_MIN) & ~3;
 	}
 	printf("accessible]");
-
-	if (start >= 0x00900000000)
-		options->debug.access = 0;
 }
 
 void E820::test(void)
@@ -297,16 +301,20 @@ void E820::test(void)
 	syslinux->memmap_start();
 
 	bool left;
+	test_errors = 0;
 
 	do {
 		left = syslinux->memmap_entry(&base, &length, &type);
 		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
-		if (type == RAM)
+		if (type == RAM) {
+			if (base >= 0x900000000)
+				options->debug.access = 2;
 			test_range(base, base + length);
-
-		if (options->tracing)
-			if (type == RESERVED && length == options->tracing)
-				printf(" [tracing]");
+			options->debug.access = 0;
+		}
 		printf("\n");
 	} while (left);
+
+	if (test_errors)
+		warning("%llu errors", test_errors);
 }

@@ -29,6 +29,7 @@ struct e820entry {
 
 class E820 {
 private:
+	uint64_t test_errors;
 	struct e820entry *map;
 	uint16_t *used;
 	static const char *names[6];
@@ -38,6 +39,7 @@ private:
 	void insert(struct e820entry *pos);
 	void remove(struct e820entry *start, struct e820entry *end);
 	bool overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const;
+	void test_address(const uint64_t addr, const uint64_t val);
 	void test_location(const uint64_t addr);
 	void test_range(const uint64_t start, const uint64_t end);
 public:

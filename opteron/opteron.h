@@ -44,8 +44,6 @@ class Opteron {
 
 		unsigned unused(void);
 	public:
-		static const unsigned ranges = 8;
-
 		DramMap(Opteron &_opteron);
 		void remove(const unsigned range);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest);
@@ -68,6 +66,7 @@ public:
 	static const reg_t VENDEV              = 0x0000;
 	static const reg_t ROUTING             = 0x0040;
 	static const reg_t HT_NODE_ID          = 0x0060;
+	static const reg_t UNIT_ID             = 0x0064;
 	static const reg_t LINK_TRANS_CTRL     = 0x0068;
 	static const reg_t LINK_INIT_CTRL      = 0x006c;
 	static const reg_t LINK_CTRL           = 0x0084;
@@ -80,7 +79,11 @@ public:
 	static const reg_t DRAM_MAP_LIMIT      = 0x1044;
 	static const reg_t MMIO_MAP_BASE       = 0x1080;
 	static const reg_t MMIO_MAP_LIMIT      = 0x1084;
+	static const reg_t IO_MAP_BASE         = 0x10c0;
+	static const reg_t IO_MAP_LIMIT        = 0x10c4;
+	static const reg_t CONF_MAP            = 0x10e0;
 	static const reg_t DRAM_HOLE           = 0x10f0;
+	static const reg_t VGA_ENABLE          = 0x10f4;
 	static const reg_t DCT_CONF_SEL        = 0x110c;
 	static const reg_t MMIO_MAP_HIGH       = 0x1180;
 	static const reg_t EXTMMIO_MAP_CTRL    = 0x1110;
@@ -111,13 +114,17 @@ public:
 
 	static const uint64_t HT_BASE          = 0xfd00000000ULL;
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;
+	static const uint32_t MMIO_VGA_BASE    = 0xa0000;
+	static const uint32_t MMIO_VGA_LIMIT   = 0xbffff;
 
 	uint64_t dram_base, dram_size;
 	static int family;
 	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
+	static uint8_t mc_banks;
 	sci_t sci;
 	const ht_t ht;
+	ht_t ioh_ht, ioh_link;
 	unsigned cores;
 	MmioMap mmiomap;
 	DramMap drammap;
@@ -136,9 +143,9 @@ public:
 	static void restore(void);
 	void dram_scrub_disable(void);
 	void dram_scrub_enable(void);
+	void disable_syncflood(const ht_t ht);
 	void init(void);
-	Opteron(const ht_t _ht);
-	Opteron(const sci_t _sci, const ht_t _ht);
+	Opteron(const sci_t _sci, const ht_t _ht, const bool _local);
 	~Opteron(void);
 	static void disable_smi(void);
 	static void enable_smi(void);

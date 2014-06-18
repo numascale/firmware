@@ -27,13 +27,8 @@ class Config {
 		uint32_t partition;
 		char hostname[32];
 		uint8_t mac[6];
-		bool sync_only;
+		bool master;
 		bool added;
-	};
-
-	struct partition {
-		uint32_t master;
-		uint32_t builder;
 	};
 
 	struct node *find(const sci_t sci);
@@ -44,10 +39,8 @@ class Config {
 public:
 	uint32_t size[3];
 
-	bool master_local;
-	unsigned nnodes, npartitions;
-	struct node *local_node, *nodes, *master;
-	struct partition *partition, *partitions;
+	unsigned nnodes;
+	struct node *local_node, *master, *nodes;
 
 	Config(void);
 	Config(const char *filename);

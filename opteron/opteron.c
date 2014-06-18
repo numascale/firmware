@@ -27,11 +27,23 @@
 // approximation before probing
 uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
+uint8_t Opteron::mc_banks;
 int Opteron::family;
 static uint64_t msr_nb_cfg;
 
 void Opteron::check(void)
 {
+#ifdef LOCAL
+	for (unsigned bank = 0; bank < mc_banks; bank++) {
+		const uint32_t msr = MSR_MC0_STATUS + bank * 4;
+		uint64_t val = lib::rdmsr(msr);
+		if (!(val & (1ULL << 63)))
+			continue;
+
+		printf("SCI%03x#%u: MSR%08x=0x%llx\n", sci, ht, msr, val);
+		lib::wrmsr(msr, 0);
+	}
+#endif
 	uint64_t s = read64(MC_NB_STAT);
 	if (s & (1ULL << 63)) {
 		const char *sig[] = {
@@ -80,6 +92,32 @@ void Opteron::check(void)
 		warning("L3 Cache machine check 0x%08x on SCI%03x#%u", v, sci, ht);
 		write32(MC_NB_L3C, 0);
 	}
+}
+
+void Opteron::disable_syncflood(const ht_t nb)
+{
+	warning_once("Disabling sync-flood");
+
+	uint32_t val = lib::cht_read32(nb, MC_NB_CONF);
+	val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
+	val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
+	val |= 1 << 4;     // SyncPktPropDis: sync packet propagation disable
+	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
+	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
+	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
+//	val |= 1 << 8; // disable WDT
+	lib::cht_write32(nb, MC_NB_CONF, val);
+
+	val = lib::cht_read32(nb, MC_NB_CONF_EXT);
+	val &= ~(1 << 1);  // SyncFloodOnUsPwDataErr: sync flood on upstream posted write data error
+	val &= ~(1 << 6);  // SyncFloodOnDatErr
+	val &= ~(1 << 7);  // SyncFloodOnTgtAbtErr
+	val &= ~(1 << 8);  // SyncOnProtEn: sync flood on protocol error enable
+	val &= ~(1 << 9);  // SyncOnUncNbAryEn: sync flood on uncorrectable NB array error enable
+	val &= ~(1 << 20); // SyncFloodOnL3LeakErr: sync flood on L3 cache leak error enable
+	val &= ~(1 << 21); // SyncFloodOnCpuLeakErr: sync flood on CPU leak error enable
+	val &= ~(1 << 22); // SyncFloodOnTblWalkErr: sync flood on table walk error enable
+	lib::cht_write32(nb, MC_NB_CONF_EXT, val);
 }
 
 uint64_t Opteron::read64(const reg_t reg) const
@@ -160,6 +198,9 @@ void Opteron::prepare(void)
 	default:
 		fatal("Unknown IOH");
 	}
+
+	// check number of MCA banks
+	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
 }
 
 void Opteron::restore(void)
@@ -208,33 +249,16 @@ void Opteron::init(void)
 	uint32_t val = read32(PROBEFILTER_CTRL);
 	assertf(val & 3, "NumaChip2 requires Probe Filter to be enabled");
 
+	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
+	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link
+
 	// detect amount of memory
 	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
 
-	if (options->debug.northbridge) {
-		warning_once("Disabling sync-flood");
-		val = read32(MC_NB_CONF);
-		val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
-		val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
-		val |= 1 << 4;     // SyncPktPropDis: sync packet propagation disable
-		val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
-		val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
-		val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-		write32(MC_NB_CONF, val);
-
-		val = read32(MC_NB_CONF_EXT);
-		val &= ~(1 << 1);  // SyncFloodOnUsPwDataErr: sync flood on upstream posted write data error
-		val &= ~(1 << 6);  // SyncFloodOnDatErr
-		val &= ~(1 << 7);  // SyncFloodOnTgtAbtErr
-		val &= ~(1 << 8);  // SyncOnProtEn: sync flood on protocol error enable
-		val &= ~(1 << 9);  // SyncOnUncNbAryEn: sync flood on uncorrectable NB array error enable
-		val &= ~(1 << 20); // SyncFloodOnL3LeakErr: sync flood on L3 cache leak error enable
-		val &= ~(1 << 21); // SyncFloodOnCpuLeakErr: sync flood on CPU leak error enable
-		val &= ~(1 << 22); // SyncFloodOnTblWalkErr: sync flood on table walk error enable
-		write32(MC_NB_CONF_EXT, val);
-	}
+	if (options->debug.northbridge)
+		disable_syncflood(ht);
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
@@ -271,18 +295,13 @@ void Opteron::init(void)
 	dram_scrub_disable();
 }
 
-// remote instantiation
-Opteron::Opteron(const sci_t _sci, const ht_t _ht):
-  local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
+Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
+  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
 {
 	init();
-}
 
-// local instantiation; SCI is set later
-Opteron::Opteron(const ht_t _ht):
-  local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this)
-{
-	init();
+	if (!local)
+		return;
 
 	// enable CF8 extended access; Linux needs this later */
 	uint32_t val = read32(NB_CONF_1H);
@@ -310,6 +329,14 @@ Opteron::Opteron(const ht_t _ht):
 		if (!(val & (1 << 15)))
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
+
+	// disable legacy GARTs
+	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)
+		write32(reg, 0);
+
+	printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
+	for (int range = 0; range < 8; range++)
+		drammap.print(range);
 }
 
 void Opteron::dram_clear_start(void)

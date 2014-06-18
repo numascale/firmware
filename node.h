@@ -32,7 +32,6 @@ public:
 
 	void init(void);
 	void status(void);
-	Node(void);
+	Node(const sci_t _sci);
 	Node(const sci_t _sci, const ht_t ht);
-	void set_sci(const sci_t _sci);
 };

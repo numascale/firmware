@@ -43,35 +43,25 @@ void Node::status(void)
 Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
 {
 	for (ht_t n = 0; n < nopterons; n++)
-		opterons[n] = new Opteron(sci, n);
+		opterons[n] = new Opteron(sci, n, 0);
 
-	numachip = new Numachip2(sci, ht);
+	numachip = new Numachip2(sci, ht, 0);
+
 	init();
 }
 
 // instantiated for local nodes
-Node::Node(void): sci(SCI_LOCAL)
+Node::Node(const sci_t _sci): sci(_sci)
 {
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
-	// set SCI ID later once mapping is setup
-	numachip = new Numachip2(nc);
+	numachip = new Numachip2(sci, nc, 1);
 	nopterons = nc;
 
 	// Opterons are on all HT IDs before Numachip
 	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(nb);
+		opterons[nb] = new Opteron(sci, nb, 1);
 
 	init();
-}
-
-void Node::set_sci(const sci_t _sci)
-{
-	sci = _sci;
-
-	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb]->sci = sci;
-
-	numachip->set_sci(sci);
 }

@@ -91,6 +91,7 @@ class Numachip2 {
 	void selftest(void);
 
 	/* dram.c */
+	void dram_test(const uint32_t shift);
 	void dram_init(void);
 
 	uint8_t next(sci_t src, sci_t dst) const;
@@ -120,8 +121,8 @@ public:
 	static const reg_t MMIO_MAP_LIMIT    = 0x1054;
 	static const reg_t EXTMMIO_MAP_BASE  = 0x1058;
 	static const reg_t EXTMMIO_MAP_LIMIT = 0x105c;
-	static const reg_t DRAM_BASE         = 0x1070;
-	static const reg_t DRAM_LIMIT        = 0x1074;
+	static const reg_t DRAM_SHARED_BASE  = 0x1070;
+	static const reg_t DRAM_SHARED_LIMIT = 0x1074;
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 	static const reg_t PIU_APIC          = 0x1080;
@@ -136,6 +137,8 @@ public:
 	static const reg_t NCACHE_CTRL       = 0x20c0;
 	static const reg_t NCACHE_MCTR_OFFSET= 0x20c4;
 	static const reg_t NCACHE_MCTR_MASK  = 0x20c8;
+	static const reg_t NCACHE_MCTR_ADDR  = 0x20cc;
+	static const reg_t NCACHE_MCTR_DATA  = 0x20d0;
 	static const reg_t MCTL_SIZE         = 0x20;
 	static const reg_t TAG_CTRL          = 0x00;
 	static const reg_t TAG_ADDR_MASK     = 0x04;
@@ -184,14 +187,14 @@ public:
 
 	uint32_t uuid;
 
+	uint64_t read64(const reg_t reg) const;
+	void write64(const reg_t reg, const uint64_t val) const;
 	uint32_t read32(const reg_t reg) const;
 	void write32(const reg_t reg, const uint32_t val) const;
 	uint8_t read8(const reg_t reg) const;
 	void write8(const reg_t reg, const uint8_t val) const;
 	static ht_t probe(const sci_t sci);
-	Numachip2(const sci_t sci, const ht_t _ht); // remote
-	Numachip2(const ht_t _ht); // local
-	void set_sci(const sci_t _sci);
+	Numachip2(const sci_t sci, const ht_t _ht, const bool _local);
 	void fabric_train(void);
 	void fabric_status(void);
 	void fabric_reset(void);

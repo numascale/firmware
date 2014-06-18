@@ -33,6 +33,6 @@ class Fabric {
 	void find(const sci_t src, const sci_t dst, const uint16_t cost, const int offset);
 	void update(const sci_t src, const sci_t dst);
 public:
-	Fabric(const Numachip2 &_numachip);
+	Fabric(Numachip2 &_numachip);
 	void init(void);
 };

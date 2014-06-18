@@ -33,4 +33,9 @@ namespace lib
 	const char *pr_size(uint64_t size);
 	void dump(const void *addr, const unsigned len);
 	void memcpy(void *dst, const void *src, size_t n);
+
+	static inline uint64_t rand64(const uint64_t v)
+	{
+		return (v * 279470273ULL) % 4294967291ULL;
+	}
 }

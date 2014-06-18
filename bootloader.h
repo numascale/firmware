@@ -24,6 +24,7 @@
 #include "platform/syslinux.h"
 #include "platform/options.h"
 #include "platform/e820.h"
+#include "platform/acpi.h"
 #include "library/access.h"
 #include "opteron/opteron.h"
 #include "numachip2/numachip.h"
@@ -41,3 +42,4 @@ extern Numachip2 *numachip;
 extern E820 *e820;
 extern Node *local_node;
 extern Node **nodes;
+extern ACPI *acpi;

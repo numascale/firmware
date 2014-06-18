@@ -24,6 +24,18 @@
 
 const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
 
+uint64_t Numachip2::read64(const reg_t reg) const
+{
+	assert(ht);
+	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
+void Numachip2::write64(const reg_t reg, const uint64_t val) const
+{
+	assert(ht);
+	lib::mcfg_write64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
 uint32_t Numachip2::read32(const reg_t reg) const
 {
 	assert(ht);
@@ -78,25 +90,20 @@ ht_t Numachip2::probe(const sci_t sci)
 	return 0;
 }
 
-// used for remote card
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht):
-  local(0), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local):
+  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
 	assert(ht);
 
-	printf("Waiting for slave to become ready");
-	while (read32(FABRIC_CTRL) != 7U << 29)
-		cpu_relax();
-	printf("\n");
+	if (!local) {
+		printf("Waiting for slave to become ready");
+		while (read32(FABRIC_CTRL) != 7U << 29)
+			cpu_relax();
+		printf("\n");
 
-	fabric_init();
-}
-
-// used for local card
-Numachip2::Numachip2(const ht_t _ht):
-  local(1), sci(SCI_LOCAL), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
-{
-	assert(ht);
+		fabric_init();
+		return;
+	}
 
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_NC2);
@@ -109,13 +116,8 @@ Numachip2::Numachip2(const ht_t _ht):
 	dram_init();
 	fabric_init();
 
-	// 335ms transaction timeout
-	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26));
-}
+	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 
-void Numachip2::set_sci(const sci_t _sci)
-{
 	write32(SIU_NODEID, _sci);
-	sci = _sci;
 	fabric_routing();
 }

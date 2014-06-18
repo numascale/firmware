@@ -38,4 +38,5 @@ public:
 	void exec(const char *label);
 	void memmap_start(void);
 	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
+	void cleanup(void);
 };

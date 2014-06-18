@@ -118,6 +118,7 @@ bool Config::parse_json_str(const json_t *obj, const char *label, char *val, int
 
 void Config::parse_json(json_t *root)
 {
+	uint32_t val;
 	int errors = 0;
 
 	const json_t *fab = json_find_first_label(root, "fabric");
@@ -162,10 +163,10 @@ void Config::parse_json(json_t *root)
 			errors++;
 		}
 
-		if (!parse_json_num(obj, "partition", &nodes[i].partition, 0)) {
-			error("Label <partition> not found in fabric configuration file");
-			errors++;
-		}
+		if (parse_json_num(obj, "partition", &nodes[i].partition, 1))
+			assertf(nodes[i].partition, "Partition 0 is invalid");
+		else
+			nodes[i].partition = 0;
 
 		if (!parse_json_str(obj, "hostname", nodes[i].hostname, sizeof(nodes[i].hostname), 0)) {
 			error("Label <hostname> not found in fabric configuration file");
@@ -184,35 +185,8 @@ void Config::parse_json(json_t *root)
 			}
 		}
 
-		uint32_t val;
-		if (parse_json_num(obj, "sync-only", &val, 1))
-			nodes[i].sync_only = val;
-		else
-			nodes[i].sync_only = 0;
-	}
-
-	list = json_find_first_label(fab->child, "partitions");
-	if (!(list && list->child && list->child->type == JSON_ARRAY)) {
-		error("Label <partitions> not found in fabric configuration file");
-		errors++;
-	}
-
-	for (npartitions = 0, obj = list->child->child; obj; obj = obj->next)
-		npartitions++;
-
-	partitions = (struct partition *)zalloc(npartitions * sizeof(*partitions));
-	assert(partitions);
-
-	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
-		if (!parse_json_num(obj, "master", &partitions[i].master, 0)) {
-			error("Label <master> not found in fabric configuration file");
-			errors++;
-		}
-
-		if (!parse_json_num(obj, "builder", &partitions[i].builder, 0)) {
-			error("Label <builder> not found in fabric configuration file");
-			errors++;
-		}
+		if (parse_json_bool(obj, "master", &val, 1))
+			nodes[i].master = val;
 	}
 
 	if (errors)
@@ -232,18 +206,10 @@ Config::Config(void)
 	nodes->uuid = ::local_node->numachip->uuid;
 	nodes->sci = 0;
 	nodes->partition = 0;
+	nodes->master = 1;
 	strcpy(nodes->hostname, "self");
-	nodes->sync_only = 1;
-	npartitions = 1;
-	partitions = (struct partition *)zalloc(sizeof(*partitions));
-	assert(partitions);
-	partitions->master = 0;
-	partitions->builder = 0;
 
 	local_node = nodes;
-	master = local_node;
-	master_local = 1;
-	partition = partitions;
 }
 
 struct Config::node *Config::find(const sci_t sci)
@@ -283,13 +249,12 @@ Config::Config(const char *filename)
 			if (nodes[i].uuid != 0xffffffff)
 				printf("UUID %08X, ", nodes[i].uuid);
 
-			printf("SCI%03x, partition %d, sync-only %d\n",
-		      nodes[i].sci, nodes[i].partition, nodes[i].sync_only);
+			printf("SCI%03x, ", nodes[i].sci);
+			if (nodes[i].partition)
+				printf("partition %u\n", nodes[i].partition);
+			else
+				printf("observer\n");
 		}
-
-		for (unsigned i = 0; i < npartitions; i++)
-			printf("Partition %d: master SCI%03x, builder SCI%03x\n",
-		      i, partitions[i].master, partitions[i].builder);
 	}
 
 	/* Locate UUID or hostname */
@@ -297,7 +262,7 @@ Config::Config(const char *filename)
 #ifdef FIXME /* Uncomment when Numachip EEPROM has UUID */
 		if (local_node->numachip->uuid == nodes[i].uuid) {
 			if (options->debug.config)
-				printf("UUID matches node %d", i);
+				printf("UUID matches node %u", i);
 			node = &nodes[i];
 			break;
 		}
@@ -305,14 +270,14 @@ Config::Config(const char *filename)
 
 		if (!memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac))) {
 			if (options->debug.config)
-				printf("MAC matches node %d", i);
+				printf("MAC matches node %u", i);
 			local_node = &nodes[i];
 			break;
 		}
 
 		if (!strcmp(syslinux->hostname, nodes[i].hostname)) {
 			if (options->debug.config)
-				printf("Hostname matches node %d", i);
+				printf("Hostname matches node %u", i);
 			local_node = &nodes[i];
 			break;
 		}
@@ -320,11 +285,32 @@ Config::Config(const char *filename)
 
 	assertf(local_node, "Failed to find entry matching this node with UUID, MAC address or hostname");
 
-	partition = &partitions[local_node->partition];
-	master = find(partition->master);
-	master_local = local_node == master;
-	printf("; partition %d; %s\n", local_node->partition, master_local ? "master" : "slave");
+	// ensure master occurs 0 or 1 times in this partition
+	unsigned count = 0;
 
-	partition = &partitions[local_node->partition];
+	for (unsigned i = 0; i < nnodes; i++) {
+		if (local_node->partition == nodes[i].partition && nodes[i].master) {
+			master = &nodes[i];
+			count++;
+		}
+	}
+
+	assertf(count <= 1, "More than one node specified as master in partition %u", local_node->partition);
+
+	// if not specfied, select first node in this partition as master
+	if (count == 0) {
+		for (unsigned i = 0; i < nnodes; i++) {
+			if (local_node->partition == nodes[i].partition) {
+				nodes[i].master = 1;
+				master = &nodes[i];
+				break;
+			}
+		}
+	}
+
+	if (local_node->partition)
+		printf("; partition %u", local_node->partition);
+	else
+		printf("; observer");
+	printf("; SCI%03x; %s\n", local_node->sci, local_node->master ? "master" : "slave");
 }
-
