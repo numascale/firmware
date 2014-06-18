@@ -19,8 +19,7 @@ upload: bootloader.c32
 
 .PHONY: reset
 reset:
-	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop-35-ipmi chassis power cycle
-	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop-36-ipmi chassis power cycle
+	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop333536-ipmi chassis power cycle
 
 .PHONY: check
 check:
@@ -85,7 +84,7 @@ $(mjson_dir)/src/json.o: $(mjson_dir)/src/json.c
 version.h: library/access.h platform/acpi.h bootloader.h library/access.c bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
-bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o library/utils.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o platform/syslinux.o platform/e820.o platform/trampoline.o $(mjson_dir)/src/json.o $(COM32DEPS)
+bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o platform/acpi.o platform/smbios.o platform/options.o library/access.o library/utils.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o platform/syslinux.o platform/e820.o platform/trampoline.o platform/devices.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
 bootloader.o: bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
@@ -106,6 +105,7 @@ platform/smbios.o: platform/smbios.c bootloader.h
 platform/syslinux.o: platform/syslinux.c platform/syslinux.h
 platform/config.o: platform/config.c platform/config.h
 platform/e820.o: platform/e820.c platform/e820.h
+platform/devices.o: platform/devices.c platform/devices.h
 
 library/access.o: library/access.c library/access.h
 library/utils.o: library/utils.h
