@@ -19,8 +19,38 @@
 #include "../bootloader.h"
 #include "../library/utils.h"
 
+void Numachip2::dram_test(const uint32_t shift)
+{
+	write32(NCACHE_CTRL, 1 << 9);
+
+	const uint32_t blksize = 8 << 20;
+
+	printf("Testing:");
+
+	for (uint64_t blk = 0; blk < (1ULL << shift); blk += blksize) {
+		printf(" %lluMB", blk >> 20);
+		for (uint64_t n = 0; n < blksize; n += 64) {
+			write64(NCACHE_MCTR_ADDR, blk + n);
+			write64(NCACHE_MCTR_DATA, lib::rand64((blk + n) / 64));
+		}
+
+		for (uint64_t n = 0; n < blksize; n += 64) {
+			write64(NCACHE_MCTR_ADDR, blk + n);
+			uint64_t val = read64(NCACHE_MCTR_DATA);
+			assertf(read64(NCACHE_MCTR_DATA) == lib::rand64((blk + n) / 64),
+			  "Readback of 0x%llx gives 0x%llx; should be 0x%llx",
+			  blk + n, val, lib::rand64((blk + n) / 64));
+		}
+
+		printf("<%x>", read32(NCACHE_CTRL));
+	}
+
+	write32(NCACHE_CTRL, 0);
+}
+
 void Numachip2::dram_init(void)
 {
+	printf("DRAM init: ");
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
@@ -31,6 +61,50 @@ void Numachip2::dram_init(void)
 	const uint64_t total = 1ULL << total_shift; // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
+	printf("%dGB DIMM", 1 << (total_shift - 30));
+
+	// wait for phy init done; shared among all ports
+	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 6)))
+		cpu_relax();
+
+	// wait for memory init done
+	write32(MTAG_BASE + TAG_CTRL, ((total_shift - 30) << 3) | 1);
+	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
+		cpu_relax();
+
+	switch (total) {
+	case 4ULL << 30:
+		// 0-1024MB nCache; 1024-1152MB CTag; 1152-2048MB unused; 2048-4096MB MTag
+		write32(CTAG_BASE + TAG_ADDR_MASK, 0);
+		write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);
+		write32(CTAG_BASE + TAG_MCTR_OFFSET, 0x800);
+		write32(CTAG_BASE + TAG_MCTR_MASK, 0xff);
+		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
+		write32(MTAG_BASE + TAG_MCTR_MASK, 0xfff);
+		write32(NCACHE_MCTR_OFFSET, 0);
+		write32(NCACHE_MCTR_MASK, 0x7ff);
+		break;
+	case 8ULL << 30:
+		// 0-2048MB nCache; 2048-2304MB CTag; 2304-4096MB unused; 4096-8192MB MTag
+		write32(CTAG_BASE + TAG_ADDR_MASK, 1);
+		write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);
+		write32(CTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
+		write32(CTAG_BASE + TAG_MCTR_MASK, 0x1ff);
+		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x2000);
+		write32(MTAG_BASE + TAG_MCTR_MASK, 0x1fff);
+		write32(NCACHE_MCTR_OFFSET, 0);
+		write32(NCACHE_MCTR_MASK, 0xfff);
+		break;
+	default:
+		error("Unexpected Numachip2 DIMM size of %lluMB", total);
+	}
+
+	uint32_t val = read32(MTAG_BASE + TAG_CTRL);
+	assertf(!(val & (1 << 8)), "Uncorrectable ECC errors detected on NumaConnect DIMM");
+	if (val & (1 << 7))
+		warning("Correctable ECC errors detected on NumaConnect DIMM");
+
+#ifdef BROKEN
 	uint64_t ncache = 1ULL << 30; /* Minimum */
 	uint64_t ctag = ncache >> 3;
 	/* Round up to mask constraints to allow manipulation */
@@ -71,10 +145,11 @@ void Numachip2::dram_init(void)
 
 	for (int port = 0; port < 2; port++)
 		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
-		  ((total_shift - 30) << 3) | (1 << 2) | 1);
+		  ((total_shift - 30) << 3) | 1);
 
 	const char *mctls[] = {"MTag", "CTag"};
 	const uint64_t part[] = {mtag >> 20, ctag >> 20};
+
 
 	/* FIXME: add NCache back in when implemented */
 	for (int port = 0; port < 2; port++) {
@@ -86,6 +161,7 @@ void Numachip2::dram_init(void)
 			val = read32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL);
 		} while ((val & 0x42) != 0x42);
 	}
+#endif
 
 	printf("\n");
 }
