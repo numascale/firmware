@@ -134,7 +134,7 @@ public:
 	void check(void);
 	uint64_t read64(const reg_t reg) const;
 	uint32_t read32(const reg_t reg) const;
-	void write64(const reg_t reg, const uint64_t val) const;
+	void write64_split(const reg_t reg, const uint64_t val) const;
 	void write32(const reg_t reg, const uint32_t val) const;
 	void set32(const reg_t reg, const uint32_t mask) const;
 	void clear32(const reg_t reg, const uint32_t mask) const;

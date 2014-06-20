@@ -69,105 +69,105 @@ namespace lib
 
 	uint8_t mem_read8(const uint64_t addr)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx -> ", addr);
 		uint8_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("movb %%fs:(0), %%al" : "=a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("0x%02x\n", val);
 		return val;
 	}
 
 	uint16_t mem_read16(const uint64_t addr)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx -> ", addr);
 		uint16_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("movw %%fs:(0), %%ax" : "=a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("0x%04x\n", val);
 		return val;
 	}
 
 	uint32_t mem_read32(const uint64_t addr)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx -> ", addr);
 		uint32_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("mov %%fs:(0), %%eax" : "=a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("0x%08x\n", val);
 		return val;
 	}
 
 	uint64_t mem_read64(const uint64_t addr)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx -> ", addr);
 		uint64_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&val) :"memory");
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("0x%016llx\n", val);
 		return val;
 	}
 
 	void mem_write8(const uint64_t addr, const uint8_t val)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx <- 0x%02x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movb %0, %%fs:(0)" :: "a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("\n");
 	}
 
 	void mem_write16(const uint64_t addr, const uint16_t val)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx <- 0x%04x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("\n");
 	}
 
 	void mem_write32(const uint64_t addr, const uint32_t val)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx <- 0x%08x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("\n");
 	}
 
 	void mem_write64(const uint64_t addr, const uint64_t val)
 	{
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("MEM:0x%016llx <- 0x%016llx", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
 		sti();
-		if (options->debug.access > 1)
+		if (options->debug.access & 2)
 			printf("\n");
 	}
 
@@ -185,10 +185,10 @@ namespace lib
 		assert(reg < 0xfff);
 
 		uint8_t ret;
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		ret = mem_read8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("%02x\n", ret);
 		return ret;
 	}
@@ -198,10 +198,10 @@ namespace lib
 		assert(reg < 0xfff);
 
 		uint16_t ret;
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		ret = mem_read16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("%04x\n", ret);
 		return ret;
 	}
@@ -211,23 +211,24 @@ namespace lib
 		assert(reg < 0xfff);
 
 		uint32_t ret;
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		ret = mem_read32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("%08x\n", ret);
 		return ret;
 	}
 
+	// requires CU_CFG2[50] to be set
 	uint64_t mcfg_read64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
 		assert(reg < 0xfff);
 
 		uint64_t ret;
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		ret = mem_read64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("%016llx\n", ret);
 		return ret;
 	}
@@ -236,11 +237,11 @@ namespace lib
 	{
 		assert(reg < 0xfff);
 
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
 		mem_write8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
 		sti();
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("\n");
 	}
 
@@ -248,10 +249,10 @@ namespace lib
 	{
 		assert(reg < 0xfff);
 
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
 		mem_write16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("\n");
 	}
 
@@ -259,21 +260,23 @@ namespace lib
 	{
 		assert(reg < 0xfff);
 
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		mem_write32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("\n");
 	}
 
-	void mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
+	void mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
 	{
 		assert(reg < 0xfff);
 
-		if (options->debug.access)
+		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
-		mem_write64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
-		if (options->debug.access)
+		const uint64_t addr = mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg);
+		mem_write32(addr, val);
+		mem_write32(addr + 4, val >> 32);
+		if (options->debug.access & 1)
 			printf("\n");
 	}
 }

@@ -30,10 +30,10 @@ uint64_t Numachip2::read64(const reg_t reg) const
 	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Numachip2::write64(const reg_t reg, const uint64_t val) const
+void Numachip2::write64_split(const reg_t reg, const uint64_t val) const
 {
 	assert(ht);
-	lib::mcfg_write64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write64_split(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint32_t Numachip2::read32(const reg_t reg) const

@@ -71,8 +71,8 @@ void Opteron::check(void)
 		if ((s >> 58) & 1) // AddrV
 			printf(" Address=0x%016llx", read64(MC_NB_ADDR));
 
-		write64(MC_NB_ADDR, 0);
-		write64(MC_NB_STAT, 0);
+		write64_split(MC_NB_ADDR, 0);
+		write64_split(MC_NB_STAT, 0);
 	}
 
 	uint32_t v = read32(MC_NB_DRAM);
@@ -130,9 +130,9 @@ uint32_t Opteron::read32(const reg_t reg) const
 	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
-void Opteron::write64(const reg_t reg, const uint64_t val) const
+void Opteron::write64_split(const reg_t reg, const uint64_t val) const
 {
-	lib::mcfg_write64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write64_split(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Opteron::write32(const reg_t reg, const uint32_t val) const
@@ -229,7 +229,7 @@ void Opteron::dram_scrub_disable(void)
 void Opteron::dram_scrub_enable(void)
 {
 	uint32_t redir = read32(SCRUB_ADDR_LOW) & 1;
-	write64(SCRUB_ADDR_LOW, dram_base | redir);
+	write64_split(SCRUB_ADDR_LOW, dram_base | redir);
 
 	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;

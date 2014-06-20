@@ -188,7 +188,7 @@ public:
 	uint32_t uuid;
 
 	uint64_t read64(const reg_t reg) const;
-	void write64(const reg_t reg, const uint64_t val) const;
+	void write64_split(const reg_t reg, const uint64_t val) const;
 	uint32_t read32(const reg_t reg) const;
 	void write32(const reg_t reg, const uint32_t val) const;
 	uint8_t read8(const reg_t reg) const;
