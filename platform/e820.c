@@ -268,11 +268,11 @@ void E820::test_location(const uint64_t addr)
 
 void E820::test_range(const uint64_t start, const uint64_t end)
 {
-	// memory under 4GB is actively used
-	if (start < 4ULL << 30)
+	// memory on the first northbridge is actively used
+	if (start < 0x000428000000) // FIXME
 		return;
 
-	const unsigned STEP_MIN = 64, STEP_MAX = 1024 << 20; // FIXME: put back to 4MB
+	const unsigned STEP_MIN = 64, STEP_MAX = 4 << 20;
 	uint64_t pos = start;
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
@@ -280,14 +280,14 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 	printf(" [");
 	while (pos < mid) {
 		test_location(pos);
-		pos = (pos + step) & ~3;
+		pos = (pos + step) & ~7;
 		step = min(step << 1, STEP_MAX);
 	}
 
 	while (pos < end) {
 		test_location(pos);
 		step = min((end - pos) / 2, STEP_MAX);
-		pos += max(step, STEP_MIN) & ~3;
+		pos += max(step, STEP_MIN) & ~7;
 	}
 	printf("accessible]");
 }
@@ -306,12 +306,8 @@ void E820::test(void)
 	do {
 		left = syslinux->memmap_entry(&base, &length, &type);
 		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
-		if (type == RAM) {
-			if (base >= 0x900000000)
-				options->debug.access = 2;
+		if (type == RAM)
 			test_range(base, base + length);
-			options->debug.access = 0;
-		}
 		printf("\n");
 	} while (left);
 
