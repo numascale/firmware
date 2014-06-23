@@ -24,29 +24,29 @@
 #include "../bootloader.h"
 #include "devices.h"
 
-void pci_search(const struct devspec *list, const int bus)
+void pci_search(const sci_t sci, const struct devspec *list, const int bus)
 {
 	const struct devspec *listp;
 
 	for (int dev = 0; dev < (bus == 0 ? 24 : 32); dev++) {
 		for (int fn = 0; fn < 8; fn++) {
-			uint32_t val = lib::mcfg_read32(SCI_LOCAL, bus, dev, fn, 0xc);
+			uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0xc);
 			/* PCI device functions are not necessarily contiguous */
 			if (val == 0xffffffff)
 				continue;
 
 			uint8_t type = val >> 16;
-			uint32_t ctlcap = lib::mcfg_read32(SCI_LOCAL, bus, dev, fn, 8);
+			uint32_t ctlcap = lib::mcfg_read32(sci, bus, dev, fn, 8);
 
 			for (listp = list; listp->classtype != PCI_CLASS_FINAL; listp++)
 				if ((listp->classtype == PCI_CLASS_ANY) || ((ctlcap >> ((4 - listp->classlen) * 8)) == listp->classtype))
 					if ((listp->type == PCI_TYPE_ANY) || (listp->type == (type & 0x7f)))
-						listp->handler(SCI_LOCAL, bus, dev, fn);
+						listp->handler(sci, bus, dev, fn);
 
 			/* Recurse down bridges */
 			if ((type & 0x7f) == 0x01) {
-				int sec = (lib::mcfg_read32(SCI_LOCAL, bus, dev, fn, 0x18) >> 8) & 0xff;
-				pci_search(list, sec);
+				int sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				pci_search(sci, list, sec);
 			}
 
 			/* If not multi-function, break out of function loop */
@@ -56,15 +56,15 @@ void pci_search(const struct devspec *list, const int bus)
 	}
 }
 
-static void pci_search_start(const struct devspec *list)
+static void pci_search_start(const sci_t sci, const struct devspec *list)
 {
-	pci_search(list, 0);
+	pci_search(sci, list, 0);
 }
 
-void disable_kvm_ports(const int port) {
+void disable_kvm_ports(const sci_t sci, const unsigned port) {
 	/* Disable AMI Virtual Keyboard and Mouse ports, since they generate a lot of interrupts */
-	uint32_t val = lib::mcfg_read32(SCI_LOCAL, 0, 19, 0, 0x40);
-	lib::mcfg_write32(SCI_LOCAL, 0, 19, 0, 0x40, val | (1 << (port + 16)));
+	uint32_t val = lib::mcfg_read32(sci, 0, 19, 0, 0x40);
+	lib::mcfg_write32(sci, 0, 19, 0, 0x40, val | (1 << (port + 16)));
 }
 
 void disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
@@ -83,16 +83,16 @@ void disable_device(const uint16_t sci, const int bus, const int dev, const int 
 	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
 }
 
-void disable_dma_all(void)
+void disable_dma_all(const sci_t sci)
 {
 	const struct devspec devices[] = {
 		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, disable_device},
 		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
 	};
-	pci_search_start(devices);
+	pci_search_start(sci, devices);
 }
 
-static uint16_t capability(const uint8_t cap, const sci_t sci, const int bus, const int dev, const int fn)
+static uint16_t capability(const sci_t sci, const int bus, const int dev, const int fn, const uint8_t cap)
 {
 	/* Check for capability list */
 	if (!(lib::mcfg_read32(sci, bus, dev, fn, 0x4) & (1 << 20)))
@@ -116,7 +116,7 @@ static uint16_t capability(const uint8_t cap, const sci_t sci, const int bus, co
 	return PCI_CAP_NONE;
 }
 
-uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const int dev, const int fn)
+static uint16_t extcapability(const sci_t sci, const int bus, const int dev, const int fn, const uint16_t cap)
 {
 	uint8_t visited[0x1000];
 	uint16_t offset = 0x100;
@@ -137,12 +137,12 @@ uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const
 	return PCI_CAP_NONE;
 }
 
-static void completion_timeout(const uint16_t sci, const int bus, const int dev, const int fn)
+static void completion_timeout(const sci_t sci, const int bus, const int dev, const int fn)
 {
 	uint32_t val;
 	printf("PCI device @ %02x:%02x.%x: ", bus, dev, fn);
 
-	uint16_t cap = capability(PCI_CAP_PCIE, sci, bus, dev, fn);
+	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_PCIE);
 	if (cap != PCI_CAP_NONE) {
 		/* Device Control */
 		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x8);
@@ -196,7 +196,7 @@ static void completion_timeout(const uint16_t sci, const int bus, const int dev,
 		printf("disabled SERR");
 	}
 
-	cap = extcapability(PCI_ECAP_AER, sci, bus, dev, fn);
+	cap = extcapability(sci, bus, dev, fn, PCI_ECAP_AER);
 	if (cap != PCI_CAP_NONE) {
 		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x0c);
 		if (val & (1 << 14)) {
@@ -399,7 +399,7 @@ static void stop_ahci(const uint16_t sci, const int bus, const int dev, const in
 	printf("legacy handover timed out\n");
 }
 
-void handover_legacy(void)
+void handover_legacy(const sci_t sci)
 {
 	const struct devspec devices[] = {
 		{PCI_CLASS_SERIAL_USB_OHCI, 3, PCI_TYPE_ENDPOINT, stop_ohci},
@@ -409,10 +409,10 @@ void handover_legacy(void)
 		{PCI_CLASS_STORAGE_RAID,    2, PCI_TYPE_ENDPOINT, stop_ahci},
 		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
 	};
-	pci_search_start(devices);
+	pci_search_start(sci, devices);
 }
 
-void pci_setup(void)
+void pci_setup(const sci_t sci)
 {
 	const struct devspec devices[] = {
 		{PCI_CLASS_ANY,             0, PCI_TYPE_ANY, completion_timeout},
@@ -420,6 +420,6 @@ void pci_setup(void)
 	};
 
 	printf("Adjusting PCI parameters:\n");
-	pci_search_start(devices);
+	pci_search_start(sci, devices);
 }
 

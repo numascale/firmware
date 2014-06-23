@@ -101,11 +101,10 @@ struct devspec {
 	void (*handler)(const uint16_t, const int, const int, const int);
 };
 
-void pci_search(const struct devspec *list, const int bus);
-void stop_acpi(void);
-void disable_kvm_ports(const int port);
-void disable_dma_all(void);
-void handover_legacy(void);
-void pci_setup(void);
+void pci_search(const sci_t sci, const struct devspec *list, const int bus);
+void stop_acpi(const sci_t sci);
+void disable_kvm_ports(const sci_t sci, const int port);
+void disable_dma_all(const sci_t sci);
+void handover_legacy(const sci_t sci);
+void pci_setup(const sci_t sci);
 void disable_device(const uint16_t sci, const int bus, const int dev, const int fn);
-checked uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const int dev, const int fn);
