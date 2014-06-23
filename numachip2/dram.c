@@ -19,33 +19,76 @@
 #include "../bootloader.h"
 #include "../library/utils.h"
 
-void Numachip2::dram_test(const uint32_t shift)
+void Numachip2::dram_status(void)
 {
-	write32(NCACHE_CTRL, 1 << 9);
+	assert(!(read32(NCACHE_CTRL) & (3 << 7)));
+}
 
-	const uint32_t blksize = 8 << 20;
+void Numachip2::dram_test(void)
+{
+	write32(NCACHE_CTRL, 3 << 9);
 
-	printf("Testing:");
+	printf("Writing:");
+	write32(NCACHE_MCTR_ADDR, 0);
 
-	for (uint64_t blk = 0; blk < (1ULL << shift); blk += blksize) {
-		printf(" %lluMB", blk >> 20);
-		for (uint64_t n = 0; n < blksize; n += 64) {
-			write64(NCACHE_MCTR_ADDR, blk + n);
-			write64(NCACHE_MCTR_DATA, lib::rand64((blk + n) / 64));
-		}
+	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
+		if (!(qw % 0x100000))
+			printf(" %llu", qw >> (20 - 3));
 
-		for (uint64_t n = 0; n < blksize; n += 64) {
-			write64(NCACHE_MCTR_ADDR, blk + n);
-			uint64_t val = read64(NCACHE_MCTR_DATA);
-			assertf(read64(NCACHE_MCTR_DATA) == lib::rand64((blk + n) / 64),
-			  "Readback of 0x%llx gives 0x%llx; should be 0x%llx",
-			  blk + n, val, lib::rand64((blk + n) / 64));
-		}
+		write64_split(NCACHE_MCTR_DATA, lib::hash64(qw));
+	}
+	printf("\n");
 
-		printf("<%x>", read32(NCACHE_CTRL));
+	printf("Readback:");
+	write32(NCACHE_MCTR_ADDR, 0);
+
+	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
+		if (!(qw % 0x100000))
+			printf(" %llu", qw >> (20 - 3));
+
+		assert(read64(NCACHE_MCTR_DATA) == lib::hash64(qw));
 	}
 
 	write32(NCACHE_CTRL, 0);
+	printf("\n");
+}
+
+void Numachip2::dram_clear(void)
+{
+	printf("Clearing:");
+	write32(NCACHE_CTRL, 1 << 9);
+
+	// prepare block
+	for (unsigned qw = 0; qw < 8; qw++) {
+		write32(NCACHE_MCTR_ADDR, qw);
+		write64_split(NCACHE_MCTR_DATA, 0);
+	}
+
+	for (uint64_t blk = 0; blk < (1ULL << (dram_total_shift - 6)); blk++) {
+		write32(NCACHE_MCTR_ADDR, (blk << (6 - 3)) | 7);
+		write32(NCACHE_MCTR_DATA + 4, 0);
+	}
+
+	write32(NCACHE_CTRL, 0);
+	printf("\n");
+}
+
+void Numachip2::dram_verify(void)
+{
+	printf("Verifying:");
+	write32(NCACHE_CTRL, 3 << 9);
+	write32(NCACHE_MCTR_ADDR, 0);
+
+	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
+		if (!(qw % 0x100000))
+			printf(" %llu", qw >> (20 - 3));
+
+		uint64_t val = read64(NCACHE_MCTR_DATA);
+		assertf(!val, "Address 0x%llx contains 0x%llx", qw, val);
+	}
+
+	write32(NCACHE_CTRL, 0);
+	printf("\n");
 }
 
 void Numachip2::dram_init(void)
@@ -57,18 +100,22 @@ void Numachip2::dram_init(void)
 	const uint32_t density_shift = ((spd_eeprom.density_banks & 0xf) + 25);
 	const uint32_t ranks_shift = (spd_eeprom.organization >> 3) & 0x7;
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
-	const uint32_t total_shift = density_shift + ranks_shift + devices_shift;
-	const uint64_t total = 1ULL << total_shift; // bytes
+	dram_total_shift = density_shift + ranks_shift + devices_shift;
+	const uint64_t total = 1ULL << dram_total_shift; // bytes
 	const uint64_t hosttotal = e820->memlimit();
 
-	printf("%dGB DIMM", 1 << (total_shift - 30));
+	printf("%uGB DIMM", 1 << (dram_total_shift - 30));
 
 	// wait for phy init done; shared among all ports
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 6)))
 		cpu_relax();
 
+	write32(MTAG_BASE + TAG_CTRL, 0);
+	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0);
+	write32(MTAG_BASE + TAG_MCTR_MASK, ~0);
+	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
+
 	// wait for memory init done
-	write32(MTAG_BASE + TAG_CTRL, ((total_shift - 30) << 3) | 1);
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
 		cpu_relax();
 
