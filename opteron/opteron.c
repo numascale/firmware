@@ -105,7 +105,7 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
 	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
 	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-//	val |= 1 << 8; // disable WDT
+	val |= 1 << 8; // disable WDT
 	lib::cht_write32(nb, MC_NB_CONF, val);
 
 	val = lib::cht_read32(nb, MC_NB_CONF_EXT);

@@ -165,7 +165,7 @@ static void add(const Node &node)
 	node.numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (node.dram_end - 1) >> 24);
 }
 
-static void setup(void)
+static void remap(void)
 {
 	// 1. setup local NumaChip DRAM ranges
 	unsigned range = 0;
@@ -227,35 +227,21 @@ static void setup(void)
 			(*nb)->write32(0x20c0, 0);
 		}
 	}
+
+	// setup IOH limits
+#ifdef FIXME /* hangs on remote node */
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->iohub->limits(dram_top - 1);
+#else
+	local_node->iohub->limits(dram_top - 1);
+#endif
+
+	handover_legacy(local_node->sci);
 }
 
-static void finalise(void)
+static void acpi_tables(void)
 {
-	printf("Clearing DRAM");
-	// start clearing DRAM
-	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->dram_clear_start();
-
-	// wait for clear to complete
-	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->dram_clear_wait();
-
-	printf("\n");
-
-	if (!options->tracing) {
-		printf("Enabling scrubbers");
-
-		// enable DRAM scrubbers
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-				(*nb)->dram_scrub_enable();
-
-		printf("\n");
-	}
-
-	AcpiTable mcfg("MCFG");
+	AcpiTable mcfg("MCFG", 1);
 
 	// MCFG 'reserved field'
 	const uint64_t reserved = 0;
@@ -276,7 +262,7 @@ static void finalise(void)
 	acpi->replace(mcfg);
 
 	// cores
-	AcpiTable apic("APIC");
+	AcpiTable apic("APIC", 3);
 
 	for (unsigned i = 0; i < acpi->napics; i++) {
 		struct acpi_local_x2apic ent = {
@@ -286,13 +272,93 @@ static void finalise(void)
 
 	acpi->replace(apic);
 
-	AcpiTable slit("SLIT"); // FIXME
+	const acpi_sdt *oslit = acpi->find_sdt("SLIT");
+	uint8_t *odist = NULL;
+	if (oslit) {
+		odist = (uint8_t *)&(oslit->data[8]);
+		assert(odist[0] <= 13);
+	}
+
+	AcpiTable slit("SLIT", 1);
+
+	// number of localities
+	uint64_t *n = (uint64_t *)slit.reserve(8);
+	*n = 0;
+
+	printf("Topology distances:\n    ");
+	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
+		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
+			printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
+	printf("\n");
+
+	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
+		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
+			printf("%3u", 000); // FIXME
+
+			for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
+				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
+					uint8_t dist;
+					if (*snode == *dnode) {
+						if (*snb == *dnb)
+							dist = 10;
+						else
+							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
+					} else
+						dist = 160;
+
+					printf(" %3u", dist);
+					slit.append((const char *)&dist, sizeof(dist));
+				}
+			}
+			printf("\n");
+			(*n)++;
+		}
+	}
+
+	acpi->replace(slit);
+	acpi->dump(acpi->find_sdt("SLIT"));
 
 	acpi->check();
-	e820->test();
+}
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+static void finalise(void)
+{
+	printf("Clearing DRAM");
+
+	// start clearing DRAM
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned start = node == nodes ? 1 : 0;
+		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_start();
+	}
+
+	// wait for clear to complete
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned start = node == nodes ? 1 : 0;
+		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_wait();
+	}
+
+	printf("\n");
+
+	if (!options->tracing) {
+		printf("Enabling scrubbers");
+
+		// enable DRAM scrubbers
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+				(*nb)->dram_scrub_enable();
+
+		printf("\n");
+	}
+
+	e820->test();
+	acpi_tables();
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		(*node)->numachip->fabric_status();
+		(*node)->numachip->dram_status();
+	}
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
@@ -361,8 +427,8 @@ int main(const int argc, const char *argv[])
 	local_node->numachip->fabric_train();
 
 	if (!config->local_node->partition) {
+		acpi_tables();
 		finished();
-		return 1;
 	}
 
 	nnodes = 0;
@@ -381,10 +447,10 @@ int main(const int argc, const char *argv[])
 
 		syslinux->cleanup();
 		acpi->handover();
-		handover_legacy();
+		handover_legacy(local_node->sci);
 
 		local_node->iohub->smi_disable();
-		disable_dma_all();
+		disable_dma_all(local_node->sci);
 
 		// clear BSP flag
 		uint64_t val = lib::rdmsr(MSR_APIC_BAR);
@@ -424,7 +490,6 @@ int main(const int argc, const char *argv[])
 		}
 	}
 
-	local_node->numachip->write32(Numachip2::FABRIC_CTRL, 0xdeadbeef);
 	config->local_node->added = 1;
 
 	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
@@ -453,7 +518,7 @@ int main(const int argc, const char *argv[])
 	} while (pos < nnodes);
 
 	scan();
-	setup();
+	remap();
 	finalise();
 	finished();
 	return 1;

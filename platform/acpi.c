@@ -352,7 +352,7 @@ void ACPI::dump(const acpi_sdt *table, const unsigned limit)
 		n = min(n, limit);
 
 	lib::dump(table, n);
-	if (limit < table->len)
+	if (limit && limit < table->len)
 		printf("[...]");
 	printf("\n");
 }
@@ -611,12 +611,12 @@ ACPI::ACPI(void): bios_shadowed(0)
 	get_cores();
 }
 
-AcpiTable::AcpiTable(const char *name): payload(0), allocated(0), used(0)
+AcpiTable::AcpiTable(const char *name, const unsigned rev): payload(0), allocated(0), used(0)
 {
 	memset(&header, 0, sizeof(header));
 	memcpy(&header.sig.s, name, 4);
 	header.len = sizeof(header);
-	header.revision = acpi_rev;
+	header.revision = rev;
 	memcpy(&header.oemid, "NUMAS2", 6);
 	memcpy(&header.oemtableid, "N313NUMA", 8);
 	header.oemrev = 0;
@@ -625,22 +625,43 @@ AcpiTable::AcpiTable(const char *name): payload(0), allocated(0), used(0)
 	header.checksum = 0;
 }
 
-void AcpiTable::append(const char *data, const unsigned len)
+void AcpiTable::extend(const unsigned len)
 {
 	if (used + len > allocated) {
 		allocated = roundup(used + len, chunk);
 		payload = (char *)realloc((void *)payload, allocated);
 		assert(payload);
 	}
+}
 
-	if (options->debug.acpi) {
+void AcpiTable::append(const char *data, const unsigned len)
+{
+	extend(len);
+
+/*	if (options->debug.acpi) {
 		printf("ACPI append: ");
 		lib::memcpy(payload + used, data, len);
-	} else
+	} else */
 		memcpy(payload + used, data, len);
 
 	header.len += len;
 	used += len;
+}
+
+char *AcpiTable::reserve(const unsigned len)
+{
+	extend(len);
+
+	if (options->debug.acpi)
+		printf("ACPI extend by %u bytes\n", len);
+
+	char *p = payload + used;
+	memset(p, 0xa5, len);
+
+	header.len += len;
+	used += len;
+
+	return p;
 }
 
 void ACPI::replace(const AcpiTable &table)

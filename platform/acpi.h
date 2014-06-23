@@ -115,16 +115,17 @@ struct acpi_mcfg {
 } __attribute__((packed));
 
 class AcpiTable {
-	static const unsigned acpi_rev = 2; // 64-bit pointers; ACPI 2-5
 	static const unsigned chunk = 1024;
 	void checksum(void);
+	void extend(const unsigned len);
 public:
 	struct acpi_sdt header;
 	char *payload;
 	unsigned allocated, used;
 
-	AcpiTable(const char *name);
+	AcpiTable(const char *name, const unsigned rev);
 	void append(const char *data, const unsigned len);
+	char *reserve(const unsigned len);
 };
 
 class ACPI {
@@ -137,12 +138,12 @@ class ACPI {
 	acpi_rsdp *find_rsdp(const char *start, int len);
 	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const int ptrsize);
 	uint32_t slack(acpi_sdt *parent);
-	static void dump(const acpi_sdt *table, const unsigned limit);
 	void get_cores(void);
 public:
 	uint8_t apics[256];
 	uint8_t napics;
 
+	static void dump(const acpi_sdt *table, const unsigned limit = 0);
 	static void assert_checksum(const acpi_sdt *table, const int len);
 	static checked uint8_t checksum(const char *addr, const int len);
 	void check(void);

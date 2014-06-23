@@ -116,7 +116,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local):
 	dram_init();
 	fabric_init();
 
-	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
+//	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 
 	write32(SIU_NODEID, _sci);
 	fabric_routing();

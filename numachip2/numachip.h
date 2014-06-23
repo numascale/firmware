@@ -74,6 +74,7 @@ class Numachip2 {
 	LC5 *lcs[6];
 	int nlcs;
 	const bool local;
+	unsigned dram_total_shift;
 
 	/* i2c-master.c */
 	void i2c_master_init(void);
@@ -91,7 +92,9 @@ class Numachip2 {
 	void selftest(void);
 
 	/* dram.c */
-	void dram_test(const uint32_t shift);
+	void dram_test(void);
+	void dram_clear(void);
+	void dram_verify(void);
 	void dram_init(void);
 
 	uint8_t next(sci_t src, sci_t dst) const;
@@ -199,4 +202,6 @@ public:
 	void fabric_status(void);
 	void fabric_reset(void);
 	void routing_dump(void);
+	void dram_status(void);
+
 };

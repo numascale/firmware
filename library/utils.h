@@ -34,8 +34,11 @@ namespace lib
 	void dump(const void *addr, const unsigned len);
 	void memcpy(void *dst, const void *src, size_t n);
 
-	static inline uint64_t rand64(const uint64_t v)
-	{
-		return (v * 279470273ULL) % 4294967291ULL;
+	static inline uint64_t hash64(uint64_t u) {
+		u += 1;
+		u ^= u >> 12; // a
+		u ^= u << 25; // b
+		u ^= u >> 27; // c
+		return u * 2685821657736338717LL;
 	}
 }

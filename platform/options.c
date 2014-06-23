@@ -97,7 +97,7 @@ void Options::parse_flags(const char *val, void *data)
 	/* If no args, assume reasonable default */
 	if (!val) {
 		memset(flags, 0x01, sizeof(Options::debug));
-		flags->fabric = flags->access = flags->ht = 0;
+		flags->fabric = flags->access = flags->ht = flags->northbridge = 0;
 		return;
 	}
 
