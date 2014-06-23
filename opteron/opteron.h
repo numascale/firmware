@@ -57,9 +57,6 @@ class Opteron {
 
 	static void reset(const enum reset mode, const int last);
 public:
-	static const uint32_t VENDEV_SR5690	   = 0x5a101002;
-	static const uint32_t VENDEV_SR5670	   = 0x5a121002;
-	static const uint32_t VENDEV_SR5650	   = 0x5a131002;
 	static const uint32_t VENDEV_MCP55	   = 0x036910de;
 	static const uint32_t VENDEV_OPTERON   = 0x12001022;
 
@@ -147,10 +144,6 @@ public:
 	void init(void);
 	Opteron(const sci_t _sci, const ht_t _ht, const bool _local);
 	~Opteron(void);
-	static void disable_smi(void);
-	static void enable_smi(void);
-	static void critical_enter(void);
-	static void critical_leave(void);
 	static void cht_print(int neigh, int link);
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);

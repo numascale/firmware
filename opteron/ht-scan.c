@@ -49,42 +49,6 @@ void Opteron::reset(const enum reset mode, const int last)
 	outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 }
 
-/* Mask southbridge SMI generation */
-void Opteron::disable_smi(void)
-{
-	switch (ioh_vendev) {
-	case VENDEV_SR5690:
-	case VENDEV_SR5670:
-	case VENDEV_SR5650:
-		const uint8_t state = lib::pmio_read8(0x53);
-		lib::pmio_write8(0x53, state | (1 << 3));
-	}
-}
-
-/* Restore previous southbridge SMI mask */
-void Opteron::enable_smi(void)
-{
-	switch (ioh_vendev) {
-	case VENDEV_SR5690:
-	case VENDEV_SR5670:
-	case VENDEV_SR5650:
-		const uint8_t state = lib::pmio_read8(0x53);
-		lib::pmio_write8(0x53, state & ~(1 << 3));
-	}
-}
-
-void Opteron::critical_enter(void)
-{
-	cli();
-	disable_smi();
-}
-
-void Opteron::critical_leave(void)
-{
-	enable_smi();
-	sti();
-}
-
 uint32_t Opteron::get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct)
 {
 	const int base = 0x180 + link * 8;
@@ -321,8 +285,6 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 
 		printf("Adjusting HT fabric");
 
-		critical_enter();
-
 		for (i = nnodes; i >= 0; i--) {
 			uint32_t ltcr, val2;
 			/* Disable probes while adjusting */
@@ -340,7 +302,6 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr | (1 << 15));
 		}
 
-		critical_leave();
 		printf("\n");
 	}
 

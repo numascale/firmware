@@ -17,7 +17,6 @@
 
 #pragma once
 
-//#include "numachip.h"
 #include "../library/base.h"
 
 class Numachip2;

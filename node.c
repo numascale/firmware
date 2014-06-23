@@ -19,6 +19,11 @@
 
 void Node::init(void)
 {
+	if (SR56x0::probe(sci))
+		iohub = new SR56x0(sci, local);
+	else
+		fatal("Unknown IO hub");
+
 	dram_base = -1;
 
 	for (ht_t n = 0; n < nopterons; n++) {
@@ -36,32 +41,33 @@ void Node::init(void)
 void Node::status(void)
 {
 	numachip->fabric_status();
-	printf("SIU status 0x%08x\n", numachip->read32(Numachip2::SIU_EVENTSTAT));
+	numachip->dram_status();
+	assert(!numachip->read32(Numachip2::SIU_EVENTSTAT));
 }
 
 // instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): sci(_sci), nopterons(ht)
+Node::Node(const sci_t _sci, const ht_t ht): local(0), sci(_sci), nopterons(ht)
 {
 	for (ht_t n = 0; n < nopterons; n++)
-		opterons[n] = new Opteron(sci, n, 0);
+		opterons[n] = new Opteron(sci, n, local);
 
-	numachip = new Numachip2(sci, ht, 0);
+	numachip = new Numachip2(sci, ht, local);
 
 	init();
 }
 
 // instantiated for local nodes
-Node::Node(const sci_t _sci): sci(_sci)
+Node::Node(const sci_t _sci): local(1), sci(_sci)
 {
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
-	numachip = new Numachip2(sci, nc, 1);
+	numachip = new Numachip2(sci, nc, local);
 	nopterons = nc;
 
 	// Opterons are on all HT IDs before Numachip
 	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(sci, nb, 1);
+		opterons[nb] = new Opteron(sci, nb, local);
 
 	init();
 }

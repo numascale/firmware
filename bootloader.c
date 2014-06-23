@@ -383,7 +383,7 @@ int main(const int argc, const char *argv[])
 		acpi->handover();
 		handover_legacy();
 
-		Opteron::disable_smi();
+		local_node->iohub->smi_disable();
 		disable_dma_all();
 
 		// clear BSP flag

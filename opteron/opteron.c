@@ -183,22 +183,6 @@ void Opteron::prepare(void)
 
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
 
-	// detect IOH
-	ioh_vendev = lib::mcfg_read32(SCI_LOCAL, 0, 0, 0, 0);
-	assert(ioh_vendev != 0xffffffff);
-
-	switch (ioh_vendev) {
-	case VENDEV_SR5690:
-	case VENDEV_SR5670:
-	case VENDEV_SR5650:
-		// enable 52-bit PCIe address generation
-		val = lib::mcfg_read32(SCI_LOCAL, 0, 0, 0, 0xc8);
-		lib::mcfg_write32(SCI_LOCAL, 0, 0, 0, 0xc8, val | (1 << 15));
-		break;
-	default:
-		fatal("Unknown IOH");
-	}
-
 	// check number of MCA banks
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
 }

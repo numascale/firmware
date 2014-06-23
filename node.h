@@ -19,14 +19,17 @@
 
 #include "library/base.h"
 #include "opteron/opteron.h"
+#include "opteron/sr56x0.h"
 #include "numachip2/numachip.h"
 
 class Node {
+	bool local;
 public:
 	sci_t sci;
 	unsigned nopterons;
 	unsigned cores;
 	Opteron *opterons[7];
+	SR56x0 *iohub;
 	Numachip2 *numachip;
 	uint64_t dram_base, dram_size, dram_end;
 
