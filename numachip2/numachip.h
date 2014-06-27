@@ -74,6 +74,7 @@ class Numachip2 {
 	LC5 *lcs[6];
 	int nlcs;
 	const bool local;
+	const sci_t master;
 	unsigned dram_total_shift;
 
 	/* i2c-master.c */
@@ -109,11 +110,9 @@ public:
 	static const reg_t CLASS_CODE_REV    = 0x0008;
 	static const reg_t HEADER_TYPE       = 0x000c;
 	static const reg_t BASE_ADDR_0       = 0x0010;
-	static const reg_t FABRIC_CTRL       = 0x0014; // FIXME correct when implemented later
 	static const reg_t CAP_PTR           = 0x0034;
 	static const reg_t LINK_CTRL         = 0x0084;
 	static const reg_t LINK_FREQ_REV     = 0x0088;
-	static const reg_t SCRATCH           = 0x0090; // 8x 32bit registers
 	static const reg_t UNIT_ID           = 0x00d0;
 	static const reg_t HT_NODE_ID        = 0x00c8;
 
@@ -130,6 +129,10 @@ public:
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 	static const reg_t PIU_APIC          = 0x1080;
 	static const reg_t PIU_APIC_SHIFT    = 0x1084;
+	static const reg_t FABRIC_CTRL       = 0x1090;
+	static const reg_t SCRATCH           = 0x1090; // 8x 32bit registers
+	static const reg_t TIMEOUT_RESP      = 0x10b0;
+	static const reg_t GSM_MASK          = 0x10b4;
 
 	static const reg_t I2C_REG0          = 0x2040;
 	static const reg_t I2C_REG1          = 0x2044;
@@ -165,16 +168,18 @@ public:
 	static const reg_t LC_ERRORCNT       = 0xcc;
 	static const reg_t HSS_PLLCTL        = 0x2f00;
 
-	static const int SIU_ATT_SHIFT = 32;
-	static const int MMIO32_ATT_SHIFT = 20;
-	static const int APIC_ATT_SHIFT = 6; // max 64 cores per server
+	static const unsigned SIU_ATT_SHIFT  = 32;
+	static const unsigned MMIO32_ATT_SHIFT = 20;
+	static const unsigned APIC_ATT_SHIFT = 6; // max 64 cores per server
+	static const unsigned GSM_SHIFT      = 43;
+	static const unsigned GSM_SIZE_SHIFT = 43;
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
 
 	const static char *ringnames[6];
 
-	sci_t sci;
+	const sci_t sci;
 	const ht_t ht;
 
 	MmioMap mmiomap;
@@ -197,11 +202,10 @@ public:
 	uint8_t read8(const reg_t reg) const;
 	void write8(const reg_t reg, const uint8_t val) const;
 	static ht_t probe(const sci_t sci);
-	Numachip2(const sci_t sci, const ht_t _ht, const bool _local);
+	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
 	void fabric_train(void);
 	void fabric_status(void);
 	void fabric_reset(void);
 	void routing_dump(void);
 	void dram_status(void);
-
 };

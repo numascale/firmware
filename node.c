@@ -46,23 +46,23 @@ void Node::status(void)
 }
 
 // instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): local(0), sci(_sci), nopterons(ht)
+Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sci), nopterons(ht)
 {
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n] = new Opteron(sci, n, local);
 
-	numachip = new Numachip2(sci, ht, local);
+	numachip = new Numachip2(sci, ht, local, SCI_NONE);
 
 	init();
 }
 
 // instantiated for local nodes
-Node::Node(const sci_t _sci): local(1), sci(_sci)
+Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
 {
 	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
-	numachip = new Numachip2(sci, nc, local);
+	numachip = new Numachip2(sci, nc, local, master);
 	nopterons = nc;
 
 	// Opterons are on all HT IDs before Numachip

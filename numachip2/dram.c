@@ -119,6 +119,8 @@ void Numachip2::dram_init(void)
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
 		cpu_relax();
 
+	write32(MTAG_BASE + TAG_CTRL, 0);
+
 	switch (total) {
 	case 4ULL << 30:
 		// 0-1024MB nCache; 1024-1152MB CTag; 1152-2048MB unused; 2048-4096MB MTag

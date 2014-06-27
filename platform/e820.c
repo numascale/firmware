@@ -20,6 +20,7 @@
 #include "e820.h"
 #include "trampoline.h"
 #include "../library/base.h"
+#include "../library/utils.h"
 #include "../bootloader.h"
 
 extern "C" {
@@ -269,7 +270,7 @@ void E820::test_location(const uint64_t addr)
 void E820::test_range(const uint64_t start, const uint64_t end)
 {
 	// memory on the first northbridge is actively used
-	if (start < 0x000428000000) // FIXME
+	if (start < (4ULL << 30))
 		return;
 
 	const unsigned STEP_MIN = 64, STEP_MAX = 4 << 20;

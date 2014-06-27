@@ -90,8 +90,8 @@ ht_t Numachip2::probe(const sci_t sci)
 	return 0;
 }
 
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local):
-  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t _master):
+  local(_local), master(_master), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
 	assert(ht);
 
@@ -119,5 +119,13 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local):
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 
 	write32(SIU_NODEID, _sci);
+
+	// set master SCI ID for PCI IO routing
+	if (master != SCI_NONE) {
+		uint32_t val = read32(PIU_APIC_SHIFT);
+		val = (val & ~0xfff) | master;
+		write32(PIU_APIC_SHIFT, val);
+	}
+
 	fabric_routing();
 }

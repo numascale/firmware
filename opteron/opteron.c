@@ -29,7 +29,9 @@ uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
 int Opteron::family;
+#ifdef NOTNEEDED
 static uint64_t msr_nb_cfg;
+#endif
 
 void Opteron::check(void)
 {
@@ -56,8 +58,8 @@ void Opteron::check(void)
 		  "Probe Filter Error", "Compute Unit Data Error"};
 
 		warning("%s on SCI%03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
-		printf("- ErrorCode=0x%llx Syndrome=0x%llx\n",
-		  s & 0xffff, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
+		printf("- ErrorCode=0x%llx ErrorCodeExt=0x%llx Syndrome=0x%llx\n",
+		  s & 0xffff, (s >> 16) & 0xf, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
 		printf("- Link=%llu Scrub=%llu SubLink=%llu McaStatSubCache=%llu\n",
 		  (s >> 26) & 0xf, (s >> 40) & 1, (s >> 41) & 1, (s >> 42) & 3);
 		printf("- UECC=%llu CECC=%llu PCC=%llu\n",
@@ -73,6 +75,7 @@ void Opteron::check(void)
 
 		write64_split(MC_NB_ADDR, 0);
 		write64_split(MC_NB_STAT, 0);
+		printf("\n");
 	}
 
 	uint32_t v = read32(MC_NB_DRAM);
@@ -105,7 +108,7 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
 	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
 	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-	val |= 1 << 8; // disable WDT
+	val |= 1 << 8;     // disable WDT
 	lib::cht_write32(nb, MC_NB_CONF, val);
 
 	val = lib::cht_read32(nb, MC_NB_CONF_EXT);
@@ -118,6 +121,12 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 21); // SyncFloodOnCpuLeakErr: sync flood on CPU leak error enable
 	val &= ~(1 << 22); // SyncFloodOnTblWalkErr: sync flood on table walk error enable
 	lib::cht_write32(nb, MC_NB_CONF_EXT, val);
+
+	for (unsigned l = 0; l < 4; l++) {
+		// CrcFloodEn: Enable sync flood propagation upon link failure
+		val = read32(0x0084 + l * 0x20);
+		write32(0x0084 + l * 0x20, val & ~2);
+	}
 }
 
 uint64_t Opteron::read64(const reg_t reg) const
@@ -154,12 +163,11 @@ void Opteron::clear32(const reg_t reg, const uint32_t mask) const
 
 void Opteron::prepare(void)
 {
-	// ensure MMCFG access is setup
-	assert(lib::rdmsr(MSR_MCFG_BASE) &~ 0xfffff);
-
+#ifdef NOTNEEDED
 	// enable CF8 extended access
 	msr_nb_cfg = lib::rdmsr(MSR_NB_CFG);
 	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg | (1ULL << 46));
+#endif
 
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
 	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
@@ -185,12 +193,17 @@ void Opteron::prepare(void)
 
 	// check number of MCA banks
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
+
+	// disable core WDT
+	lib::wrmsr(MSR_CPUWDT, 0);
 }
 
+#ifdef NOTNEEDED
 void Opteron::restore(void)
 {
 	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg);
 }
+#endif
 
 void Opteron::dram_scrub_disable(void)
 {
@@ -202,10 +215,8 @@ void Opteron::dram_scrub_disable(void)
 
 	// disable DRAM scrubbers
 	scrub = read32(SCRUB_RATE_CTRL);
-	if (scrub & 0x1f) {
-		write32(SCRUB_RATE_CTRL, scrub & ~0x1f);
-		lib::udelay(40); // allow outstanding scrub requests to finish
-	}
+	write32(SCRUB_RATE_CTRL, scrub & ~0x1f);
+	lib::udelay(40); // allow outstanding scrub requests to finish
 
 	clear32(SCRUB_ADDR_LOW, 1);
 }
@@ -230,9 +241,6 @@ void Opteron::init(void)
 	uint32_t vendev = read32(VENDEV);
 	assert(vendev == VENDEV_OPTERON);
 
-	uint32_t val = read32(PROBEFILTER_CTRL);
-	assertf(val & 3, "NumaChip2 requires Probe Filter to be enabled");
-
 	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
 	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link
 
@@ -246,7 +254,7 @@ void Opteron::init(void)
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
-		val = read32(DRAM_HOLE);
+		uint32_t val = read32(DRAM_HOLE);
 		if (val & 1) {
 			dram_size -= (val & 0xff00) << (23 - 7);
 			write32(DRAM_HOLE, val & ~0xff81);
@@ -256,7 +264,7 @@ void Opteron::init(void)
 	// detect number of cores
 	cores = 1;
 	if (family < 0x15) {
-		val = read32(LINK_TRANS_CTRL);
+		uint32_t val = read32(LINK_TRANS_CTRL);
 		if (val & 0x20)
 			cores++; /* Cpu1En */
 
@@ -265,7 +273,7 @@ void Opteron::init(void)
 			if (val & (1 << i))
 				cores++;
 	} else {
-		val = read32(NB_CAP_2);
+		uint32_t val = read32(NB_CAP_2);
 		cores += val & 0xff;
 
 		val = read32(DOWNCORE_CTRL);
@@ -287,12 +295,16 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	if (!local)
 		return;
 
+#ifdef NOTNEEDED
 	// enable CF8 extended access; Linux needs this later */
 	uint32_t val = read32(NB_CONF_1H);
 	write32(NB_CONF_1H, val | (1 << (46 - 32)));
+#endif
+
+	// FIXME set DisOrderRdRsp
 
 	// set CHtExtAddrEn, ApicExtId, ApicExtBrdCst
-	val = read32(LINK_TRANS_CTRL);
+	uint32_t val = read32(LINK_TRANS_CTRL);
 	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
 		write32(LINK_TRANS_CTRL, val | (1 << 25) | (1 << 18) | (1 << 17));
 
@@ -313,6 +325,16 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 		if (!(val & (1 << 15)))
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
+
+	// Numachip can't handle Coherent Prefetch Probes, required disabled for PF anyway
+	// FIXME: check if needed
+	val = read32(MCTL_EXT_CONF_LOW);
+	write32(MCTL_EXT_CONF_LOW, val & ~(7 <<8));
+
+	// disable traffic distribution for directed probes
+	// FIXME: check if needed
+	val = read32(COH_LINK_TRAF_DIST);
+	write32(COH_LINK_TRAF_DIST, val & ~1);
 
 	// disable legacy GARTs
 	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)

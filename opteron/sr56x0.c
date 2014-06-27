@@ -72,6 +72,10 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 		// enable 52-bit PCIe address generation
 		uint32_t val = read32(0xc8);
 		write32(0xc8, val | (1 << 15));
+
+		// SERR_EN: initiate sync flood when PCIe System Error detected in IOH
+		val = read32(0x4);
+		write32(0x4, val & ~(1 << 8));
 	}
 }
 

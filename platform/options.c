@@ -97,7 +97,7 @@ void Options::parse_flags(const char *val, void *data)
 	/* If no args, assume reasonable default */
 	if (!val) {
 		memset(flags, 0x01, sizeof(Options::debug));
-		flags->fabric = flags->access = flags->ht = flags->northbridge = 0;
+		flags->fabric = flags->access = flags->ht = 0;
 		return;
 	}
 
@@ -143,7 +143,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
 		{"ht.200mhz-only",  &Options::parse_int,    &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"init-only",       &Options::parse_bool,   &init_only},
-		{"boot-wait",       &Options::parse_bool,   &boot_wait},
+		{"wait",            &Options::parse_bool,   &boot_wait},
 		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
 		{"config",          &Options::parse_string, &config_filename},
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
@@ -185,7 +185,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 	assertf(!errors, "Invalid arguments specified");
 
 	if (tracing == 1) {
-		printf("Defaulting to 512MB trace buffers\n");
-		tracing = 512 << 20;
+		printf("Defaulting to 2GB trace buffers\n");
+		tracing = 2048ULL << 20;
 	}
 }

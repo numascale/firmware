@@ -165,6 +165,56 @@ static void add(const Node &node)
 	node.numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (node.dram_end - 1) >> 24);
 }
 
+static void setup_gsm_early(void)
+{
+	for (unsigned n = 0; n < config->nnodes; n++) {
+		if (config->nodes[n].partition)
+			continue;
+
+		for (unsigned i = 0; i < local_node->nopterons; i++) {
+			uint64_t base = 1ULL << Numachip2::GSM_SHIFT;
+			local_node->opterons[i]->mmiomap.add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0);
+		}
+	}
+}
+
+static void setup_gsm(void)
+{
+	printf("Setting up GSM to");
+	for (unsigned n = 0; n < config->nnodes; n++)
+		if (!config->nodes[n].partition)
+			printf(" %03x", config->nodes[n].sci);
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		uint64_t base = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_base;
+		uint64_t limit = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_end;
+		sci_t dest = (*node)->sci;
+
+		(*node)->numachip->write32(Numachip2::GSM_MASK, (1ULL << (Numachip2::GSM_SHIFT - 36)) - 1);
+
+		// setup ATT on observers for GSM
+		for (unsigned n = 0; n < config->nnodes; n++) {
+			if (config->nodes[n].partition)
+				continue;
+
+			// FIXME: use observer instance
+			assert(limit > base);
+
+			const uint64_t mask = (1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
+			assert((base & mask) == 0);
+			assert((limit & mask) == mask);
+
+			lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht, Numachip2::SIU_ATT_INDEX >> 12,
+			  Numachip2::SIU_ATT_INDEX & 0xfff, (1 << 31) | (base >> Numachip2::SIU_ATT_SHIFT));
+
+			for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
+				lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht,
+				  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
+		}
+	}
+	printf("\n");
+}
+
 static void remap(void)
 {
 	// 1. setup local NumaChip DRAM ranges
@@ -262,6 +312,7 @@ static void acpi_tables(void)
 	acpi->replace(mcfg);
 
 	// cores
+	const acpi_sdt *oapic = acpi->find_sdt("APIC");
 	AcpiTable apic("APIC", 3);
 
 	for (unsigned i = 0; i < acpi->napics; i++) {
@@ -285,7 +336,7 @@ static void acpi_tables(void)
 	uint64_t *n = (uint64_t *)slit.reserve(8);
 	*n = 0;
 
-	printf("Topology distances:\n    ");
+	printf("Topology distances:\n   ");
 	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
 		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
 			printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
@@ -316,13 +367,16 @@ static void acpi_tables(void)
 	}
 
 	acpi->replace(slit);
-	acpi->dump(acpi->find_sdt("SLIT"));
 
 	acpi->check();
 }
 
 static void finalise(void)
 {
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->status();
+
 	printf("Clearing DRAM");
 
 	// start clearing DRAM
@@ -355,16 +409,12 @@ static void finalise(void)
 	e820->test();
 	acpi_tables();
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		(*node)->numachip->fabric_status();
-		(*node)->numachip->dram_status();
-	}
-
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->check();
+		(*node)->status();
 
+#ifdef NOTNEEDED
 	Opteron::restore();
+#endif
 }
 
 static void finished(void)
@@ -373,7 +423,9 @@ static void finished(void)
 		lib::wait_key("Press enter to boot");
 
 	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
+#ifdef NOTNEEDED
 	Opteron::restore();
+#endif
 	syslinux->exec(options->next_label);
 }
 
@@ -404,7 +456,7 @@ int main(const int argc, const char *argv[])
 		config = new Config(options->config_filename);
 
 	e820 = new E820();
-	local_node = new Node(config->local_node->sci);
+	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
 	if (options->init_only) {
 		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
@@ -424,12 +476,13 @@ int main(const int argc, const char *argv[])
 	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
 	lib::wrmsr(MSR_MCFG_BASE, val6);
 
+	if (options->tracing)
+		setup_gsm_early();
+
 	local_node->numachip->fabric_train();
 
-	if (!config->local_node->partition) {
-		acpi_tables();
+	if (!config->local_node->partition)
 		finished();
-	}
 
 	nnodes = 0;
 	for (unsigned n = 0; n < config->nnodes; n++)
@@ -513,13 +566,12 @@ int main(const int argc, const char *argv[])
 
 			cpu_relax();
 		}
-
-		lib::udelay(1000000);
 	} while (pos < nnodes);
 
 	scan();
 	remap();
+	if (options->tracing)
+		setup_gsm();
 	finalise();
 	finished();
-	return 1;
 }

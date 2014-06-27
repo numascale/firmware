@@ -91,6 +91,7 @@ public:
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
 	static const reg_t MCTL_SEL_LOW        = 0x2110;
 	static const reg_t MCTL_CONF_HIGH      = 0x211c;
+	static const reg_t MCTL_EXT_CONF_LOW   = 0x21b0;
 	static const reg_t MC_NB_CONF          = 0x3044;
 	static const reg_t MC_NB_STAT          = 0x3048;
 	static const reg_t MC_NB_ADDR          = 0x3050;
@@ -137,7 +138,9 @@ public:
 	void clear32(const reg_t reg, const uint32_t mask) const;
 
 	static void prepare(void);
+#ifdef NOTNEEDED
 	static void restore(void);
+#endif
 	void dram_scrub_disable(void);
 	void dram_scrub_enable(void);
 	void disable_syncflood(const ht_t ht);

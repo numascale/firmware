@@ -24,6 +24,7 @@
 
 class Node {
 	bool local;
+	const sci_t master;
 public:
 	sci_t sci;
 	unsigned nopterons;
@@ -35,6 +36,6 @@ public:
 
 	void init(void);
 	void status(void);
-	Node(const sci_t _sci);
 	Node(const sci_t _sci, const ht_t ht);
+	Node(const sci_t _sci, const sci_t master);
 };
