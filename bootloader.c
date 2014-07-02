@@ -285,88 +285,149 @@ static void remap(void)
 #else
 	local_node->iohub->limits(dram_top - 1);
 #endif
-
-	handover_legacy(local_node->sci);
 }
 
 static void acpi_tables(void)
 {
-	AcpiTable mcfg("MCFG", 1);
+	{
+		AcpiTable mcfg("MCFG", 1);
 
-	// MCFG 'reserved field'
-	const uint64_t reserved = 0;
-	mcfg.append((const char *)&reserved, sizeof(reserved));
+		// MCFG 'reserved field'
+		const uint64_t reserved = 0;
+		mcfg.append((const char *)&reserved, sizeof(reserved));
 
-	uint16_t segment = 0;
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		struct acpi_mcfg ent = {
-			.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL),
-			.pci_segment = segment++,
-			.start_bus_number = 0,
-			.end_bus_number = 255,
-			.reserved = 0,
-		};
-		mcfg.append((const char *)&ent, sizeof(ent));
-	}
-
-	acpi->replace(mcfg);
-
-	// cores
-	const acpi_sdt *oapic = acpi->find_sdt("APIC");
-	AcpiTable apic("APIC", 3);
-
-	for (unsigned i = 0; i < acpi->napics; i++) {
-		struct acpi_local_x2apic ent = {
-			.type = 9, .len = 16, .reserved = 0, .x2apic_id = acpi->apics[i], .flags = 1, .proc_uid = 0};
-		apic.append((const char *)&ent, sizeof(ent));
-	}
-
-	acpi->replace(apic);
-
-	const acpi_sdt *oslit = acpi->find_sdt("SLIT");
-	uint8_t *odist = NULL;
-	if (oslit) {
-		odist = (uint8_t *)&(oslit->data[8]);
-		assert(odist[0] <= 13);
-	}
-
-	AcpiTable slit("SLIT", 1);
-
-	// number of localities
-	uint64_t *n = (uint64_t *)slit.reserve(8);
-	*n = 0;
-
-	printf("Topology distances:\n   ");
-	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
-		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
-			printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
-	printf("\n");
-
-	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
-		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
-			printf("%3u", 000); // FIXME
-
-			for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
-				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
-					uint8_t dist;
-					if (*snode == *dnode) {
-						if (*snb == *dnb)
-							dist = 10;
-						else
-							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
-					} else
-						dist = 160;
-
-					printf(" %3u", dist);
-					slit.append((const char *)&dist, sizeof(dist));
-				}
-			}
-			printf("\n");
-			(*n)++;
+		uint16_t segment = 0;
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			struct acpi_mcfg ent = {
+				.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL),
+				.pci_segment = segment++,
+				.start_bus_number = 0,
+				.end_bus_number = 255,
+				.reserved = 0,
+			};
+			mcfg.append((const char *)&ent, sizeof(ent));
 		}
+
+		acpi->replace(mcfg);
 	}
 
-	acpi->replace(slit);
+	{
+		// cores
+		const acpi_sdt *oapic = acpi->find_sdt("APIC");
+		AcpiTable apic("APIC", 3);
+		apic.append((const char *)&oapic->data[0], 4); // Local Interrupt Controller Address
+		apic.append((const char *)&oapic->data[4], 4); // Flags
+
+		// append new x2APIC entries
+		uint32_t core = 8;
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+				for (unsigned c = 0; c < 6; c++) {
+					struct acpi_x2apic_apic ent = {
+						.type = 9, .length = 16, .reserved = 0, .x2apic_id = core++, // FIXME
+						.flags = 1, .acpi_uid = 0};
+					apic.append((const char *)&ent, sizeof(ent));
+				}
+				core += 2;
+			}
+		}
+
+		// copying all entries except x2APIC (9) and APIC (0)
+		unsigned pos = 8;
+		while (pos < (oapic->len - sizeof(struct acpi_sdt))) {
+			uint8_t type = oapic->data[pos];
+			uint8_t len = oapic->data[pos + 1];
+			printf("pos=%d type=%d len=%d olen=%d s=%d\n", pos, type, len, oapic->len, sizeof(struct acpi_sdt));
+			assert(len > 0 && len < 64);
+			if (type != 0 && type != 9)
+				apic.append((const char *)&oapic->data[pos], len);
+			pos += len;
+		}
+
+		acpi->replace(apic);
+		acpi->dump(acpi->find_sdt("APIC"));
+	}
+
+	{
+		// core to node mapping
+		AcpiTable srat("SRAT", 3);
+
+		uint32_t reserved1 = 1;
+		srat.append((const char *)&reserved1, sizeof(reserved1));
+		uint64_t reserved2 = 0;
+		srat.append((const char *)&reserved2, sizeof(reserved2));
+
+		uint32_t domain = 0, core = 8;
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+				struct acpi_mem_affinity ment = {
+					.type = 1, .length = 40, .proximity = domain, .reserved1 = 0,
+					.base = (*nb)->dram_base,
+					.lengthlo = (uint32_t)(*nb)->dram_size, .lengthhi = (uint32_t)((*nb)->dram_size >> 32),
+					.reserved2 = 0, .flags = 1, .reserved3 = {0, 0}};
+				srat.append((const char *)&ment, sizeof(ment));
+
+				for (unsigned c = 0; c < 6; c++) {
+					struct acpi_x2apic_affinity ent = {
+						.type = 2, .length = 24, .reserved1 = 0, .proximity = domain,
+						.x2apicid = core++, .flags = 1, // FIXME
+						.clock = (uint32_t)(node - nodes), .reserved2 = 0};
+					srat.append((const char *)&ent, sizeof(ent));
+				}
+				domain++;
+				core += 2;
+			}
+		}
+
+		acpi->replace(srat);
+	}
+
+	{
+		const acpi_sdt *oslit = acpi->find_sdt("SLIT");
+		uint8_t *odist = NULL;
+		if (oslit) {
+			odist = (uint8_t *)&(oslit->data[8]);
+			assert(odist[0] <= 13);
+		}
+
+		AcpiTable slit("SLIT", 1);
+
+		// number of localities
+		uint64_t *n = (uint64_t *)slit.reserve(8);
+		*n = 0;
+
+		printf("Topology distances:\n   ");
+		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
+			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
+				printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
+		printf("\n");
+
+		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
+			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
+				printf("%3u", 000); // FIXME
+
+				for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
+					for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
+						uint8_t dist;
+						if (*snode == *dnode) {
+							if (*snb == *dnb)
+								dist = 10;
+							else
+								dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
+						} else
+							dist = 160;
+
+						printf(" %3u", dist);
+						slit.append((const char *)&dist, sizeof(dist));
+					}
+				}
+				printf("\n");
+				(*n)++;
+			}
+		}
+
+		acpi->replace(slit);
+	}
 
 	acpi->check();
 }
@@ -411,10 +472,6 @@ static void finalise(void)
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->status();
-
-#ifdef NOTNEEDED
-	Opteron::restore();
-#endif
 }
 
 static void finished(void)
@@ -423,9 +480,6 @@ static void finished(void)
 		lib::wait_key("Press enter to boot");
 
 	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
-#ifdef NOTNEEDED
-	Opteron::restore();
-#endif
 	syslinux->exec(options->next_label);
 }
 
@@ -530,16 +584,8 @@ int main(const int argc, const char *argv[])
 		lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 
 		while (1) {
-#ifdef DEBUG
-			for (unsigned i = 0; i < local_node->nopterons; i++)
-				local_node->opterons[i]->check();
-
-			lib::udelay(1000000);
-			printf("wake ");
-#else
 			cli();
 			asm volatile("hlt" ::: "memory");
-#endif
 		}
 	}
 

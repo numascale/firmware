@@ -50,60 +50,35 @@ struct acpi_sdt {
 	unsigned char data[0];
 } __attribute__((packed));
 
-struct acpi_core_affinity {
-	uint8_t type;
-	uint8_t len;
-	uint8_t prox_low;
-	uint8_t apic_id;
-	unsigned int enabled: 1;
-	unsigned int flags: 31;
-	uint8_t sapic_eid;
-	unsigned int prox_hi: 24;
-	char reserved[4];
+struct acpi_x2apic_apic {
+	uint8_t type, length;
+	uint16_t reserved;
+	uint32_t x2apic_id, flags, acpi_uid;
 } __attribute__((packed));
 
 struct acpi_mem_affinity {
-	uint8_t type;
-	uint8_t len;
-	uint32_t prox_dom;
-	char reserved1[2];
-	uint64_t mem_base;
-	uint64_t mem_size;
-	char reserved2[4];
-	unsigned int enabled: 1;
-	unsigned int hotplug: 1;
-	unsigned int nonvol: 1;
-	unsigned int reserved3: 29;
-	char reserved4[8];
+	uint8_t type, length;
+	uint32_t proximity;
+	uint16_t reserved1;
+	uint64_t base;
+	uint32_t lengthlo, lengthhi;
+	uint32_t reserved2, flags;
+	uint32_t reserved3[2];
+} __attribute__((packed));
+
+struct acpi_apic_affinity {
+	uint8_t type, length;
+	uint8_t proximity1, apicid;
+	uint32_t flags;
+	uint8_t sapicid;
+	uint32_t proximity2 : 24;
+	uint32_t clock;
 } __attribute__((packed));
 
 struct acpi_x2apic_affinity {
-	uint8_t type;
-	uint8_t len;
-	char reserved1[2];
-	uint32_t prox_dom;
-	uint32_t x2apic_id;
-	unsigned int enabled: 1;
-	unsigned int flags: 31;
-	uint32_t clock_dom;
-	char reserved2[4];
-} __attribute__((packed));
-
-struct acpi_local_apic {
-	uint8_t type;
-	uint8_t len;
-	uint8_t proc_id;
-	uint8_t apic_id;
-	uint32_t flags;
-} __attribute__((packed));
-
-struct acpi_local_x2apic {
-	uint8_t type;
-	uint8_t len;
-	uint16_t reserved;
-	uint32_t x2apic_id;
-	uint32_t flags;
-	uint32_t proc_uid;
+	uint8_t type, length;
+	uint16_t reserved1;
+	uint32_t proximity, x2apicid, flags, clock, reserved2;
 } __attribute__((packed));
 
 struct acpi_mcfg {

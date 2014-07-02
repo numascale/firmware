@@ -59,8 +59,8 @@ void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const 
 
 Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
 {
-//	if (numachip.local)
-//		range(0, (1ULL << 32) - 1, 0x0fff);
+	if (numachip.local)
+		range(0, (1ULL << 32) - 1, 0xfff);
 }
 
 void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
@@ -83,8 +83,8 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 
 Numachip2::ApicAtt::ApicAtt(Numachip2 &_numachip): numachip(_numachip)
 {
-//	if (numachip.local)
-//		range(0x000, 0xfff, 0x0fff);
+	if (numachip.local)
+		range(0x000, 0xfff, 0xfff);
 }
 
 void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const sci_t dest)

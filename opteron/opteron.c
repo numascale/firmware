@@ -29,9 +29,6 @@ uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
 int Opteron::family;
-#ifdef NOTNEEDED
-static uint64_t msr_nb_cfg;
-#endif
 
 void Opteron::check(void)
 {
@@ -108,7 +105,7 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
 	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
 	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-	val |= 1 << 8;     // disable WDT
+//	val |= 1 << 8;     // disable WDT
 	lib::cht_write32(nb, MC_NB_CONF, val);
 
 	val = lib::cht_read32(nb, MC_NB_CONF_EXT);
@@ -294,12 +291,6 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 
 	if (!local)
 		return;
-
-#ifdef NOTNEEDED
-	// enable CF8 extended access; Linux needs this later */
-	uint32_t val = read32(NB_CONF_1H);
-	write32(NB_CONF_1H, val | (1 << (46 - 32)));
-#endif
 
 	// FIXME set DisOrderRdRsp
 

@@ -547,29 +547,34 @@ void ACPI::handover(void)
 
 void ACPI::get_cores(void)
 {
-	memset(apics, 0, sizeof(apics));
 	acpi_sdt *srat = find_sdt("SRAT");
 	unsigned i = 12;
 	napics = 0;
 
 	while (i + sizeof(*srat) < srat->len) {
-		if (srat->data[i] == 0) {
-			struct acpi_core_affinity *af =
-			    (struct acpi_core_affinity *)&(srat->data[i]);
+		switch(srat->data[i]) {
+		case 0: {
+			struct acpi_apic_affinity *ent =
+			    (struct acpi_apic_affinity *)&(srat->data[i]);
 
-			if (af->enabled) {
-				assert(af->apic_id != 0xff); /* Ensure ID is valid */
-				apics[napics] = af->apic_id;
+			if (ent->flags & 1) {
+				assert(ent->apicid != 0xff);
+				apics[napics] = ent->apicid;
 				napics++;
 			}
 
-			i += af->len;
-		} else if (srat->data[i] == 1) {
-			struct acpi_mem_affinity *af =
-			    (struct acpi_mem_affinity *)&(srat->data[i]);
-			i += af->len;
-		} else
+			i += ent->length;
 			break;
+		}
+		case 1: {
+			struct acpi_mem_affinity *ent =
+			    (struct acpi_mem_affinity *)&(srat->data[i]);
+			i += ent->length;
+			break;
+		}
+		default:
+			fatal("Unexpected SRAT entry %u", srat->data[i]);
+		}
 	}
 }
 
