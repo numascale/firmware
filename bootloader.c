@@ -215,6 +215,25 @@ static void setup_gsm(void)
 	printf("\n");
 }
 
+static void setup_info(void)
+{
+	uint32_t info[Numachip2::INFO_SIZE];
+	struct info *infop = (struct info *)&info;
+
+	memset(info, 0, sizeof(info));
+	infop->partition = config->local_node->partition;
+	infop->fabric_nodes = config->nnodes;
+	infop->part_start = local_node->sci;
+	infop->part_nodes = nnodes;
+	infop->ver = 0;
+	infop->symmetric = 1;
+	infop->io = config->local_node->master;
+
+	for (unsigned n = 0; n < nnodes; n++)
+		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i += 4)
+			nodes[n]->numachip->write32(Numachip2::INFO + i*4, info[i]);
+}
+
 static void remap(void)
 {
 	// 1. setup local NumaChip DRAM ranges
@@ -618,6 +637,7 @@ int main(const int argc, const char *argv[])
 	remap();
 	if (options->tracing)
 		setup_gsm();
+	setup_info();
 	finalise();
 	finished();
 }

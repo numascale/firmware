@@ -33,6 +33,16 @@
 #define foreach_node(x) for (Node **(x) = &nodes[0]; (x) < &nodes[config->nnodes]; (x)++)
 #define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
 
+struct info {
+	uint8_t partition; // 0 for observer
+	uint16_t fabric_nodes : 12;
+	uint16_t part_start : 12;
+	uint16_t part_nodes : 12;
+	uint8_t ver : 4;
+	bool symmetric;
+	bool io;
+} __attribute__((packed));
+
 /* Global constants found in initialization */
 extern Syslinux *syslinux;
 extern Options *options;

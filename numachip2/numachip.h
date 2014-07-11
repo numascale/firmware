@@ -130,7 +130,8 @@ public:
 	static const reg_t PIU_APIC          = 0x1080;
 	static const reg_t PIU_APIC_SHIFT    = 0x1084;
 	static const reg_t FABRIC_CTRL       = 0x1090;
-	static const reg_t SCRATCH           = 0x1090; // 8x 32bit registers
+	static const reg_t INFO              = 0x1090;
+	static const reg_t INFO_SIZE         = 0x8;
 	static const reg_t TIMEOUT_RESP      = 0x10b0;
 	static const reg_t GSM_MASK          = 0x10b4;
 
