@@ -185,6 +185,9 @@ void Config::parse_json(json_t *root)
 			}
 		}
 
+		if (parse_json_bool(obj, "devices", &val, 1))
+			nodes[i].devices = val;
+
 		if (parse_json_bool(obj, "master", &val, 1))
 			nodes[i].master = val;
 	}

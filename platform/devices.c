@@ -67,22 +67,6 @@ void disable_kvm_ports(const sci_t sci, const unsigned port) {
 	lib::mcfg_write32(sci, 0, 19, 0, 0x40, val | (1 << (port + 16)));
 }
 
-void disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
-{
-	int i;
-	/* Disable I/O, memory, DMA and interrupts */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0);
-
-	/* Clear BARs */
-	for (i = 0x10; i <= 0x24; i += 4)
-		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
-
-	/* Clear expansion ROM base address */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
-	/* Set Interrupt Line register to 0 (unallocated) */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
-}
-
 void disable_dma_all(const sci_t sci)
 {
 	const struct devspec devices[] = {
@@ -135,6 +119,30 @@ static uint16_t extcapability(const sci_t sci, const int bus, const int dev, con
 	} while (offset > 0xff && visited[offset]++ == 0);
 
 	return PCI_CAP_NONE;
+}
+
+void disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
+{
+	// put device into D3 if possible
+	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_POWER);
+	if (cap != PCI_CAP_NONE) {
+		uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x4);
+		lib::mcfg_write32(sci, bus, dev, fn, cap + 0x4, val | 3);
+	}
+
+	/* Disable I/O, memory, DMA and interrupts */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0);
+
+// FIXME for bridges
+
+	/* Clear BARs */
+	for (int i = 0x10; i <= 0x24; i += 4)
+		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
+
+	/* Clear expansion ROM base address */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
+	/* Set Interrupt Line register to 0 (unallocated) */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
 }
 
 static void completion_timeout(const sci_t sci, const int bus, const int dev, const int fn)
@@ -214,7 +222,7 @@ static void completion_timeout(const sci_t sci, const int bus, const int dev, co
 	printf("\n");
 }
 
-static void stop_ohci(const uint16_t sci, const int bus, const int dev, const int fn)
+static void stop_ohci(const sci_t sci, const int bus, const int dev, const int fn)
 {
 	uint32_t val, bar0;
 	printf("OHCI controller @ %02x:%02x.%x: ", bus, dev, fn);

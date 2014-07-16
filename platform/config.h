@@ -29,6 +29,7 @@ class Config {
 		uint8_t mac[6];
 		bool master;
 		bool added;
+		bool devices;
 	};
 
 	struct node *find(const sci_t sci);
