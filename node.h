@@ -35,7 +35,7 @@ public:
 	uint64_t dram_base, dram_size, dram_end;
 
 	void init(void);
-	void status(void);
+	void check(void);
 	Node(const sci_t _sci, const ht_t ht);
 	Node(const sci_t _sci, const sci_t master);
 };

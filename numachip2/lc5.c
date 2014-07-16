@@ -27,6 +27,13 @@ uint64_t LC5::status(void)
 	return val;
 }
 
+void LC5::check(void)
+{
+	const uint64_t val = status();
+	if (val != 0x0000000080000000)
+		warning("Link %s on %03x has issues 0x%016llx", name, numachip.sci, val);
+}
+
 void LC5::clear(void)
 {
 	// clear link error bits

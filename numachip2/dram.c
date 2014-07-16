@@ -19,9 +19,11 @@
 #include "../bootloader.h"
 #include "../library/utils.h"
 
-void Numachip2::dram_status(void)
+void Numachip2::dram_check(void)
 {
-	assert(!(read32(NCACHE_CTRL) & (3 << 7)));
+	uint32_t val = read32(NCACHE_CTRL);
+	if (val & (3 << 7))
+		warning("NumaChip DRAM issue 0x%08x on %03x", val, sci);
 }
 
 void Numachip2::dram_test(void)

@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
+
 #include "numachip.h"
 #include "lc5.h"
 #include "../platform/config.h"
@@ -29,16 +31,14 @@ void Numachip2::fabric_reset(void)
 	write32(Numachip2::HSS_PLLCTL, 0);
 }
 
-void Numachip2::fabric_status(void)
+void Numachip2::fabric_check(void)
 {
-	printf("Link status:");
 	for (int lc = 0; lc < 6; lc++) {
 		if (!config->size[lc / 2])
 			continue;
 
-		printf(" %016llx", lcs[lc]->status());
+		lcs[lc]->check();
 	}
-	printf("\n");
 }
 
 // goal: read all phy status successfully 5M times; if any error encountered, reset and restart

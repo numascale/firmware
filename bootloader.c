@@ -53,6 +53,12 @@ char *asm_relocated;
 static uint64_t dram_top;
 static unsigned nnodes;
 
+static void check(void)
+{
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->check();
+}
+
 static void scan(void)
 {
 	printf("Map scan:\n");
@@ -453,10 +459,6 @@ static void acpi_tables(void)
 
 static void finalise(void)
 {
-
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->status();
-
 	printf("Clearing DRAM");
 
 	// start clearing DRAM
@@ -488,9 +490,7 @@ static void finalise(void)
 
 	e820->test();
 	acpi_tables();
-
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->status();
+	check();
 }
 
 static void finished(void)

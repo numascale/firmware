@@ -36,11 +36,15 @@ void ACPI::shadow_bios(void)
 	assert(area);
 	memcpy(area, (void *)SHADOW_BASE, SHADOW_LEN);
 	uint64_t val = lib::rdmsr(MSR_SYSCFG);
+
+	// disable fixed MTRRs
 	lib::wrmsr(MSR_SYSCFG, val | (3 << 18));
 	disable_cache();
 	lib::wrmsr(MSR_MTRR_FIX4K_F0000, FMTRR_WRITETHROUGH);
 	lib::wrmsr(MSR_MTRR_FIX4K_F8000, FMTRR_WRITETHROUGH);
 	enable_cache();
+
+	// reenable fixed MTRRs
 	lib::wrmsr(MSR_SYSCFG, val | (1 << 18));
 	memcpy((void *)SHADOW_BASE, area, SHADOW_LEN);
 	free(area);

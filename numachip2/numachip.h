@@ -205,8 +205,7 @@ public:
 	static ht_t probe(const sci_t sci);
 	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
 	void fabric_train(void);
-	void fabric_status(void);
+	void fabric_check(void);
 	void fabric_reset(void);
-	void routing_dump(void);
-	void dram_status(void);
+	void dram_check(void);
 };

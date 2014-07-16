@@ -28,5 +28,6 @@ public:
 
 	void clear(void);
 	uint64_t status(void);
+	void check(void);
 	LC5(Numachip2 &_numachip, const uint16_t _addr, const char *name);
 };

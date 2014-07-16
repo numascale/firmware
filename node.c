@@ -38,10 +38,10 @@ void Node::init(void)
 	printf("SCI%03x (%lluGB, %u cores)\n", sci, dram_size >> 30, cores);
 }
 
-void Node::status(void)
+void Node::check(void)
 {
-	numachip->fabric_status();
-	numachip->dram_status();
+	numachip->fabric_check();
+	numachip->dram_check();
 	assert(!numachip->read32(Numachip2::SIU_EVENTSTAT));
 }
 
