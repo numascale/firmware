@@ -626,8 +626,8 @@ AcpiTable::AcpiTable(const char *name, const unsigned rev): payload(0), allocate
 	memcpy(&header.sig.s, name, 4);
 	header.len = sizeof(header);
 	header.revision = rev;
-	memcpy(&header.oemid, "NUMAS2", 6);
-	memcpy(&header.oemtableid, "N313NUMA", 8);
+	memcpy(&header.oemid, "NUMASC", 6);
+	memcpy(&header.oemtableid, "NCONECT2", 8);
 	header.oemrev = 0;
 	memcpy(&header.creatorid, "1B47", 4);
 	header.creatorrev = 1;
