@@ -36,28 +36,21 @@ EXPORT(init_dispatch)
 	mov	%ax, %ss
 	mov	$(stack_end - stack_start), %sp
 
-	movl	%cs:SYM_OFFSET(cpu_status), %edx
-	cmpl	$VECTOR_TRAMPOLINE, %edx
-	je	init_trampoline
-	cmpl	$VECTOR_PROBEFILTER_EARLY_f10, %edx
-	je	init_probefilter_early_f10
-	cmpl	$VECTOR_PROBEFILTER_EARLY_f15, %edx
-	je	init_probefilter_early_f15
-	cmpl	$VECTOR_ENABLE_CACHE, %edx
-	je	init_enable_cache
-	cmpl	$VECTOR_READBACK_MSR, %edx
-	je	init_readback_msr
-	cmpl	$VECTOR_READBACK_APIC, %edx
-	je	init_readback_apic
+	movl %cs:SYM_OFFSET(cpu_status), %edx
+	cmpl $VECTOR_SETUP, %edx
+	je setup
+	cmpl $VECTOR_TEST_START, %edx
+	je test_start
+	cmpl $VECTOR_TEST_STOP, %edx
+	je test_stop
+
+	STATUS(0x10);
 1:
 	cli
 	hlt
 	jmp	1b
 
-	.align 16
-init_trampoline:
-	STATUS(4)
-
+setup:
 	// disable caching
 	mov	%cr0, %eax
 	or	$0x40000000, %eax
@@ -74,11 +67,7 @@ init_trampoline:
 	cmp	$MSR_MTRR_PHYS_MASK7, %ecx
 	jna	1b
 
-	// set default memory type
-	mov	%cs:SYM_OFFSET(mtrr_default), %eax
-	mov	%cs:SYM_OFFSET(mtrr_default + 4), %edx
-	mov	$MSR_MTRR_DEFAULT, %ecx
-	wrmsr
+	STATUS(0x30)
 
 	// set fixed MTRRs
 	mov	$SYM_OFFSET(fixed_mtrr_regs), %edi // 32-bit MSR to use
@@ -97,6 +86,8 @@ init_trampoline:
 
 	wrmsr
 	jmp	1b
+
+	STATUS(0x40)
 
 break:
 	// set variable MTRRs
@@ -141,22 +132,10 @@ break:
 	mov	$MSR_TOPMEM2, %ecx
 	wrmsr
 
-	// set SYSCFG MSR
-	mov	%cs:SYM_OFFSET(msr_syscfg), %eax
-	mov	%cs:SYM_OFFSET(msr_syscfg + 4), %edx
-	mov	$MSR_SYSCFG, %ecx
-	wrmsr
-
 	// set CPU WDT MSR
 	mov	%cs:SYM_OFFSET(msr_cpuwdt), %eax
 	mov	%cs:SYM_OFFSET(msr_cpuwdt + 4), %edx
 	mov	$MSR_CPUWDT, %ecx
-	wrmsr
-
-	// ensure MCEs aren't redirected into SMIs
-	mov	$0, %eax
-	mov	$0, %edx
-	mov	$MSR_MCE_REDIR, %ecx
 	wrmsr
 
 	// set HWCR MSR
@@ -165,49 +144,7 @@ break:
 	mov	$MSR_HWCR, %ecx
 	wrmsr
 
-	// set MC4_MISC0 MSR
-	mov	%cs:SYM_OFFSET(msr_mc4_misc0), %eax
-	mov	%cs:SYM_OFFSET(msr_mc4_misc0 + 4), %edx
-	mov	$MSR_MC4_MISC0, %ecx
-	wrmsr
-
-	// set MC4_MISC1 MSR
-	mov	%cs:SYM_OFFSET(msr_mc4_misc1), %eax
-	mov	%cs:SYM_OFFSET(msr_mc4_misc1 + 4), %edx
-	mov	$MSR_MC4_MISC1, %ecx
-	wrmsr
-
-	// set MC4_MISC2 MSR
-	mov	%cs:SYM_OFFSET(msr_mc4_misc2), %eax
-	mov	%cs:SYM_OFFSET(msr_mc4_misc2 + 4), %edx
-	mov	$MSR_MC4_MISC2, %ecx
-	wrmsr
-
-#ifdef BROKEN
-	// set OSVW_ID_LEN MSR
-	mov	%cs:SYM_OFFSET(msr_osvw_id_len), %eax
-	mov	%cs:SYM_OFFSET(msr_osvw_id_len + 4), %edx
-	mov	$MSR_OSVW_ID_LEN, %ecx
-	wrmsr
-
-	// set OSVW_STATUS MSR
-	mov	%cs:SYM_OFFSET(msr_osvw_status), %eax
-	mov	%cs:SYM_OFFSET(msr_osvw_status + 4), %edx
-	mov	$MSR_OSVW_STATUS, %ecx
-	wrmsr
-
-	// set Interrupt Pending and CMP-Halt Register MSR
-	mov	%cs:SYM_OFFSET(msr_int_halt), %eax
-	mov	%cs:SYM_OFFSET(msr_int_halt + 4), %edx
-	mov	$MSR_HWCR, %ecx
-	wrmsr
-#endif
-
-	// set LSCFG MSR
-	mov	%cs:SYM_OFFSET(msr_lscfg), %eax
-	mov	%cs:SYM_OFFSET(msr_lscfg + 4), %edx
-	mov	$MSR_LSCFG, %ecx
-	wrmsr
+	STATUS(0x50)
 
 	// set CUCFG2 MSR
 	mov	%cs:SYM_OFFSET(msr_cucfg2), %eax
@@ -215,6 +152,9 @@ break:
 	mov	$MSR_CU_CFG2, %ecx
 	wrmsr
 
+	STATUS(0x51)
+
+#ifdef DEBUG
 	mov	$SYM_OFFSET(cpu_cr), %si
 	call	print_strz
 
@@ -229,11 +169,14 @@ break:
 
 	mov	$SYM_OFFSET(cpu_done1), %si
 	call	print_strz
+#endif
+	STATUS(0x52)
 
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax
 	call	print_hex32
+
 	mov	$0x70800, %eax
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
@@ -247,18 +190,24 @@ break:
 	mov	%es:0x30, %eax
 	call	print_hex32
 
+	STATUS(0x53)
+
 	mov	%cs:SYM_OFFSET(cpu_apic_renumber), %al
 	shl	$24, %eax
 	mov	%eax, %es:0x20
 	mov	%es:0x20, %eax
-	call	print_hex32
+	call print_hex32
+
+	STATUS(0x54)
 
 	pop	%eax
 	and	$~0x100, %eax	// clear BSP flag to let core accept INIT and STARTUP IPIs
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
 	rdmsr
-	call	print_hex32
+	call print_hex32
+
+	STATUS(0x60)
 
 	mov	$MSR_NODE_ID, %ecx
 	rdmsr
@@ -274,7 +223,7 @@ break:
 	or	%ebx, %eax
 	wrmsr
 
-	mov	$MSR_MCFG_BASE, %ecx
+	mov	$MSR_MCFG, %ecx
 	mov	%cs:SYM_OFFSET(msr_mcfg), %eax
 	mov	%cs:SYM_OFFSET(msr_mcfg + 4), %edx
 	wrmsr
@@ -284,14 +233,47 @@ break:
 	mov	%eax, %cs:SYM_OFFSET(msr_smm_base_rem)
 	mov	%edx, %cs:SYM_OFFSET(msr_smm_base_rem + 4)
 
-	mov	$SYM_OFFSET(cpu_done2), %si
-	call	print_strz
-
-	STATUS(0)
+	STATUS(0x70)
 1:
 	cli
 	hlt
 	jmp	1b
+
+// seed passed in EBX
+// random number returned in EAX
+prng:
+	push %edx
+	mov $1103515245, %eax
+	mul %ebx
+	add $12345, %eax
+	pop %edx
+	ret
+
+// address passed in EDX:EAX
+// data returned in ECX
+read32:
+//	mov $MSR_FS_BASE, %ecx
+//	wrmsr
+//	mov %fs:(0), %ecx
+	ret
+
+test_start:
+	STATUS(0x80)
+	mov $1, %ebx
+1:
+	call prng
+	and $~63, %eax // align access
+	mov $0x1, %edx // 4GB base
+	call read32
+	inc %ebx
+	jmp 1b
+
+test_stop:
+	STATUS(0x90)
+1:
+	cli
+	hlt
+	jmp 1b
 
 init_probefilter_early_f10:
 	// disable cacheing
@@ -304,7 +286,7 @@ init_probefilter_early_f10:
 	mov $MSR_CU_CFG2, %ecx
 	rdmsr
 	or	$(1 << (42 - 32)), %edx
-	wrmsr
+	wrmsr // FIXME: read MSR
 
 	STATUS(0)
 1:
@@ -317,7 +299,7 @@ init_probefilter_early_f15:
 	mov $MSR_CU_CFG3, %ecx
 	rdmsr
 	or	$(1 << (49 - 32)), %edx
-	wrmsr
+	wrmsr // FIXME: read MSR
 
 	// disable cacheing
 	mov	%cr0, %eax
@@ -329,7 +311,7 @@ init_probefilter_early_f15:
 	mov $MSR_CU_CFG2, %ecx
 	rdmsr
 	or	$(1 << (42 - 32)), %edx
-	wrmsr
+	wrmsr // FIXME: read MSR
 
 	STATUS(0)
 1:
@@ -395,13 +377,59 @@ init_readback_apic:
 	hlt
 	jmp	1b
 
-	.align 16
-EXPORT(cpu_status)
-	.long 0
-EXPORT(cpu_apic_renumber)
-	.byte 0
-EXPORT(cpu_apic_hi)
-	.byte 0
+// print asciiz string at by cs:si
+print_strz:
+#if DEBUG
+	xor	%bx, %bx
+	xor	%dx, %dx
+1:
+	mov	%cs:(%si), %al
+	inc	%si
+	or	%al, %al
+	jz	2f
+	mov	$0x0e, %ah
+	int	$0x10
+	mov	$0x01, %ah
+	int	$0x14
+	jmp	1b
+2:
+#endif
+	ret
+
+print_hex32:
+#if DEBUG
+	push	%eax
+	push	%ebx
+	push	%ecx
+	push	%edx
+	push	%esi
+	mov	%eax, %ebx
+	mov	$8, %ecx
+	mov	$SYM_OFFSET(hex32_buf) + 8, %si
+1:
+	mov	%bl, %al
+	and	$0x0f, %al
+	add	$0x30, %al
+	cmp	$0x3a, %al
+	jb	2f
+	add	$0x27, %al
+2:
+	mov	%al, %cs:(%si)
+	dec	%si
+	shr	$4, %ebx
+	loop	1b
+
+	mov	$SYM_OFFSET(hex32_buf), %si
+	call	print_strz
+	pop	%esi
+	pop	%edx
+	pop	%ecx
+	pop	%ebx
+	pop	%eax
+#endif
+	ret
+
+	.align 64
 EXPORT(msr_mcfg)
 	.long 0, 0
 EXPORT(msr_topmem)
@@ -445,25 +473,25 @@ EXPORT(msr_mc4_misc1)
 	.long 0, 0
 EXPORT(msr_mc4_misc2)
 	.long 0, 0
-#ifdef BROKEN
-EXPORT(msr_osvw_id_len)
-	.long 0, 0
-EXPORT(msr_osvw_status)
-	.long 0, 0
-EXPORT(msr_int_halt)
-	.long 0, 0
-#endif
 EXPORT(msr_readback)
+	.long 0, 0
+EXPORT(msr_lscfg)
+	.long 0, 0
+EXPORT(msr_cucfg2)
 	.long 0, 0
 EXPORT(apic_offset)
 	.long 0
 EXPORT(apic_readback)
 	.long 0
-EXPORT(msr_lscfg)
-	.long 0, 0
-EXPORT(msr_cucfg2)
-	.long 0, 0
-
+EXPORT(cpu_status)
+	.long 0
+EXPORT(cpu_apic_renumber)
+	.byte 0
+EXPORT(cpu_apic_hi)
+	.byte 0
+EXPORT(counter)
+	.long 0
+#if DEBUG
 cpu_mtrr:
 	.asciz	"\r\nMTRR "
 cpu_cr:
@@ -472,73 +500,21 @@ cpu_done1:
 	.asciz	"\r\nCPU "
 cpu_done2:
 	.asciz  " done setting MTRRs\r\n"
-
-// print asciiz string at by cs:si
-print_strz:
-#if DEBUG_TRAMP
-	xor	%bx, %bx
-	xor	%dx, %dx
-1:
-	mov	%cs:(%si), %al
-	inc	%si
-	or	%al, %al
-	jz	2f
-	mov	$0x0e, %ah
-	int	$0x10
-	mov	$0x01, %ah
-	int	$0x14
-	jmp	1b
-2:
-#endif
-	ret
-
 hex32_buf:
 	.asciz	"[--------] "
-
-print_hex32:
-#if DEBUG_TRAMP
-	push	%eax
-	push	%ebx
-	push	%ecx
-	push	%edx
-	push	%esi
-	mov	%eax, %ebx
-	mov	$8, %ecx
-	mov	$SYM_OFFSET(hex32_buf) + 8, %si
-1:
-	mov	%bl, %al
-	and	$0x0f, %al
-	add	$0x30, %al
-	cmp	$0x3a, %al
-	jb	2f
-	add	$0x27, %al
-2:
-	mov	%al, %cs:(%si)
-	dec	%si
-	shr	$4, %ebx
-	loop	1b
-
-	mov	$SYM_OFFSET(hex32_buf), %si
-	call	print_strz
-	pop	%esi
-	pop	%edx
-	pop	%ecx
-	pop	%ebx
-	pop	%eax
 #endif
-	ret
-
-	.align 16
-stack_start:  .skip 4096, 0
-stack_end:
-
-	.align 16
 EXPORT(old_int15_vec)
 	.word 0,0
+
+	.align 64
 EXPORT(new_e820_len)
 	.word 0
 EXPORT(new_e820_map)
 	.skip E820_MAP_MAX, 0
+
+	.align 64
+stack_start:  .skip 1024, 0
+stack_end:
 
 EXPORT(new_e820_handler)
 	cmp	$0xe820, %eax
@@ -578,13 +554,6 @@ EXPORT(new_e820_handler)
 1:	or	$1, 4(%esp)	# Set carry flag to signify error
 2:	xor	%ebx, %ebx
 	iret
-
-	.align 16
-
-EXPORT(new_mpfp)
-	.skip 16, 0
-EXPORT(new_mptable)
-	.skip 768, 0
 
 	.global asm_relocate_end
 asm_relocate_end:

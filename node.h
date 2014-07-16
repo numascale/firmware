@@ -33,6 +33,7 @@ public:
 	SR56x0 *iohub;
 	Numachip2 *numachip;
 	uint64_t dram_base, dram_size, dram_end;
+	uint16_t apic_offset;
 
 	void init(void);
 	void check(void);

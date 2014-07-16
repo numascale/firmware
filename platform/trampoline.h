@@ -17,12 +17,9 @@
 
 #pragma once
 
-#define VECTOR_TRAMPOLINE 1
-#define VECTOR_PROBEFILTER_EARLY_f10 2
-#define VECTOR_PROBEFILTER_EARLY_f15 3
-#define VECTOR_ENABLE_CACHE 4
-#define VECTOR_READBACK_MSR 5
-#define VECTOR_READBACK_APIC 6
+#define VECTOR_SETUP 1
+#define VECTOR_TEST_START 2
+#define VECTOR_TEST_STOP 3
 
 #define APIC_VECTOR_MASKED 0x00010000
 #define MSR_VECTOR_MASKED 0xc010000001000000
@@ -48,9 +45,9 @@ IMPORT_RELOCATED(msr_topmem2);
 IMPORT_RELOCATED(msr_cpuwdt);
 IMPORT_RELOCATED(mtrr_default);
 IMPORT_RELOCATED(fixed_mtrr_regs);
-IMPORT_RELOCATED(new_mtrr_fixed);
-IMPORT_RELOCATED(new_mtrr_var_base);
-IMPORT_RELOCATED(new_mtrr_var_mask);
+IMPORT_RELOCATED(mtrr_fixed);
+IMPORT_RELOCATED(mtrr_var_base);
+IMPORT_RELOCATED(mtrr_var_mask);
 IMPORT_RELOCATED(msr_syscfg);
 IMPORT_RELOCATED(msr_topmem_rem);
 IMPORT_RELOCATED(msr_smm_base_rem);

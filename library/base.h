@@ -96,6 +96,7 @@ typedef uint8_t ht_t;
 typedef uint16_t sci_t;
 typedef uint16_t reg_t;
 typedef uint32_t msr_t;
+typedef uint16_t apic_t;
 
 inline void *operator new(const size_t size)
 {

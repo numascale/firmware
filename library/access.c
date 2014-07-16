@@ -171,7 +171,7 @@ namespace lib
 
 	uint64_t mcfg_base(const sci_t sci)
 	{
-		uint64_t base = (rdmsr(MSR_MCFG_BASE) & ~0xfffff);
+		uint64_t base = (rdmsr(MSR_MCFG) & ~0xfffff);
 		if (base < (1ULL << 32) || sci == SCI_NONE)
 			return base;
 

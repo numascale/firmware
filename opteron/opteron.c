@@ -160,19 +160,13 @@ void Opteron::clear32(const reg_t reg, const uint32_t mask) const
 
 void Opteron::prepare(void)
 {
-#ifdef NOTNEEDED
-	// enable CF8 extended access
-	msr_nb_cfg = lib::rdmsr(MSR_NB_CFG);
-	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg | (1ULL << 46));
-#endif
-
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
-	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
-	lib::wrmsr(MSR_HWCR, *REL64(msr_hwcr));
+	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
+	lib::wrmsr(MSR_HWCR, msr);
 
 	// enable 64-bit config access
-	*REL64(msr_cucfg2) = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
-	lib::wrmsr(MSR_CU_CFG2, *REL64(msr_cucfg2));
+	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
+	lib::wrmsr(MSR_CU_CFG2, msr);
 
 	// detect processor family
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
@@ -194,13 +188,6 @@ void Opteron::prepare(void)
 	// disable core WDT
 	lib::wrmsr(MSR_CPUWDT, 0);
 }
-
-#ifdef NOTNEEDED
-void Opteron::restore(void)
-{
-	lib::wrmsr(MSR_NB_CFG, msr_nb_cfg);
-}
-#endif
 
 void Opteron::dram_scrub_disable(void)
 {

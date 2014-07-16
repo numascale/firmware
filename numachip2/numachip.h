@@ -171,9 +171,10 @@ public:
 
 	static const unsigned SIU_ATT_SHIFT  = 32;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
-	static const unsigned APIC_ATT_SHIFT = 6; // max 64 cores per server
+	static const unsigned APIC_NODE_SHIFT = 6; // max 64 cores per server
 	static const unsigned GSM_SHIFT      = 43;
 	static const unsigned GSM_SIZE_SHIFT = 43;
+	static const unsigned APIC_ATT_SHIFT     = 4;
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;

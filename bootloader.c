@@ -91,13 +91,13 @@ static void add(const Node &node)
 
 	// 7. setup MMIO32 ATT to master
 	node.numachip->mmioatt.range(vga_base, vga_limit, local_node->sci);
-	node.numachip->mmioatt.range(*REL64(msr_topmem), 0xffffffff, local_node->sci);
+	node.numachip->mmioatt.range(lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->sci);
 
 	// 8. forward VGA and MMIO32 regions to master
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		range = 0;
 		(*nb)->mmiomap.add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
-		(*nb)->mmiomap.add(range++, (uint32_t)*REL64(msr_topmem), 0xffffffff, node.numachip->ht, 0);
+		(*nb)->mmiomap.add(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
 
 		while (range < 8)
 			(*nb)->mmiomap.remove(range++);
@@ -261,14 +261,11 @@ static void remap(void)
 			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
 
 	// 5. set top of memory
-	*REL64(msr_topmem) = lib::rdmsr(MSR_TOPMEM);
-	assert(*REL64(msr_topmem) < 0xffffffff);
-	*REL64(msr_topmem2) = dram_top;
-	lib::wrmsr(MSR_TOPMEM2, *REL64(msr_topmem2));
+	lib::wrmsr(MSR_TOPMEM2, dram_top);
 
 	// 6. add NumaChip MMIO32 ranges
 	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
-	local_node->numachip->mmiomap.add(1, *REL64(msr_topmem), 0xffffffff, local_node->opterons[0]->ioh_ht);
+	local_node->numachip->mmiomap.add(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
 
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
 		add(**node);
@@ -312,6 +309,155 @@ static void remap(void)
 #endif
 }
 
+#define MTRR_TYPE(x) (x) == 0 ? "uncacheable" : (x) == 1 ? "write-combining" : (x) == 4 ? "write-through" : (x) == 5 ? "write-protect" : (x) == 6 ? "write-back" : "unknown"
+
+static void setup_cores(void)
+{
+	// read fixed MSRs
+	uint64_t *mtrr_fixed = REL64(mtrr_fixed);
+	uint32_t *fixed_mtrr_regs = REL32(fixed_mtrr_regs);
+
+	printf("Fixed MTRRs:\n");
+	for (unsigned i = 0; fixed_mtrr_regs[i] != 0xffffffff; i++) {
+		mtrr_fixed[i] = lib::rdmsr(fixed_mtrr_regs[i]);
+		printf("- 0x%016llx\n", mtrr_fixed[i]);
+	}
+
+	// read variable MSRs
+	uint64_t *mtrr_var_base = REL64(mtrr_var_base);
+	uint64_t *mtrr_var_mask = REL64(mtrr_var_mask);
+	printf("Variable MTRRs:\n");
+
+	for (int i = 0; i < 8; i++) {
+		mtrr_var_base[i] = lib::rdmsr(MSR_MTRR_PHYS_BASE0 + i * 2);
+		mtrr_var_mask[i] = lib::rdmsr(MSR_MTRR_PHYS_MASK0 + i * 2);
+
+		if (mtrr_var_mask[i] & 0x800ULL)
+			printf("- 0x%011llx:0x%011llx %s\n", mtrr_var_base[i] & ~0xfffULL,
+			  mtrr_var_mask[i] & ~0xfffULL, MTRR_TYPE(mtrr_var_base[i] & 0xffULL));
+	}
+
+	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR);
+	*REL64(msr_cpuwdt) = lib::rdmsr(MSR_CPUWDT);
+	*REL64(msr_cucfg2) = lib::rdmsr(MSR_CU_CFG2);
+	*REL64(msr_topmem) = lib::rdmsr(MSR_TOPMEM);
+	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
+	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
+
+	volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
+	// renumber BSC to apicid 0
+	uint32_t val = apic[0x20/4];
+	apic[0x20/4] = (val & 0xffffff) | (0 << 24);
+
+	// boot cores
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		local_node->numachip->apicatt.range(0, 0xff, (*node)->sci);
+		printf("APICs on %03x:", (*node)->sci);
+
+		for (unsigned n = 0; n < acpi->napics; n++) {
+			// skip BSC
+			if (node == &nodes[0] && n == 0)
+				continue;
+
+			uint8_t apicid = acpi->apics[n];
+			uint16_t new_apicid = apicid - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+			*REL8(cpu_apic_renumber) = new_apicid;
+			*REL8(cpu_apic_hi) = new_apicid >> 8;
+			printf(" %u->", apicid);
+
+			local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
+			  (5 << 8)); // init
+			*REL32(cpu_status) = VECTOR_SETUP;
+			local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
+			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+
+			printf("%u", new_apicid);
+
+			for (unsigned i = 0; i < 1000000; i++) {
+				if (*REL32(cpu_status) == 0x70)
+					break;
+				cpu_relax();
+			}
+
+			assertf(*REL32(cpu_status) == 0x70, "APIC %u->%u has status 0x%x", apicid, new_apicid, *REL32(cpu_status));
+		}
+		printf("\n");
+	}
+
+	// map APICIDs to appropriate server
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
+			uint16_t start = (dnode - nodes) << Numachip2::APIC_NODE_SHIFT;
+			(*node)->numachip->apicatt.range(start, start + (1 << Numachip2::APIC_NODE_SHIFT) - 1, (*dnode)->sci);
+		}
+	}
+}
+
+static void test_cores(void)
+{
+	lib::wait_key("Press enter to start test");
+
+	printf("Starting cores:");
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
+			// skip BSC
+			if (node == &nodes[0] && n == 0)
+				continue;
+
+			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+
+			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
+			  (5 << 8)); // init
+			*REL32(cpu_status) = VECTOR_TEST_START;
+			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
+			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+
+            printf(" %u", new_apicid);
+
+            for (unsigned i = 0; i < 1000000; i++) {
+                if (*REL32(cpu_status) == 0x80)
+                    break;
+                cpu_relax();
+            }
+
+			assertf(*REL32(cpu_status) == 0x80, "APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+		}
+	}
+	printf("\n");
+
+	lib::wait_key("Press enter to stop test");
+
+	printf("Stopping cores:");
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
+			// skip BSC
+			if (node == &nodes[0] && n == 0)
+				continue;
+
+			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+
+			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
+			  (5 << 8)); // init
+			*REL32(cpu_status) = VECTOR_TEST_STOP;
+			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
+			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+
+            printf(" %u", new_apicid);
+
+            for (unsigned i = 0; i < 1000000; i++) {
+                if (*REL32(cpu_status) == 0x90)
+                    break;
+                cpu_relax();
+            }
+
+			assertf(*REL32(cpu_status) == 0x90, "APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+		}
+	}
+	printf("\n");
+}
+
 static void acpi_tables(void)
 {
 	{
@@ -344,16 +490,19 @@ static void acpi_tables(void)
 		apic.append((const char *)&oapic->data[4], 4); // Flags
 
 		// append new x2APIC entries
-		uint32_t core = 8;
 		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			unsigned n = 0;
+
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-				for (unsigned c = 0; c < 6; c++) {
+				for (unsigned m = 0; m < (*nb)->cores; m++) {
+					uint16_t apicid = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					struct acpi_x2apic_apic ent = {
-						.type = 9, .length = 16, .reserved = 0, .x2apic_id = core++, // FIXME
-						.flags = 1, .acpi_uid = 0};
+					  .type = 9, .length = 16, .reserved = 0,
+					  .x2apic_id = apicid, .flags = 1, .acpi_uid = 0};
 					apic.append((const char *)&ent, sizeof(ent));
 				}
-				core += 2;
+
+				n += (*nb)->cores;
 			}
 		}
 
@@ -362,15 +511,14 @@ static void acpi_tables(void)
 		while (pos < (oapic->len - sizeof(struct acpi_sdt))) {
 			uint8_t type = oapic->data[pos];
 			uint8_t len = oapic->data[pos + 1];
-			printf("pos=%d type=%d len=%d olen=%d s=%d\n", pos, type, len, oapic->len, sizeof(struct acpi_sdt));
 			assert(len > 0 && len < 64);
+
 			if (type != 0 && type != 9)
 				apic.append((const char *)&oapic->data[pos], len);
 			pos += len;
 		}
 
 		acpi->replace(apic);
-		acpi->dump(acpi->find_sdt("APIC"));
 	}
 
 	{
@@ -382,8 +530,10 @@ static void acpi_tables(void)
 		uint64_t reserved2 = 0;
 		srat.append((const char *)&reserved2, sizeof(reserved2));
 
-		uint32_t domain = 0, core = 8;
+		uint32_t domain = 0;
 		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			unsigned n = 0;
+
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 				struct acpi_mem_affinity ment = {
 					.type = 1, .length = 40, .proximity = domain, .reserved1 = 0,
@@ -392,15 +542,16 @@ static void acpi_tables(void)
 					.reserved2 = 0, .flags = 1, .reserved3 = {0, 0}};
 				srat.append((const char *)&ment, sizeof(ment));
 
-				for (unsigned c = 0; c < 6; c++) {
+				for (unsigned m = 0; m < (*nb)->cores; m++) {
+					uint16_t apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					struct acpi_x2apic_affinity ent = {
-						.type = 2, .length = 24, .reserved1 = 0, .proximity = domain,
-						.x2apicid = core++, .flags = 1, // FIXME
-						.clock = (uint32_t)(node - nodes), .reserved2 = 0};
+					  .type = 2, .length = 24, .reserved1 = 0, .proximity = domain,
+					  .x2apicid = apicid, .flags = 1, .clock = (uint32_t)(node - nodes), .reserved2 = 0};
 					srat.append((const char *)&ent, sizeof(ent));
 				}
+
+				n += (*nb)->cores;
 				domain++;
-				core += 2;
 			}
 		}
 
@@ -489,6 +640,8 @@ static void finalise(void)
 	}
 
 	e820->test();
+	setup_cores();
+	test_cores();
 	acpi_tables();
 	check();
 }
@@ -546,18 +699,18 @@ int main(const int argc, const char *argv[])
 	e820->add(NC_MCFG_BASE, NC_MCFG_LIM - NC_MCFG_BASE + 1, E820::RESERVED);
 
 	// setup local MCFG access
-	uint64_t val6 = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28ULL) | 0x21ULL;
-	lib::wrmsr(MSR_MCFG_BASE, val6);
+	lib::wrmsr(MSR_MCFG, NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21);
 
 	if (options->tracing)
 		setup_gsm_early();
 
 	local_node->numachip->fabric_train();
 
-	if (!config->local_node->partition)
+	if (!config->local_node->partition) {
+		setup_info();
 		finished();
+	}
 
-	nnodes = 0;
 	for (unsigned n = 0; n < config->nnodes; n++)
 		if (config->nodes[n].partition == config->local_node->partition)
 			nnodes++;

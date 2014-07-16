@@ -71,7 +71,7 @@
 #define MSR_NB_CFG            0xc001001f
 #define MSR_MCE_REDIR         0xc0010022
 #define MSR_INT_HALT          0xc0010055
-#define MSR_MCFG_BASE         0xc0010058
+#define MSR_MCFG              0xc0010058
 #define MSR_TRAP_CTL          0xc0010059
 #define MSR_COFVID_STAT       0xc0010071
 #define MSR_CPUWDT            0xc0010074
