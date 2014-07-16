@@ -121,11 +121,8 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	write32(SIU_NODEID, _sci);
 
 	// set master SCI ID for PCI IO routing
-	if (master != SCI_NONE) {
-		uint32_t val = read32(PIU_APIC_SHIFT);
-		val = (val & ~0xfff) | master;
-		write32(PIU_APIC_SHIFT, val);
-	}
+	uint32_t val = read32(PIU_APIC_SHIFT) & ~0xfff;
+	write32(PIU_APIC_SHIFT, val | master);
 
 	fabric_routing();
 }

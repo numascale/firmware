@@ -85,6 +85,9 @@ Numachip2::ApicAtt::ApicAtt(Numachip2 &_numachip): numachip(_numachip)
 {
 	if (numachip.local)
 		range(0x000, 0xfff, 0xfff);
+
+	uint32_t val = numachip.read32(PIU_APIC_SHIFT) & ~(3 << 16);
+	numachip.write32(PIU_APIC_SHIFT, val | ((APIC_ATT_SHIFT - 1) << 16));
 }
 
 void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const sci_t dest)
@@ -93,6 +96,9 @@ void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const 
 		printf("SCI%03x: APIC ATT 0x%04x:0x%04x to SCI%03x", numachip.sci, base, limit, dest);
 
 	assert(limit > base);
+	const uint16_t mask = (1 << APIC_ATT_SHIFT) - 1;
+	assert((base & mask) == 0);
+	assert((limit & mask) == mask);
 
 	numachip.write32(PIU_ATT_INDEX, (1 << 31) | (1 << 30) | (base >> APIC_ATT_SHIFT));
 
