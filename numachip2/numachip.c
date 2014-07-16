@@ -112,7 +112,6 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 
-	selftest();
 	dram_init();
 	fabric_init();
 

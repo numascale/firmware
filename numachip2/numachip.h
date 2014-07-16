@@ -89,9 +89,6 @@ class Numachip2 {
 	uint8_t spi_master_read_fifo(void);
 	void spi_master_read(const uint16_t addr, const int len, uint8_t *data);
 
-	/* selftest.c */
-	void selftest(void);
-
 	/* dram.c */
 	void dram_test(void);
 	void dram_clear(void);
