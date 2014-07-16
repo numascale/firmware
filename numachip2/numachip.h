@@ -72,6 +72,7 @@ class Numachip2 {
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC5 *lcs[6];
+	uint16_t routes[7][256][3];
 	int nlcs;
 	const bool local;
 	const sci_t master;
@@ -99,6 +100,8 @@ class Numachip2 {
 	void update(const uint16_t dest, const uint8_t bxbarid, const uint8_t link);
 	void route(const uint8_t in, const sci_t sci, const uint8_t out);
 	void fabric_routing(void);
+	void routing_dump(void);
+	void routing_write(void);
 	void fabric_init(void);
 public:
 	/* Registers; function in bits 15:12 */

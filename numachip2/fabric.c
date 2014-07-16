@@ -176,9 +176,31 @@ void Numachip2::routing_dump(void)
 	}
 }
 
+void Numachip2::routing_write(void)
+{
+	printf("Writing routes");
+
+	for (int in = 0; in <= 6; in++) {
+		if (!config->size[(in - 1) / 2])
+			continue;
+
+		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
+
+		for (unsigned chunk = 0; chunk < 16; chunk++) {
+			write32(regbase + XBAR_CHUNK, chunk );
+	//		for (unsigned n = 0; n < 256; n++)
+//				write32(regbase + n * 4, routes[]);
+		}
+	}
+
+	printf("\n");
+}
+
 void Numachip2::fabric_routing(void)
 {
 	printf("Initialising XBar routing:\n");
+
+	memset(routes, 0xff, sizeof(routes));
 
 	switch(sci) {
 	case 0x000:
@@ -237,6 +259,7 @@ void Numachip2::fabric_routing(void)
 	}
 #endif
 	routing_dump();
+//	routing_write();
 }
 
 void Numachip2::fabric_init(void)
