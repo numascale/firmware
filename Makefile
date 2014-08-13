@@ -84,14 +84,14 @@ $(mjson_dir)/src/json.o: $(mjson_dir)/src/json.c
 version.h: library/access.h platform/acpi.h bootloader.h library/access.c bootloader.c
 	@echo \#define VER \"`git describe --always`\" >version.h
 
-bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o opteron/sr56x0.o platform/acpi.o platform/smbios.o platform/options.o library/access.o library/utils.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o platform/syslinux.o platform/e820.o platform/trampoline.o platform/devices.o $(mjson_dir)/src/json.o $(COM32DEPS)
+bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o opteron/sr56x0.o platform/acpi.o platform/smbios.o platform/options.o library/access.o library/utils.o numachip2/i2c-master.o numachip2/numachip.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o platform/syslinux.o platform/e820.o platform/trampoline.o platform/devices.o $(mjson_dir)/src/json.o $(COM32DEPS)
 
 bootloader.o: bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h
 
 .PHONY: tests
 tests: simulation/sim
 
-simulation/sim: simulation/sim.o nodes.o numachip2/numachip.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/selftest.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o opteron/opteron.o opteron/ht-scan.o opteron/maps.o platform/config.o platform/options.o platform/e820.o platform/trampoline.o $(mjson_dir)/src/json.o simulation/syslinux.o library/utils.o
+simulation/sim: simulation/sim.o nodes.o numachip2/numachip.o numachip2/i2c-master.o numachip2/spd.o numachip2/spi-master.o numachip2/lc5.o numachip2/dram.o numachip2/fabric.o numachip2/maps.o numachip2/atts.o opteron/opteron.o opteron/ht-scan.o opteron/maps.o platform/config.o platform/options.o platform/e820.o platform/trampoline.o $(mjson_dir)/src/json.o simulation/syslinux.o library/utils.o
 
 node.o: node.h
 
@@ -116,7 +116,6 @@ numachip2/numachip.o: numachip2/numachip.c numachip2/numachip.h
 numachip2/i2c-master.o: numachip2/i2c-master.c bootloader.h library/access.h
 numachip2/spi-master.o: numachip2/spi-master.c bootloader.h library/access.h
 numachip2/lc5.o: numachip2/lc5.c numachip2/lc5.h
-numachip2/selftest.o: numachip2/selftest.c
 numachip2/fabric.h: $(mjson_dir)/src/json.h
 numachip2/fabric.o: numachip2/fabric.c
 numachip2/dram.o: numachip2/dram.c
