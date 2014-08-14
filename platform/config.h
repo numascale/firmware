@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "../json-1.5/src/json.h"
+#include "../json-1.6/src/json.h"
 #include "../library/base.h"
 
 class Config {
