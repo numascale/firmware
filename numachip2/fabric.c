@@ -127,25 +127,16 @@ uint8_t Numachip2::next(sci_t src, sci_t dst) const
 	return out;
 }
 
-// on LC5 'in', route packets to SCI 'dest' via LC 'out'
+// on LC 'in', route packets to SCI 'dest' via LC 'out'
 void Numachip2::route(const uint8_t in, const uint16_t dest, const uint8_t out)
 {
-	// dest[3:0] corresponds to bit offset
-	// dest[7:4] corresponds to register offset
-	// dest[11:8] corresponds to chunk offset
+	const unsigned regoffset = dest >> 4;
+	const unsigned bitoffset = dest & 0xf;
 
-	const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
-	const int regoffset = ((dest >> 4) & 0xf) << 2;
-	const int chunk = dest >> 8;
-	const int bitoffset = dest & 0xf;
-
-	write32(regbase + XBAR_CHUNK, chunk);
-
-	for (int bit = 0; bit < 3; bit++) {
-		uint32_t val = read32(regbase + regoffset + bit * XBAR_TABLE_SIZE);
-		val &= ~(1 << bitoffset);
-		val |= ((out >> bit) & 1) << bitoffset;
-		write32(regbase + regoffset + bit * XBAR_TABLE_SIZE, val);
+	for (unsigned bit = 0; bit < 3; bit++) {
+		uint16_t *ent = &routes[in][regoffset][bit];
+		*ent &= ~(1 << bitoffset);
+		*ent |= ((out >> bit) & 1) << bitoffset;
 	}
 }
 
@@ -153,22 +144,17 @@ void Numachip2::routing_dump(void)
 {
 	printf("Routing tables:\n");
 
-	for (int in = 0; in <= 6; in++) {
+	for (unsigned in = 0; in <= 6; in++) {
 		if (!config->size[(in - 1) / 2])
 			continue;
 
-		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
-
-		for (unsigned dest = 0; dest < config->nnodes; dest++) {
-			const int regoffset = ((dest >> 4) & 0xf) << 2;
-			const int chunk = dest >> 8;
-			const int bitoffset = dest & 0xf;
+		for (unsigned dest = 0; dest < 4096; dest++) {
+			const unsigned regoffset = dest >> 4;
+			const unsigned bitoffset = dest & 0xf;
 			uint8_t out = 0;
 
-			write32(regbase + XBAR_CHUNK, chunk);
-
-			for (int bit = 0; bit < 3; bit++)
-				out |= ((read32(regbase + regoffset + bit * XBAR_TABLE_SIZE) >> bitoffset) & 1) << bit;
+			for (unsigned bit = 0; bit < 3; bit++)
+				out |= ((routes[in][regoffset][bit] >> bitoffset) & 1) << bit;
 
 			if (out != 7)
 				printf("- on LC%d, SCI%03x via LC%d\n", in, dest, out);
@@ -178,28 +164,36 @@ void Numachip2::routing_dump(void)
 
 void Numachip2::routing_write(void)
 {
-	printf("Writing routes");
+	// calculate implemented depth
+	write32(SIU_XBAR + XBAR_CHUNK, 0xff);
+	const uint8_t chunk_lim = read32(LC_XBAR + XBAR_CHUNK);
 
-	for (int in = 0; in <= 6; in++) {
-		if (!config->size[(in - 1) / 2])
+	printf("Writing routes (%d chunks)", chunk_lim);
+
+options->debug.access = 1;
+
+	for (unsigned lc = 0; lc <= 6; lc++) {
+		if (!config->size[(lc - 1) / 2])
 			continue;
 
-		const int regbase = in ? (LC_XBAR + (in - 1) * LC_SIZE) : SIU_XBAR;
+		const unsigned regbase = lc ? (LC_XBAR + (lc - 1) * LC_SIZE) : SIU_XBAR;
 
-		for (unsigned chunk = 0; chunk < 16; chunk++) {
-			write32(regbase + XBAR_CHUNK, chunk );
-	//		for (unsigned n = 0; n < 256; n++)
-//				write32(regbase + n * 4, routes[]);
+		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
+			write32(regbase + XBAR_CHUNK, chunk);
+
+			for (unsigned offset = 0; offset < 1; offset++)
+				for (unsigned bit = 0; bit < 3; bit++)
+					write32(regbase + bit * XBAR_TABLE_SIZE + offset * 4, routes[lc][offset][bit]);
 		}
 	}
 
+options->debug.access = 0;
 	printf("\n");
 }
 
 void Numachip2::fabric_routing(void)
 {
-	printf("Initialising XBar routing:\n");
-
+	// default route is to link 7 to trap unexpected behaviour
 	memset(routes, 0xff, sizeof(routes));
 
 	switch(sci) {
@@ -259,7 +253,7 @@ void Numachip2::fabric_routing(void)
 	}
 #endif
 	routing_dump();
-//	routing_write();
+	routing_write();
 }
 
 void Numachip2::fabric_init(void)
