@@ -469,13 +469,12 @@ static void acpi_tables(void)
 
 		uint16_t segment = 0;
 		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			struct acpi_mcfg ent = {
-				.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL),
-				.pci_segment = segment++,
-				.start_bus_number = 0,
-				.end_bus_number = 255,
-				.reserved = 0,
-			};
+			struct acpi_mcfg ent;
+			ent.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
+			ent.pci_segment = segment++;
+			ent.start_bus_number = 0;
+			ent.end_bus_number = 255;
+			ent.reserved = 0;
 			mcfg.append((const char *)&ent, sizeof(ent));
 		}
 
@@ -496,9 +495,13 @@ static void acpi_tables(void)
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 				for (unsigned m = 0; m < (*nb)->cores; m++) {
 					uint16_t apicid = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-					struct acpi_x2apic_apic ent = {
-					  .type = 9, .length = 16, .reserved = 0,
-					  .x2apic_id = apicid, .flags = 1, .acpi_uid = 0};
+					struct acpi_x2apic_apic ent;
+					ent.type = 9;
+					ent.length = 16;
+					ent.reserved = 0;
+					ent.x2apic_id = apicid;
+					ent.flags = 1;
+					ent.acpi_uid = 0;
 					apic.append((const char *)&ent, sizeof(ent));
 				}
 
@@ -535,18 +538,31 @@ static void acpi_tables(void)
 			unsigned n = 0;
 
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-				struct acpi_mem_affinity ment = {
-					.type = 1, .length = 40, .proximity = domain, .reserved1 = 0,
-					.base = (*nb)->dram_base,
-					.lengthlo = (uint32_t)(*nb)->dram_size, .lengthhi = (uint32_t)((*nb)->dram_size >> 32),
-					.reserved2 = 0, .flags = 1, .reserved3 = {0, 0}};
+				struct acpi_mem_affinity ment;
+				ment.type = 1;
+				ment.length = 40;
+				ment.proximity = domain;
+				ment.reserved1 = 0;
+				ment.base = (*nb)->dram_base;
+				ment.lengthlo = (uint32_t)(*nb)->dram_size;
+				ment.lengthhi = (uint32_t)((*nb)->dram_size >> 32);
+				ment.reserved2 = 0;
+				ment.flags = 1;
+				ment.reserved3[0] = 0;
+				ment.reserved3[1] = 0;
 				srat.append((const char *)&ment, sizeof(ment));
 
 				for (unsigned m = 0; m < (*nb)->cores; m++) {
 					uint16_t apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-					struct acpi_x2apic_affinity ent = {
-					  .type = 2, .length = 24, .reserved1 = 0, .proximity = domain,
-					  .x2apicid = apicid, .flags = 1, .clock = (uint32_t)(node - nodes), .reserved2 = 0};
+					struct acpi_x2apic_affinity ent;
+					ent.type = 2;
+					ent.length = 24;
+					ent.reserved1 = 0;
+					ent.proximity = domain;
+					ent.x2apicid = apicid;
+					ent.flags = 1;
+					ent.clock = (uint32_t)(node - nodes);
+					ent.reserved2 = 0;
 					srat.append((const char *)&ent, sizeof(ent));
 				}
 
