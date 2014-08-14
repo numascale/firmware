@@ -43,6 +43,15 @@ void Opteron::check(void)
 		lib::wrmsr(msr, 0);
 	}
 #endif
+	for (unsigned link = 0; link < 4; link++) {
+		uint32_t val = read32(LINK_FREQ_REV * link * 0x20);
+		if (val & 0x300)
+			warning("HT link %u CRC error", link);
+
+		if (val & 0x10)
+			warning("HT link %u failure", link);
+	}
+
 	uint64_t s = read64(MC_NB_STAT);
 	if (s & (1ULL << 63)) {
 		const char *sig[] = {

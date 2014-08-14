@@ -40,6 +40,9 @@ void Node::init(void)
 
 void Node::check(void)
 {
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n]->check();
+
 	numachip->fabric_check();
 	numachip->dram_check();
 	assert(!numachip->read32(Numachip2::SIU_EVENTSTAT));
