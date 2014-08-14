@@ -165,12 +165,11 @@ void Numachip2::routing_dump(void)
 void Numachip2::routing_write(void)
 {
 	// calculate implemented depth
-	write32(SIU_XBAR + XBAR_CHUNK, 0xff);
-	const uint8_t chunk_lim = read32(LC_XBAR + XBAR_CHUNK);
+	write32(SIU_XBAR + XBAR_CHUNK, 0xf);
+	const uint8_t chunk_lim = 7; // FIXME read32(SIU_XBAR + XBAR_CHUNK);
+	const uint8_t offset_lim = chunk_lim;
 
-	printf("Writing routes (%d chunks)", chunk_lim);
-
-options->debug.access = 1;
+	printf("Writing routes (%d chunks)", chunk_lim+1);
 
 	for (unsigned lc = 0; lc <= 6; lc++) {
 		if (!config->size[(lc - 1) / 2])
@@ -181,13 +180,12 @@ options->debug.access = 1;
 		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
 			write32(regbase + XBAR_CHUNK, chunk);
 
-			for (unsigned offset = 0; offset < 1; offset++)
+			for (unsigned offset = 0; offset <= offset_lim; offset++)
 				for (unsigned bit = 0; bit < 3; bit++)
-					write32(regbase + bit * XBAR_TABLE_SIZE + offset * 4, routes[lc][offset][bit]);
+					write32(regbase + bit * XBAR_TABLE_SIZE + offset * 4, routes[lc][(chunk<<4)+offset][bit]);
 		}
 	}
 
-options->debug.access = 0;
 	printf("\n");
 }
 
