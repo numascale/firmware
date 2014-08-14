@@ -104,7 +104,7 @@ void Numachip2::fabric_train(void)
 	} while (errors);
 
 	for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-		printf(" %s", (*lc)->name);
+		printf(" %u", (*lc)->num);
 	printf("\n");
 }
 
@@ -264,12 +264,10 @@ void Numachip2::fabric_routing(void)
 
 void Numachip2::fabric_init(void)
 {
-	const char *names[6] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
-
-	for (int lc = 0; lc < 6; lc++) {
+	for (unsigned lc = 0; lc < 6; lc++) {
 		if (!config->size[lc/ 2])
 			continue;
 
-		lcs[nlcs++] = new LC5(*this, LC_XBAR + lc * LC_SIZE, names[lc]);
+		lcs[nlcs++] = new LC5(*this, LC_XBAR + lc * LC_SIZE, lc + 1);
 	}
 }

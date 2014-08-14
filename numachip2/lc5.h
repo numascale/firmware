@@ -24,10 +24,10 @@ class LC5 {
 	const Numachip2& numachip;
 	const uint16_t addr;
 public:
-	char name[3];
+	unsigned num;
 
 	void clear(void);
 	uint64_t status(void);
 	void check(void);
-	LC5(Numachip2 &_numachip, const uint16_t _addr, const char *name);
+	LC5(Numachip2 &_numachip, const uint16_t _addr, const unsigned num);
 };
