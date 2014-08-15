@@ -720,7 +720,8 @@ int main(const int argc, const char *argv[])
 	if (options->tracing)
 		setup_gsm_early();
 
-	local_node->numachip->fabric_train();
+	if (!options->singleton)
+		local_node->numachip->fabric_train();
 
 	if (!config->local_node->partition) {
 		setup_info();
