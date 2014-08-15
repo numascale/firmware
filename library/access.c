@@ -214,13 +214,6 @@ namespace lib
 		ret = mem_read32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access & 1)
 			printf("%08x\n", ret);
-
-		if (ret == 0xffffffff || ret == Numachip2::TIMEOUT_VAL) {
-			printf("\n");
-			local_node->check();
-			fatal("Read timed out\n");
-		}
-
 		return ret;
 	}
 
