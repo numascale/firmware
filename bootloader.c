@@ -762,6 +762,7 @@ int main(const int argc, const char *argv[])
 		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) != 3 << 29)
 			cpu_relax();
 
+		printf("\n");
 		syslinux->cleanup();
 		acpi->handover();
 		handover_legacy(local_node->sci);
