@@ -515,10 +515,10 @@ static void acpi_tables(void)
 					ent.type = 9;
 					ent.length = 16;
 					ent.reserved = 0;
-					if (node == nodes)
-						ent.x2apic_id = acpi->apics[m];
+					if (node == &nodes[0])
+						ent.x2apic_id = acpi->apics[n + m]; // Keep original APIC IDs on master
 					else
-						ent.x2apic_id = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+						ent.x2apic_id = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					ent.flags = 1;
 					ent.acpi_uid = 0;
 					apic.append((const char *)&ent, sizeof(ent));
@@ -578,7 +578,7 @@ static void acpi_tables(void)
 					ent.reserved1 = 0;
 					ent.proximity = domain;
 					if (node == &nodes[0])
-						ent.x2apicid = acpi->apics[n + m];
+						ent.x2apicid = acpi->apics[n + m]; // Keep original APIC IDs on master
 					else
 						ent.x2apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					ent.flags = 1;
