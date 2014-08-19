@@ -400,7 +400,7 @@ static void test_cores(void)
 	printf("Starting cores:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
+		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
@@ -426,12 +426,11 @@ static void test_cores(void)
 	}
 	printf("\n");
 
-	lib::wait_key("Press enter to stop test");
-
+	lib::udelay(2000000);
 	printf("Stopping cores:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
+		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
