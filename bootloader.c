@@ -344,12 +344,11 @@ static void setup_cores(void)
 	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
 	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
 
-#ifdef SKIP
 	volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
 	// renumber BSC to apicid 0
 	uint32_t val = apic[0x20/4];
 	apic[0x20/4] = (val & 0xffffff) | (0 << 24);
-#endif
+
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		local_node->numachip->apicatt.range(0, 0xff, (*node)->sci);
@@ -361,12 +360,7 @@ static void setup_cores(void)
 				continue;
 
 			uint8_t apicid = acpi->apics[n];
-			uint16_t new_apicid;
-			if (node == &nodes[0])
-				new_apicid = apicid;
-			else
-				new_apicid = apicid - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-
+			uint16_t new_apicid = apicid - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 			*REL8(cpu_apic_renumber) = new_apicid;
 			*REL8(cpu_apic_hi) = new_apicid >> 8;
 			printf(" %u->", apicid);
@@ -401,22 +395,17 @@ static void setup_cores(void)
 
 static void test_cores(void)
 {
-//	lib::wait_key("Press enter to start test");
+	lib::wait_key("Press enter to start test");
 
 	printf("Starting cores:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-//		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
-		for (unsigned n = 0; n < acpi->napics; n++) {
+		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			uint16_t new_apicid;
-			if (node == &nodes[0])
-				new_apicid = acpi->apics[n];
-			else
-				new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 
 			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
 			  (5 << 8)); // init
@@ -437,23 +426,17 @@ static void test_cores(void)
 	}
 	printf("\n");
 
-	lib::udelay(2000000);
-//	lib::wait_key("Press enter to stop test");
+	lib::wait_key("Press enter to stop test");
 
 	printf("Stopping cores:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-//		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
-		for (unsigned n = 0; n < acpi->napics; n++) {
+		for (unsigned n = 0; n < (node == &nodes[0] ? 2 : 2); n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			uint16_t new_apicid;
-			if (node == &nodes[0])
-				new_apicid = acpi->apics[n];
-			else
-				new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 
 			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
 			  (5 << 8)); // init
@@ -511,14 +494,12 @@ static void acpi_tables(void)
 
 			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 				for (unsigned m = 0; m < (*nb)->cores; m++) {
+					uint16_t apicid = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					struct acpi_x2apic_apic ent;
 					ent.type = 9;
 					ent.length = 16;
 					ent.reserved = 0;
-					if (node == nodes)
-						ent.x2apic_id = acpi->apics[m];
-					else
-						ent.x2apic_id = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+					ent.x2apic_id = apicid;
 					ent.flags = 1;
 					ent.acpi_uid = 0;
 					apic.append((const char *)&ent, sizeof(ent));
@@ -572,15 +553,13 @@ static void acpi_tables(void)
 				srat.append((const char *)&ment, sizeof(ment));
 
 				for (unsigned m = 0; m < (*nb)->cores; m++) {
+					uint16_t apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 					struct acpi_x2apic_affinity ent;
 					ent.type = 2;
 					ent.length = 24;
 					ent.reserved1 = 0;
 					ent.proximity = domain;
-					if (node == &nodes[0])
-						ent.x2apicid = acpi->apics[n + m];
-					else
-						ent.x2apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+					ent.x2apicid = apicid;
 					ent.flags = 1;
 					ent.clock = (uint32_t)(node - nodes);
 					ent.reserved2 = 0;
