@@ -252,9 +252,9 @@ prng:
 // address passed in EDX:EAX
 // data returned in ECX
 read32:
-//	mov $MSR_FS_BASE, %ecx
-//	wrmsr
-//	mov %fs:(0), %ecx
+	mov $MSR_FS_BASE, %ecx
+	wrmsr
+	mov %fs:(0), %ecx
 	ret
 
 test_start:

@@ -157,7 +157,7 @@ void Numachip2::routing_dump(void)
 				out |= ((routes[in][regoffset][bit] >> bitoffset) & 1) << bit;
 
 			if (out != 7)
-				printf("- on LC%d, SCI%03x via LC%d\n", in, dest, out);
+				printf("- on LC%u, SCI%03x via LC%d\n", in, dest, out);
 		}
 	}
 }
