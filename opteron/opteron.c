@@ -232,7 +232,7 @@ void Opteron::dram_scrub_enable(void)
 void Opteron::init(void)
 {
 	uint32_t vendev = read32(VENDEV);
-	assert(vendev == VENDEV_OPTERON);
+	assert(vendev == VENDEV_FAM10H||vendev == VENDEV_FAM15H);
 
 	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
 	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link

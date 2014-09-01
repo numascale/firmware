@@ -65,7 +65,8 @@ ht_t Numachip2::probe(const sci_t sci)
 {
 	// read node count
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 24 + 0, VENDEV >> 12, VENDEV & 0xfff);
-	if (vendev != Opteron::VENDEV_OPTERON) {
+	if (vendev != Opteron::VENDEV_FAM10H &&
+	    vendev != Opteron::VENDEV_FAM15H) {
 		local_node->check();
 		fatal("Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
 	}

@@ -57,8 +57,9 @@ class Opteron {
 
 	static void reset(const enum reset mode, const int last);
 public:
-	static const uint32_t VENDEV_MCP55	   = 0x036910de;
-	static const uint32_t VENDEV_OPTERON   = 0x12001022;
+	static const uint32_t VENDEV_MCP55     = 0x036910de;
+	static const uint32_t VENDEV_FAM10H    = 0x12001022;
+	static const uint32_t VENDEV_FAM15H    = 0x16001022;
 
 	static const reg_t VENDEV              = 0x0000;
 	static const reg_t ROUTING             = 0x0040;
