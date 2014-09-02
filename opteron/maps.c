@@ -19,18 +19,8 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-/* Fam15h for now */
-
-Opteron::MmioMap::MmioMap(Opteron &_opteron): opteron(_opteron)
-{
-	if (family >= 0x15)
-		ranges = 12;
-	else
-		ranges = 8 + 16;
-}
-
 /* Setup register offsets */
-struct reg Opteron::MmioMap::setup(const unsigned range)
+struct reg Opteron::MmioMap10::setup(const unsigned range)
 {
 	struct reg reg;
 
@@ -51,7 +41,7 @@ struct reg Opteron::MmioMap::setup(const unsigned range)
 	fatal("No free NB MMIO ranges");
 }
 
-void Opteron::MmioMap::remove(const unsigned range)
+void Opteron::MmioMap10::remove(const unsigned range)
 {
 	if (options->debug.maps)
 		printf("Deleting NB MMIO range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
@@ -63,7 +53,12 @@ void Opteron::MmioMap::remove(const unsigned range)
 	opteron.write32(0x1000 | reg.high, 0);
 }
 
-bool Opteron::MmioMap::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
+void Opteron::MmioMap15::remove(const unsigned range)
+{
+	// FIXME
+}
+
+bool Opteron::MmioMap10::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
 {
 	if (family >= 0x15) {
 		assert(range < 12);
@@ -147,6 +142,11 @@ bool Opteron::MmioMap::read(unsigned range, uint64_t *base, uint64_t *limit, ht_
 #endif
 }
 
+bool Opteron::MmioMap15::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
+{
+	// FIXME
+}
+
 void Opteron::MmioMap::print(const unsigned range)
 {
 	uint64_t base, limit;
@@ -179,7 +179,7 @@ unsigned Opteron::MmioMap::unused(void)
 	fatal("No free NB MMIO ranges");
 }
 
-void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
 {
 	const bool ovw = 1;
 
@@ -338,6 +338,11 @@ void Opteron::MmioMap::add(unsigned range, uint64_t base, uint64_t limit, const 
 	opteron.write32(0x1000 | reg.limit, val3);
 	opteron.write32(0x1000 | reg.base, val2);
 #endif
+}
+
+void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+{
+	// FIXME
 }
 
 void Opteron::MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)

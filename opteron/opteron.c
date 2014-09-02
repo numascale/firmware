@@ -281,8 +281,10 @@ void Opteron::init(void)
 }
 
 Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
-  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this)
+  local(_local), sci(_sci), ht(_ht), drammap(*this)
 {
+	mmiomap = new MmioMap15(*this);
+
 	init();
 
 	if (!local)

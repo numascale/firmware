@@ -25,26 +25,42 @@ struct reg {
 
 class Opteron {
 	class MmioMap {
+	protected:
 		const Opteron &opteron;
-		unsigned ranges;
-
-		struct reg setup(const unsigned range);
+		const unsigned ranges;
 		unsigned unused(void);
 	public:
 		void print(const unsigned range);
-		MmioMap(Opteron &_opteron);
-		void remove(const unsigned range);
-		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
-		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		MmioMap(Opteron &_opteron, const unsigned _ranges): opteron(_opteron), ranges(_ranges) {};
+		virtual void remove(const unsigned range);
+		virtual bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		virtual void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
 		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 	};
+public:
+	class MmioMap15: public MmioMap {
+	public:
+		MmioMap15(Opteron &_opteron): MmioMap(_opteron, 16) {};
+		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		void remove(const unsigned range);
+	};
 
+	class MmioMap10: public MmioMap {
+		struct reg setup(const unsigned range);
+	public:
+		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 12) {};
+		void remove(const unsigned range);
+	};
+private:
 	class DramMap {
 		const Opteron &opteron;
 
 		unsigned unused(void);
 	public:
-		DramMap(Opteron &_opteron);
+		explicit DramMap(Opteron &_opteron);
 		void remove(const unsigned range);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest);
 		void print(const unsigned range);
@@ -125,9 +141,11 @@ public:
 	const ht_t ht;
 	ht_t ioh_ht, ioh_link;
 	unsigned cores;
-	MmioMap mmiomap;
+	MmioMap *mmiomap;
 	DramMap drammap;
 	friend class MmioMap;
+	friend class MmioMap10;
+	friend class MmioMap15;
 	friend class DramMap;
 
 	void check(void);

@@ -96,11 +96,11 @@ static void add(const Node &node)
 	// 8. forward VGA and MMIO32 regions to master
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		range = 0;
-		(*nb)->mmiomap.add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
-		(*nb)->mmiomap.add(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
+		(*nb)->mmiomap->add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
+		(*nb)->mmiomap->add(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
 
 		while (range < 8)
-			(*nb)->mmiomap.remove(range++);
+			(*nb)->mmiomap->remove(range++);
 
 		(*nb)->write32(Opteron::VGA_ENABLE, 0);
 		if ((*nb)->read32(Opteron::VGA_ENABLE))
@@ -179,7 +179,7 @@ static void setup_gsm_early(void)
 
 		for (unsigned i = 0; i < local_node->nopterons; i++) {
 			uint64_t base = 1ULL << Numachip2::GSM_SHIFT;
-			local_node->opterons[i]->mmiomap.add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0);
+			local_node->opterons[i]->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0);
 		}
 	}
 }
@@ -707,7 +707,7 @@ int main(const int argc, const char *argv[])
 
 	// add global MCFG maps
 	for (unsigned i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap.add(8, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap->add(8, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
 
 	// reserve HT decode and MCFG address range so Linux accepts it
 	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
