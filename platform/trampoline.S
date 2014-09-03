@@ -126,19 +126,16 @@ break:
 	mov	%cs:SYM_OFFSET(msr_topmem + 4), %edx
 	wrmsr
 
-	// set TOP_MEM2
 	mov	%cs:SYM_OFFSET(msr_topmem2), %eax
 	mov	%cs:SYM_OFFSET(msr_topmem2 + 4), %edx
 	mov	$MSR_TOPMEM2, %ecx
 	wrmsr
 
-	// set CPU WDT MSR
 	mov	%cs:SYM_OFFSET(msr_cpuwdt), %eax
 	mov	%cs:SYM_OFFSET(msr_cpuwdt + 4), %edx
 	mov	$MSR_CPUWDT, %ecx
 	wrmsr
 
-	// set HWCR MSR
 	mov	%cs:SYM_OFFSET(msr_hwcr), %eax
 	mov	%cs:SYM_OFFSET(msr_hwcr + 4), %edx
 	mov	$MSR_HWCR, %ecx
@@ -146,7 +143,11 @@ break:
 
 	STATUS(0x50)
 
-	// set CUCFG2 MSR
+	mov	%cs:SYM_OFFSET(msr_lscfg), %eax
+	mov	%cs:SYM_OFFSET(msr_lscfg + 4), %edx
+	mov	$MSR_LSCFG, %ecx
+	wrmsr
+
 	mov	%cs:SYM_OFFSET(msr_cucfg2), %eax
 	mov	%cs:SYM_OFFSET(msr_cucfg2 + 4), %edx
 	mov	$MSR_CU_CFG2, %ecx

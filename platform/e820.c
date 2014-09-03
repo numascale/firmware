@@ -27,7 +27,8 @@ extern "C" {
 	#include "com32.h"
 }
 
-const char *E820::names[] = {"", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable"};
+const char *E820::names[] = {"type 0", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable",
+  "type 6", "type 7", "type 8", "type 9"};
 
 void E820::dump(void)
 {
@@ -104,7 +105,7 @@ bool E820::overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, cons
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
 	if (options->debug.e820)
-		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
+		printf("Adding e820 %011llx:%011llx (%011llx) %s (%u)\n", base, base + length, length, names[type], type);
 
 	assert(base < (base + length));
 
@@ -188,7 +189,7 @@ uint64_t E820::expand(const uint64_t type, const uint64_t size)
 		}
 	}
 
-	fatal("Unable to find region of type %llu with adjacent space", type);
+	fatal("Insufficient space to expand %s region by %llu bytes", names[type], size);
 out:
 	if (options->debug.e820)
 		printf("Expanding: ");

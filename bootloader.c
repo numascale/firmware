@@ -339,6 +339,7 @@ static void setup_cores(void)
 
 	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR);
 	*REL64(msr_cpuwdt) = lib::rdmsr(MSR_CPUWDT);
+	*REL64(msr_lscfg) = lib::rdmsr(MSR_LSCFG);
 	*REL64(msr_cucfg2) = lib::rdmsr(MSR_CU_CFG2);
 	*REL64(msr_topmem) = lib::rdmsr(MSR_TOPMEM);
 	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
@@ -626,6 +627,7 @@ static void acpi_tables(void)
 static void finalise(void)
 {
 	printf("Clearing DRAM");
+	local_node->iohub->smi_disable();
 
 	// start clearing DRAM
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -641,6 +643,7 @@ static void finalise(void)
 			(*nb)->dram_clear_wait();
 	}
 
+	local_node->iohub->smi_enable();
 	printf("\n");
 
 	if (!options->tracing) {

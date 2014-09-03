@@ -32,7 +32,7 @@ private:
 	uint64_t test_errors;
 	struct e820entry *map;
 	uint16_t *used;
-	static const char *names[6];
+	static const char *names[10];
 	static const uint64_t PATTERN = 0xa0a1a2a3a4a5a6a7ULL;
 
 	struct e820entry *position(const uint64_t base);

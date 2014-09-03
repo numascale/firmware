@@ -174,7 +174,7 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_HWCR, msr);
 
 	// enable 64-bit config access
-	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
+	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 27) | (1ULL << 50);
 	lib::wrmsr(MSR_CU_CFG2, msr);
 
 	// detect processor family
@@ -187,6 +187,12 @@ void Opteron::prepare(void)
 		val = lib::cht_read32(0, CLK_CTRL_0);
 		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
+	}
+
+	if (family == 0x10) {
+		// disable HT lock mechanism as unsupported by Numachip
+		msr = lib::rdmsr(MSR_LSCFG) | (1ULL << 44);
+		lib::wrmsr(MSR_LSCFG, msr);
 	}
 
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
