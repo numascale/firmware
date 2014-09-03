@@ -19,75 +19,64 @@
 #include "../library/access.h"
 #include "../bootloader.h"
 
-/* Setup register offsets */
-struct reg Opteron::MmioMap10::setup(const unsigned range)
-{
-	struct reg reg;
-
-	if (range < 8) {
-		reg.base = 0x80 + range * 8;
-		reg.limit = reg.base + 4;
-		reg.high = 0x180 + range * 4;
-		return reg;
-	}
-
-	if (range < 12) {
-		reg.base = 0x1a0 + range * 8;
-		reg.limit = reg.base + 4;
-		reg.high = 0x1c0 + range * 4;
-		return reg;
-	}
-
-	fatal("No free NB MMIO ranges");
-}
-
 void Opteron::MmioMap10::remove(const unsigned range)
 {
 	if (options->debug.maps)
 		printf("Deleting NB MMIO range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
 
-	struct reg reg = setup(range);
-
-	opteron.write32(0x1000 | reg.base, 0);
-	opteron.write32(0x1000 | reg.limit, 0);
-	opteron.write32(0x1000 | reg.high, 0);
+	assert(range < 8);
+	opteron.write32(MMIO_MAP_BASE + range * 8, 0);
+	opteron.write32(MMIO_MAP_BASE + range * 8, 0);
+	opteron.write32(MMIO_MAP_HIGH + range * 4, 0);
 }
 
 void Opteron::MmioMap15::remove(const unsigned range)
 {
-	// FIXME
+	assert(range < ranges);
+
+	uint16_t loff = 0, hoff = 0;
+	if (range >= 8) {
+		loff = 0xe0;
+		hoff = 0x20;
+	}
+
+	opteron.write32(MMIO_MAP_BASE + loff + range * 8, 0);
+	opteron.write32(MMIO_MAP_LIMIT + loff + range * 8, 0);
+	opteron.write32(MMIO_MAP_HIGH + hoff + range * 4, 0);
+}
+
+bool Opteron::MmioMap15::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
+{
+	assert(range < ranges);
+
+	uint16_t loff = 0, hoff = 0;
+	if (range >= 8) {
+		loff = 0xe0;
+		hoff = 0x20;
+	}
+
+	// skip disabled ranges
+	uint32_t a = opteron.read32(MMIO_MAP_BASE + loff + range * 8);
+	uint32_t b = opteron.read32(MMIO_MAP_LIMIT + loff + range * 8);
+	uint32_t c = opteron.read32(MMIO_MAP_HIGH + hoff + range * 4);
+
+	*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
+	*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
+	*dest = b & 7;
+	*link = (b >> 4) & 3;
+
+	// ensure read and write bits are consistent
+	assert(!(a & 1) == !(a & 2));
+	*lock = a & 8;
+	return a & 3;
 }
 
 bool Opteron::MmioMap10::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
 {
-	if (family >= 0x15) {
-		assert(range < 12);
+	assert(range < ranges);
 
-		int loff = 0, hoff = 0;
-		if (range > 7) {
-			loff = 0xe0;
-			hoff = 0x20;
-		}
-
-		/* Skip disabled ranges */
-		uint32_t a = opteron.read32(MMIO_MAP_BASE + loff + range * 8);
-		uint32_t b = opteron.read32(MMIO_MAP_LIMIT + loff + range * 8);
-		uint32_t c = opteron.read32(MMIO_MAP_HIGH + hoff + range * 4);
-
-		*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
-		*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
-		*dest = b & 7;
-		*link = (b >> 4) & 3;
-
-		/* Ensure read and write bits are consistent */
-		assert(!(a & 1) == !(a & 2));
-		*lock = a & 8;
-		return a & 3;
-	}
-
-	/* Family 10h */
 	if (range < 8) {
-		/* Skip disabled ranges */
+		// skip disabled ranges
 		uint32_t a = opteron.read32(MMIO_MAP_BASE + range * 8);
 		uint32_t b = opteron.read32(MMIO_MAP_LIMIT + range * 8);
 
@@ -99,7 +88,6 @@ bool Opteron::MmioMap10::read(unsigned range, uint64_t *base, uint64_t *limit, h
 		return a & 3;
 	}
 
-	assert(range < 12);
 	range -= 8;
 
 	opteron.write32(EXTMMIO_MAP_CTRL, (3 << 28) | range);
@@ -107,14 +95,14 @@ bool Opteron::MmioMap10::read(unsigned range, uint64_t *base, uint64_t *limit, h
 	opteron.write32(EXTMMIO_MAP_CTRL, (2 << 28) | range);
 	uint32_t a = opteron.read32(EXTMMIO_MAP_DATA);
 
-	/* 128MB granularity is setup earlier */
+	// 128MB granularity is setup earlier
 	*base = (a & ~0xe00000ff) << (27 - 8);
 	*limit = (~((b >> 8) & 0x1fffff)) << 20;
 	*lock = 0;
 	if (a & (1 << 6)) {
 		*dest = 0;
 		*link = a & 3;
-		/* Assert sublink is zero as we ignore it */
+		// assert sublink is zero as we ignore it
 		assert((a & 4) == 0);
 	} else {
 		*dest = a & 7;
@@ -122,29 +110,6 @@ bool Opteron::MmioMap10::read(unsigned range, uint64_t *base, uint64_t *limit, h
 	}
 
 	return b & 1;
-
-#ifdef NEWWORLD
-	struct reg reg = setup(range);
-	/* Skip disabled ranges */
-	uint32_t a = opteron.read32(0x1000 | reg.base);
-	uint32_t b = opteron.read32(0x1000 | reg.limit);
-	uint32_t c = opteron.read32(0x1000 | reg.high);
-
-	*base = ((uint64_t)(a & ~0xff) << 8) | ((uint64_t)(c & 0xff) << 40);
-	*limit = ((uint64_t)(b & ~0xff) << 8) | ((uint64_t)(c & 0xff0000) << (40 - 16)) | 0xffff;
-	*dest = b & 7;
-	*link = (b >> 4) & 3;
-
-	/* Ensure read and write bits are consistent */
-	assert(!(a & 1) == !(a & 2));
-	*lock = a & 8;
-	return a & 3;
-#endif
-}
-
-bool Opteron::MmioMap15::read(unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock)
-{
-	// FIXME
 }
 
 void Opteron::MmioMap::print(const unsigned range)
@@ -179,6 +144,59 @@ unsigned Opteron::MmioMap::unused(void)
 	fatal("No free NB MMIO ranges");
 }
 
+void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+{
+	const bool ovw = 1;
+
+	if (options->debug.maps)
+		printf("Adding NB MMIO range %u on SCI%03x#%x: 0x%08llx:0x%08llx to %d.%d\n",
+			range, opteron.sci, opteron.ht, base, limit, dest, link);
+
+	assert(range < ranges);
+	assert(limit > base);
+	assert((base & 0xffff) == 0);
+	assert((limit & 0xffff) == 0xffff);
+
+	int loff = 0, hoff = 0;
+	if (range >= 8) {
+		loff = 0xe0;
+		hoff = 0x20;
+	}
+
+	uint32_t val = opteron.read32(MMIO_MAP_BASE + loff + range * 8);
+	if ((val & 3) && !ovw) {
+		uint64_t base2, limit2;
+		ht_t dest2;
+		link_t link2;
+		bool lock2;
+		read(range, &base2, &limit2, &dest2, &link2, &lock2);
+		fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
+	}
+
+	uint32_t val2 = ((base >> 16) << 8) | 3;
+	uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
+	uint32_t val4 = ((limit >> 40) << 16) | (base >> 40);
+
+	// check if locked
+	if ((val & 8) && ((val2 != (val & ~8))
+	  || (val3 != opteron.read32(MMIO_MAP_LIMIT + range * 8))
+	  || (val4 != opteron.read32(MMIO_MAP_HIGH + hoff + range * 4)))) {
+		uint64_t old_base, old_limit;
+		ht_t old_dest;
+		link_t old_link;
+		bool old_lock;
+
+		read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
+		warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
+			range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
+		return;
+	}
+
+	opteron.write32(MMIO_MAP_HIGH + hoff + range * 4, val4);
+	opteron.write32(MMIO_MAP_LIMIT + loff + range * 8, val3);
+	opteron.write32(MMIO_MAP_BASE + loff + range * 8, val2);
+}
+
 void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
 {
 	const bool ovw = 1;
@@ -187,55 +205,11 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 		printf("Adding NB MMIO range %u on SCI%03x#%x: 0x%08llx:0x%08llx to %d.%d\n",
 			range, opteron.sci, opteron.ht, base, limit, dest, link);
 
+	assert(range < ranges);
 	assert(limit > base);
 	assert((base & 0xffff) == 0);
 	assert((limit & 0xffff) == 0xffff);
 
-	if (family >= 0x15) {
-		assert(range < 12);
-
-		int loff = 0, hoff = 0;
-		if (range > 7) {
-			loff = 0xe0;
-			hoff = 0x20;
-		}
-
-		uint32_t val = opteron.read32(MMIO_MAP_BASE + loff + range * 8);
-		if ((val & 3) && !ovw) {
-			uint64_t base2, limit2;
-			ht_t dest2;
-			link_t link2;
-			bool lock2;
-			read(range, &base2, &limit2, &dest2, &link2, &lock2);
-			fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
-		}
-
-		uint32_t val2 = ((base >> 16) << 8) | 3;
-		uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
-		uint32_t val4 = ((limit >> 40) << 16) | (base >> 40);
-
-		/* Check if locked */
-		if ((val & 8) && ((val2 != (val & ~8))
-		  || (val3 != opteron.read32(MMIO_MAP_LIMIT + range * 8))
-		  || (val4 != opteron.read32(MMIO_MAP_HIGH + hoff + range * 4)))) {
-			uint64_t old_base, old_limit;
-			ht_t old_dest;
-			link_t old_link;
-			bool old_lock;
-
-			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-			warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
-				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
-			return;
-		}
-
-		opteron.write32(MMIO_MAP_HIGH + hoff + range * 4, val4);
-		opteron.write32(MMIO_MAP_LIMIT + loff + range * 8, val3);
-		opteron.write32(MMIO_MAP_BASE + loff + range * 8, val2);
-		return;
-	}
-
-	/* Family 10h */
 	if (range < 8) {
 		assert(limit < (1ULL << 40));
 		uint32_t val = opteron.read32(MMIO_MAP_BASE + range * 8);
@@ -251,7 +225,7 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 		uint32_t val2 = ((base >> 16) << 8) | 3;
 		uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
 
-		/* Check if locked */
+		// check if locked
 		if ((val & 8) && ((val2 != (val & ~8))
 		  || (val3 != opteron.read32(MMIO_MAP_LIMIT + range * 8)))) {
 			uint64_t old_base, old_limit;
@@ -270,7 +244,6 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 		return;
 	}
 
-	assert(range < 24);
 	// Fam10h extended MMIO 128MB granularity
 	assert((base & 0x7ffffff) == 0);
 	assert((limit & 0x7ffffff) ==  0x7ffffff);
@@ -291,58 +264,6 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 	opteron.write32(EXTMMIO_MAP_DATA, (base << 8) | dest);
 	opteron.write32(EXTMMIO_MAP_CTRL, (3 << 28) | range);
 	opteron.write32(EXTMMIO_MAP_DATA, (mask << 8) | 1);
-
-#ifdef NEWWORLD
-	struct reg reg = setup(range);
-
-	if (options->debug.maps)
-		printf("Adding NB MMIO range %u on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d\n",
-			range, opteron.sci, opteron.ht, base, limit, dest, link);
-
-	assert(limit > base);
-	assert((base & 0xffff) == 0);
-	assert((limit & 0xffff) == 0xffff);
-	assert(range < ranges);
-
-	uint32_t val = opteron.read32(0x1000 | reg.base);
-	if (val & 3) {
-		uint64_t base2, limit2;
-		ht_t dest2;
-		link_t link2;
-		bool lock2;
-		read(range, &base2, &limit2, &dest2, &link2, &lock2);
-		fatal("Overwriting NB MMIO range %u on SCI%03x#%d: 0x%08llx:0x%08llx to %d.%d%s",
-		  range, opteron.sci, opteron.ht, base2, limit2, dest2, link2, lock2 ? " locked" : "");
-	}
-
-	uint32_t val2 = ((base >> 16) << 8) | 3;
-	uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
-	uint32_t val4 = ((limit >> 40) << 16) | (base >> 40);
-
-	/* Check if locked */
-	if ((val & 8) && ((val2 != (val & ~8))
-	  || (val3 != opteron.read32(0x1000 | reg.base))
-	  || (val4 != opteron.read32(0x1000 | reg.high)))) {
-		uint64_t old_base, old_limit;
-		ht_t old_dest;
-		link_t old_link;
-		bool old_lock;
-
-		read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-		warning("Unable to overwrite locked NB MMIO range %u on SCI%03x#%d 0x%llx:0x%llx to %d.%d with 0x%llx:0x%llx to %d.%d",
-			range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
-		return;
-	}
-
-	opteron.write32(0x1000 | reg.high, val4);
-	opteron.write32(0x1000 | reg.limit, val3);
-	opteron.write32(0x1000 | reg.base, val2);
-#endif
-}
-
-void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
-{
-	// FIXME
 }
 
 void Opteron::MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
@@ -381,7 +302,7 @@ bool Opteron::DramMap::read(const unsigned range, uint64_t *base, uint64_t *limi
 	*limit = ((uint64_t)(limit_l & ~0xffff) << (24 - 16)) | ((uint64_t)(limit_h & 0xff) << 40);
 	*dest = limit_l & 7;
 
-	/* Ensure read and write bits are consistent */
+	// ensure read and write bits are consistent
 	assert(!(base_l & 1) == !(base_l & 2));
 	bool en = base_l & 1;
 	if (en)

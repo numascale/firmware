@@ -232,7 +232,13 @@ void Opteron::dram_scrub_enable(void)
 void Opteron::init(void)
 {
 	uint32_t vendev = read32(VENDEV);
-	assert(vendev == VENDEV_FAM10H||vendev == VENDEV_FAM15H);
+
+	if (vendev == VENDEV_FAM15H)
+		mmiomap = new MmioMap15(*this);
+	else if (vendev == VENDEV_FAM10H)
+		mmiomap = new MmioMap10(*this);
+	else
+		fatal("Unexpected Opteron vendev 0x%08x", vendev);
 
 	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
 	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link
@@ -283,8 +289,6 @@ void Opteron::init(void)
 Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
   local(_local), sci(_sci), ht(_ht), drammap(*this)
 {
-	mmiomap = new MmioMap15(*this);
-
 	init();
 
 	if (!local)

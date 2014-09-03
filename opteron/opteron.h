@@ -19,10 +19,6 @@
 
 #include "../library/base.h"
 
-struct reg {
-	uint16_t base, limit, high;
-};
-
 class Opteron {
 	class MmioMap {
 	protected:
@@ -40,18 +36,17 @@ class Opteron {
 public:
 	class MmioMap15: public MmioMap {
 	public:
-		MmioMap15(Opteron &_opteron): MmioMap(_opteron, 16) {};
+		MmioMap15(Opteron &_opteron): MmioMap(_opteron, 12) {};
 		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
 		void remove(const unsigned range);
 	};
 
 	class MmioMap10: public MmioMap {
-		struct reg setup(const unsigned range);
 	public:
 		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
-		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 12) {};
+		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
 		void remove(const unsigned range);
 	};
 private:
