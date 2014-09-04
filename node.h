@@ -27,12 +27,14 @@ class Node {
 	const sci_t master;
 public:
 	sci_t sci;
+	ht_t neigh;
 	unsigned nopterons;
 	unsigned cores;
 	Opteron *opterons[7];
 	SR56x0 *iohub;
 	Numachip2 *numachip;
 	uint64_t dram_base, dram_size, dram_end;
+	uint64_t trace_base, trace_lim;
 	uint16_t apic_offset;
 
 	void init(void);

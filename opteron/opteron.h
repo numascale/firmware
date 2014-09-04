@@ -101,8 +101,15 @@ public:
 	static const reg_t DRAM_LIMIT          = 0x1124;
 	static const reg_t DRAM_MAP_BASE_HIGH  = 0x1140;
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
+	static const reg_t TRACE_BUF_BASELIM   = 0x20b8;
+	static const reg_t TRACE_BUF_ADDR      = 0x20bc;
+	static const reg_t TRACE_BUF_CTRL      = 0x20c0;
+	static const reg_t TRACE_START         = 0x20c4;
+	static const reg_t TRACE_STOP          = 0x20c8;
+	static const reg_t TRACE_CAPTURE       = 0x20cc;
 	static const reg_t MCTL_SEL_LOW        = 0x2110;
 	static const reg_t MCTL_CONF_HIGH      = 0x211c;
+	static const reg_t TRACE_BUF_ADDR_HIGH = 0x2120;
 	static const reg_t MCTL_EXT_CONF_LOW   = 0x21b0;
 	static const reg_t MC_NB_CONF          = 0x3044;
 	static const reg_t MC_NB_STAT          = 0x3048;
@@ -111,6 +118,8 @@ public:
 	static const reg_t SCRUB_ADDR_LOW      = 0x305c;
 	static const reg_t SCRUB_ADDR_HIGH     = 0x3060;
 	static const reg_t NB_CONF_1H          = 0x308c;
+	static const reg_t ARRAY_ADDR          = 0x30b8;
+	static const reg_t ARRAY_DATA          = 0x30bc;
 	static const reg_t CLK_CTRL_0          = 0x30d4;
 	static const reg_t NB_CPUID            = 0x30fc;
 	static const reg_t MC_NB_DRAM          = 0x3160;
@@ -128,6 +137,7 @@ public:
 	static const uint32_t MMIO_VGA_LIMIT   = 0xbffff;
 
 	uint64_t dram_base, dram_size;
+	uint64_t trace_base, trace_limit;
 	static int family;
 	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
@@ -164,7 +174,10 @@ public:
 	static void cht_print(int neigh, int link);
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
-	static ht_t ht_fabric_fixup(const uint32_t vendev);
+	static ht_t ht_fabric_fixup(ht_t &neigh, const uint32_t vendev);
 	void dram_clear_start(void);
 	void dram_clear_wait(void);
+	void tracing_arm(void);
+	void tracing_start(void);
+	void tracing_stop(void);
 };

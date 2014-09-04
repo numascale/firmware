@@ -37,6 +37,7 @@ EXPORT(init_dispatch)
 	mov	$(stack_end - stack_start), %sp
 
 	movl %cs:SYM_OFFSET(cpu_status), %edx
+	STATUS(0x9);
 	cmpl $VECTOR_SETUP, %edx
 	je setup
 	cmpl $VECTOR_TEST_START, %edx

@@ -194,7 +194,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
-ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
+ht_t Opteron::ht_fabric_fixup(ht_t &neigh, const uint32_t vendev)
 {
 	ht_t nc;
 	uint32_t val = lib::cht_read32(0, HT_NODE_ID);
@@ -210,7 +210,7 @@ ht_t Opteron::ht_fabric_fixup(const uint32_t vendev)
 		ht_optimize_link(nc, -1, -1);
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
-		int neigh, link = 0, rt, i;
+		int link = 0, rt, i;
 		bool use = 1;
 
 		for (neigh = 0; neigh <= nnodes; neigh++) {

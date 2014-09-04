@@ -278,25 +278,18 @@ static void remap(void)
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 
 			if (options->tracing) {
-				uint64_t base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
-				uint64_t limit = base + options->tracing - 1;
-				assert((base & 0xffffff) == 0);
-				assert((limit & 0xffffff) == 0xffffff);
+				(*nb)->trace_base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
+				(*nb)->trace_limit = (*nb)->trace_base + options->tracing - 1;
+				assert(((*nb)->trace_base & 0xffffff) == 0);
+				assert(((*nb)->trace_limit & 0xffffff) == 0xffffff);
 
 				// disable DRAM stutter scrub
 				uint32_t val = (*nb)->read32(Opteron::CLK_CTRL_0);
 				(*nb)->write32(Opteron::CLK_CTRL_0, val & ~(1 << 15));
 
-				(*nb)->write32(0x20b8, ((base & ((1ULL << 40) - 1)) >> 24) | (((limit & ((1ULL << 40) - 1)) >> 24) << 16));
-				(*nb)->write32(0x2120, (base >> 40) | ((limit >> 40) << 8));
-				(*nb)->write32(0x20bc, base >> 6);
-				e820->add(base, limit - base + 1, E820::RESERVED);
-			} else {
-				(*nb)->write32(0x20b8, 0);
-				(*nb)->write32(0x2120, 0);
-				(*nb)->write32(0x20bc, 0);
+				(*nb)->tracing_arm();
+				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 			}
-			(*nb)->write32(0x20c0, 0);
 		}
 	}
 
@@ -394,11 +387,31 @@ static void setup_cores(void)
 	}
 }
 
+static void tracing_start(void)
+{
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->opterons[(*node)->neigh]->tracing_start();
+}
+
+static void tracing_stop(void)
+{
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->opterons[(*node)->neigh]->tracing_stop();
+}
+
+static void tracing_arm(void)
+{
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->opterons[local_node->neigh]->tracing_arm();
+}
+
 static void test_cores(void)
 {
 	lib::wait_key("Press enter to start test");
-
 	printf("Starting cores:");
+
+	if (options->tracing)
+		tracing_start();
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
@@ -422,13 +435,16 @@ static void test_cores(void)
                 cpu_relax();
             }
 
-			assertf(*REL32(cpu_status) == 0x80, "APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			if (*REL32(cpu_status) != 0x80) {
+				tracing_stop();
+				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			}
 		}
 	}
 	printf("\n");
 
 	lib::udelay(2000000);
-	printf("Stopping cores:");
+	printf("Stopping APICs:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
@@ -452,10 +468,18 @@ static void test_cores(void)
                 cpu_relax();
             }
 
-			assertf(*REL32(cpu_status) == 0x90, "APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			if (*REL32(cpu_status) != 0x90) {
+				tracing_stop();
+				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			}
 		}
 	}
 	printf("\n");
+
+	if (options->tracing) {
+		tracing_stop();
+		tracing_arm();
+	}
 }
 
 static void acpi_tables(void)

@@ -62,7 +62,7 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sc
 // instantiated for local nodes
 Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
 {
-	const ht_t nc = Opteron::ht_fabric_fixup(Numachip2::VENDEV_NC2);
+	const ht_t nc = Opteron::ht_fabric_fixup(neigh, Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
 	numachip = new Numachip2(sci, nc, local, master);
