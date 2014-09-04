@@ -53,6 +53,18 @@ char *asm_relocated;
 static uint64_t dram_top;
 static unsigned nnodes;
 
+static void critical_enter(void)
+{
+	asm volatile("cli");
+	local_node->iohub->smi_disable();
+}
+
+static void critical_leave(void)
+{
+	local_node->iohub->smi_enable();
+	asm volatile("sti");
+}
+
 static void check(void)
 {
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
@@ -236,7 +248,7 @@ static void setup_info(void)
 	infop->io = config->local_node->master;
 
 	for (unsigned n = 0; n < nnodes; n++)
-		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i += 4)
+		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++)
 			nodes[n]->numachip->write32(Numachip2::INFO + i*4, info[i]);
 }
 
@@ -387,6 +399,12 @@ static void setup_cores(void)
 	}
 }
 
+static void tracing_arm(void)
+{
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->opterons[local_node->neigh]->tracing_arm();
+}
+
 static void tracing_start(void)
 {
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
@@ -399,12 +417,6 @@ static void tracing_stop(void)
 		(*node)->opterons[(*node)->neigh]->tracing_stop();
 }
 
-static void tracing_arm(void)
-{
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[local_node->neigh]->tracing_arm();
-}
-
 static void test_cores(void)
 {
 	lib::wait_key("Press enter to start test");
@@ -413,7 +425,7 @@ static void test_cores(void)
 	if (options->tracing)
 		tracing_start();
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[0]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
@@ -446,7 +458,7 @@ static void test_cores(void)
 	lib::udelay(2000000);
 	printf("Stopping APICs:");
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[0]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
@@ -651,7 +663,7 @@ static void acpi_tables(void)
 static void finalise(void)
 {
 	printf("Clearing DRAM");
-	local_node->iohub->smi_disable();
+	critical_enter();
 
 	// start clearing DRAM
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -667,7 +679,7 @@ static void finalise(void)
 			(*nb)->dram_clear_wait();
 	}
 
-	local_node->iohub->smi_enable();
+	critical_leave();
 	printf("\n");
 
 	if (!options->tracing) {
