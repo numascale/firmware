@@ -194,7 +194,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
-ht_t Opteron::ht_fabric_fixup(ht_t &neigh, const uint32_t vendev)
+ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const uint32_t vendev)
 {
 	ht_t nc;
 	uint32_t val = lib::cht_read32(0, HT_NODE_ID);
@@ -210,7 +210,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, const uint32_t vendev)
 		ht_optimize_link(nc, -1, -1);
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
-		int link = 0, rt, i;
+		int rt, i;
 		bool use = 1;
 
 		for (neigh = 0; neigh <= nnodes; neigh++) {
@@ -250,7 +250,9 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, const uint32_t vendev)
 			/* Does not return */
 		}
 
-		printf("HT#%d L%d is coherent and unrouted\n", neigh, link);
+		// FIXME detect sublink
+		sublink = 0;
+		printf("HT%u.%u.%u is coherent and unrouted\n", neigh, link, sublink);
 
 		nc = nnodes + 1;
 		/* "neigh" request/response routing, copy bcast values from self */

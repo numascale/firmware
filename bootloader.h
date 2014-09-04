@@ -39,6 +39,9 @@ struct info {
 	uint16_t part_start : 12;
 	uint16_t part_nodes : 12;
 	uint8_t ver : 4;
+	uint8_t neigh_ht : 3;
+	uint8_t neigh_link : 2;
+	uint8_t neigh_sublink : 1;
 	bool symmetric;
 	bool io;
 } __attribute__((packed));

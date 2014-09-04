@@ -174,7 +174,7 @@ public:
 	static void cht_print(int neigh, int link);
 	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
-	static ht_t ht_fabric_fixup(ht_t &neigh, const uint32_t vendev);
+	static ht_t ht_fabric_fixup(ht_t &neigh, link_t &ht, link_t &sublink, const uint32_t vendev);
 	void dram_clear_start(void);
 	void dram_clear_wait(void);
 	void tracing_arm(void);

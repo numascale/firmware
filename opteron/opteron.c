@@ -174,7 +174,11 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_HWCR, msr);
 
 	// enable 64-bit config access
-	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 27) | (1ULL << 50);
+	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
+
+	// workaround F15h Errata 572: Access to PCI Extended Configuration Space in SMM is blocked
+	if (family >= 0x15)
+		msr |= 1ULL << 27;
 	lib::wrmsr(MSR_CU_CFG2, msr);
 
 	// detect processor family

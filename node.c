@@ -54,6 +54,8 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sc
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n] = new Opteron(sci, n, local);
 
+	// FIXME set neigh_ht/link/sublink
+
 	numachip = new Numachip2(sci, ht, local, SCI_NONE);
 
 	init();
@@ -62,7 +64,7 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sc
 // instantiated for local nodes
 Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
 {
-	const ht_t nc = Opteron::ht_fabric_fixup(neigh, Numachip2::VENDEV_NC2);
+	const ht_t nc = Opteron::ht_fabric_fixup(neigh_ht, neigh_link, neigh_sublink, Numachip2::VENDEV_NC2);
 	assertf(nc, "NumaChip2 not found");
 
 	numachip = new Numachip2(sci, nc, local, master);

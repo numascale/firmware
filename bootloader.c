@@ -244,6 +244,9 @@ static void setup_info(void)
 	infop->part_start = local_node->sci;
 	infop->part_nodes = nnodes;
 	infop->ver = 0;
+	infop->neigh_ht = local_node->neigh_ht;
+	infop->neigh_link = local_node->neigh_link;
+	infop->neigh_link = local_node->neigh_sublink;
 	infop->symmetric = 1;
 	infop->io = config->local_node->master;
 
@@ -402,30 +405,56 @@ static void setup_cores(void)
 static void tracing_arm(void)
 {
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[local_node->neigh]->tracing_arm();
+		(*node)->opterons[local_node->neigh_ht]->tracing_arm();
 }
 
 static void tracing_start(void)
 {
+	printf("Tracing started on:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[(*node)->neigh]->tracing_start();
+		printf(" %03x#%u", (*node)->sci, (*node)->neigh_ht);
+	printf("\n");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->opterons[(*node)->neigh_ht]->tracing_start();
 }
 
 static void tracing_stop(void)
 {
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[(*node)->neigh]->tracing_stop();
+		(*node)->opterons[(*node)->neigh_ht]->tracing_stop();
+	printf("Tracing stopped on:");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		printf(" %03x#%u", (*node)->sci, (*node)->neigh_ht);
+	printf("\n");
+}
+
+static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
+{
+
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
+	*REL32(cpu_status) = vector;
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
+	  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+
+    printf(" %u", apicid);
+
+    for (unsigned i = 0; i < 1000000; i++) {
+        if (*REL32(cpu_status) == status)
+            return 0;
+        cpu_relax();
+    }
+
+	return 1;
 }
 
 static void test_cores(void)
 {
-	lib::wait_key("Press enter to start test");
-	printf("Starting cores:");
-
+	critical_enter();
 	if (options->tracing)
 		tracing_start();
 
-	for (Node **node = &nodes[0]; node < &nodes[0]; node++) {
+	printf("Testing APICs:");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
@@ -433,22 +462,35 @@ static void test_cores(void)
 
 			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 
-			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
-			  (5 << 8)); // init
-			*REL32(cpu_status) = VECTOR_TEST_START;
-			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
-			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+			if (boot_core(new_apicid, VECTOR_TEST_START, 0x80)) {
+				if (options->tracing)
+					tracing_stop();
+				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			}
 
-            printf(" %u", new_apicid);
+			lib::udelay(100000);
 
-            for (unsigned i = 0; i < 1000000; i++) {
-                if (*REL32(cpu_status) == 0x80)
-                    break;
-                cpu_relax();
-            }
+			if (boot_core(new_apicid, VECTOR_TEST_STOP, 0x90)) {
+				if (options->tracing)
+					tracing_stop();
+				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			}
+		}
+	}
+	printf("\n");
 
-			if (*REL32(cpu_status) != 0x80) {
-				tracing_stop();
+	printf("Starting APICs:");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (unsigned n = 0; n < acpi->napics; n++) {
+			// skip BSC
+			if (node == &nodes[0] && n == 0)
+				continue;
+
+			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
+
+			if (boot_core(new_apicid, VECTOR_TEST_START, 0x80)) {
+				if (options->tracing)
+					tracing_stop();
 				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
 			}
 		}
@@ -458,7 +500,7 @@ static void test_cores(void)
 	lib::udelay(2000000);
 	printf("Stopping APICs:");
 
-	for (Node **node = &nodes[0]; node < &nodes[0]; node++) {
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
@@ -466,22 +508,9 @@ static void test_cores(void)
 
 			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 
-			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
-			  (5 << 8)); // init
-			*REL32(cpu_status) = VECTOR_TEST_STOP;
-			local_node->numachip->write32(Numachip2::PIU_APIC, (new_apicid << 16) |
-			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
-
-            printf(" %u", new_apicid);
-
-            for (unsigned i = 0; i < 1000000; i++) {
-                if (*REL32(cpu_status) == 0x90)
-                    break;
-                cpu_relax();
-            }
-
-			if (*REL32(cpu_status) != 0x90) {
-				tracing_stop();
+			if (boot_core(new_apicid, VECTOR_TEST_STOP, 0x90)) {
+				if (options->tracing)
+					tracing_stop();
 				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
 			}
 		}
@@ -492,6 +521,7 @@ static void test_cores(void)
 		tracing_stop();
 		tracing_arm();
 	}
+	critical_leave();
 }
 
 static void acpi_tables(void)
@@ -665,6 +695,7 @@ static void finalise(void)
 	printf("Clearing DRAM");
 	critical_enter();
 
+#ifdef FIXME // hangs
 	// start clearing DRAM
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		unsigned start = node == nodes ? 1 : 0;
@@ -678,6 +709,7 @@ static void finalise(void)
 		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
 	}
+#endif
 
 	critical_leave();
 	printf("\n");

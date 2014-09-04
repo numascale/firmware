@@ -27,7 +27,9 @@ class Node {
 	const sci_t master;
 public:
 	sci_t sci;
-	ht_t neigh;
+	ht_t neigh_ht;
+	link_t neigh_link;
+	link_t neigh_sublink;
 	unsigned nopterons;
 	unsigned cores;
 	Opteron *opterons[7];
