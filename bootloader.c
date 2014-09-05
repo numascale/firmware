@@ -443,8 +443,8 @@ static void tracing_stop(void)
 
 static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
 {
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
 	*REL32(cpu_status) = vector;
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
 	  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
 
@@ -462,6 +462,7 @@ static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32
 static void test_cores(void)
 {
 	critical_enter();
+
 	if (options->tracing)
 		tracing_start();
 
@@ -474,7 +475,7 @@ static void test_cores(void)
 
 			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
 
-			if (boot_core(new_apicid, VECTOR_TEST_START, 0x80)) {
+			if (boot_core(new_apicid, VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				if (options->tracing)
 					tracing_stop();
 				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
@@ -482,7 +483,7 @@ static void test_cores(void)
 
 			lib::udelay(100000);
 
-			if (boot_core(new_apicid, VECTOR_TEST_STOP, 0x90)) {
+			if (boot_core(new_apicid, VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
 				if (options->tracing)
 					tracing_stop();
 				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));

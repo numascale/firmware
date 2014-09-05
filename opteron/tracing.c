@@ -17,6 +17,9 @@
 
 #include "opteron.h"
 
+#define TCB 1
+#define TCB_SIZE (64 * 8)
+
 void Opteron::tracing_arm(void)
 {
 	write32(TRACE_BUF_BASELIM, ((trace_base & ((1ULL << 40) - 1)) >> 24) | (((trace_limit & ((1ULL << 40) - 1)) >> 24) << 16));
@@ -30,6 +33,13 @@ void Opteron::tracing_start(void)
 	write32(TRACE_START, 0);
 	write32(TRACE_STOP, 1 < 31);
 
+	if (TCB) {
+		for (unsigned i = 0; i < TCB_SIZE / 4; i++) {
+			write32(ARRAY_ADDR, 0xa0000000 | i);
+			write32(ARRAY_DATA, 0);
+		}
+	}
+
 	write32(TRACE_BUF_ADDR_HIGH, 0);
 	write32(TRACE_BUF_BASELIM,
 		(((trace_limit >> (24 - 16)) - 1) & 0xffff0000) | (trace_base >> 24));
@@ -37,7 +47,7 @@ void Opteron::tracing_start(void)
 
 	uint32_t val = read32(TRACE_BUF_CTRL);
 	write32(TRACE_BUF_CTRL, val & ~1);
-	write32(TRACE_BUF_CTRL, 1 | (0 << 4) | (1 << 13) | (1 << 20) |
+	write32(TRACE_BUF_CTRL, 1 | (TCB << 1) | (0 << 4) | (1 << 13) | (1 << 20) |
 	  (1 << 20) | (0 << 21) | (0 << 23) | (1 << 25));
 	write32(TRACE_STOP, 1 | (1 << 4) | (1 << 8) | (1 << 12) | (1 << 16));
 	write32(TRACE_CAPTURE, (1 << 31) | (1 << 30) | (0x3f << 24) | (0x3f << 16));

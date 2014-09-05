@@ -260,7 +260,7 @@ read32:
 	ret
 
 test_start:
-	STATUS(0x80)
+	STATUS(VECTOR_TEST_STARTED)
 	mov $1, %ebx
 1:
 	call prng
@@ -271,7 +271,7 @@ test_start:
 	jmp 1b
 
 test_stop:
-	STATUS(0x90)
+	STATUS(VECTOR_TEST_STOPPED)
 1:
 	cli
 	hlt
