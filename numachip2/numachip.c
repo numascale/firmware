@@ -79,12 +79,12 @@ ht_t Numachip2::probe(const sci_t sci)
 	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + val, SIU_NODEID >> 12, SIU_NODEID & 0xfff);
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
-	uint32_t control = lib::mcfg_read32(sci, 0, 24 + val, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff);
+	uint32_t control = lib::mcfg_read32(sci, 0, 24 + val, INFO >> 12, INFO & 0xfff);
 	assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
 	if (control == 1 << 29) {
 		printf("Found SCI%03x\n", sci);
 		// tell slave to proceed
-		lib::mcfg_write32(sci, 0, 24 + val, FABRIC_CTRL >> 12, FABRIC_CTRL & 0xfff, 3 << 29);
+		lib::mcfg_write32(sci, 0, 24 + val, INFO >> 12, INFO & 0xfff, 3 << 29);
 		return val;
 	}
 
@@ -98,7 +98,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 	if (!local) {
 		printf("Waiting for slave to become ready");
-		while (read32(FABRIC_CTRL) != 7U << 29)
+		while (read32(INFO) != 7U << 29)
 			cpu_relax();
 		printf("\n");
 

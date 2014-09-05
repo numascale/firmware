@@ -319,6 +319,19 @@ static void remap(void)
 
 #define MTRR_TYPE(x) (x) == 0 ? "uncacheable" : (x) == 1 ? "write-combining" : (x) == 4 ? "write-through" : (x) == 5 ? "write-protect" : (x) == 6 ? "write-back" : "unknown"
 
+static void copy_inherit(void)
+{
+	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++) {
+		const uint64_t rnode = (*node)->dram_base + (*node)->numachip->read32(Numachip2::INFO + 4);
+		lib::memcpy64((uint64_t)&(*node)->neigh_ht, rnode + xoffsetof(local_node->neigh_ht, local_node), sizeof((*node)->neigh_ht));
+
+		// FIXME
+		(*node)->neigh_ht = 2;
+		printf("%03x Numachip @ HT%u.%u.%u\n", (*node)->sci, (*node)->neigh_ht,
+		  (*node)->neigh_link, (*node)->neigh_sublink);
+	}
+}
+
 static void setup_cores(void)
 {
 	// read fixed MSRs
@@ -430,7 +443,6 @@ static void tracing_stop(void)
 
 static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
 {
-
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
 	*REL32(cpu_status) = vector;
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
@@ -804,11 +816,14 @@ int main(const int argc, const char *argv[])
 
 	// slaves
 	if (!config->local_node->master) {
+		// read from master after mapped
+		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
+
 		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
-		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 1 << 29);
+		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
 		// wait for 'ready'
-		while (local_node->numachip->read32(Numachip2::FABRIC_CTRL) != 3 << 29)
+		while (local_node->numachip->read32(Numachip2::INFO) != 3 << 29)
 			cpu_relax();
 
 		printf("\n");
@@ -834,7 +849,7 @@ int main(const int argc, const char *argv[])
 		  nnodes, config->master->sci, config->master->hostname);
 
 		// set 'go-ahead'
-		local_node->numachip->write32(Numachip2::FABRIC_CTRL, 7 << 29);
+		local_node->numachip->write32(Numachip2::INFO, 7 << 29);
 
 		disable_cache();
 		asm volatile("mfence" ::: "memory");
@@ -876,6 +891,7 @@ int main(const int argc, const char *argv[])
 
 	scan();
 	remap();
+	copy_inherit();
 	if (options->tracing)
 		setup_gsm();
 	setup_info();

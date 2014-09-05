@@ -104,6 +104,7 @@ namespace lib
 	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
+	void memcpy64(uint64_t dest, uint64_t src, size_t n);
 
 	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
 	{

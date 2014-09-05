@@ -277,4 +277,10 @@ namespace lib
 		if (options->debug.access & 1)
 			printf("\n");
 	}
+
+	void memcpy64(uint64_t dest, uint64_t src, size_t n)
+	{
+		for (size_t i = 0; i < n; i++)
+			mem_write8(dest + i, mem_read8(src + i));
+	}
 }

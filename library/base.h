@@ -24,6 +24,7 @@
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
+#define xoffsetof(a, b) ((uint64_t)(b)-(uint64_t)(a))
 #define roundup(x, n) (((x) + ((n) - 1)) & (~((n) - 1)))
 #define poweroftwo(x) (!((x) & ((x) - 1)))
 #define roundup_pow2(x, y) ({uint64_t power = (y); while (power < (x)) power <<=1; power;})

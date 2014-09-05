@@ -129,7 +129,6 @@ public:
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 	static const reg_t PIU_APIC          = 0x1080;
 	static const reg_t PIU_APIC_SHIFT    = 0x1084;
-	static const reg_t FABRIC_CTRL       = 0x1090;
 	static const reg_t INFO              = 0x1090;
 	static const reg_t INFO_SIZE         = 0x8;
 	static const reg_t TIMEOUT_RESP      = 0x10b0;
