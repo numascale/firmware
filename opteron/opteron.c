@@ -290,6 +290,40 @@ void Opteron::dram_scrub_enable(void)
 	set32(SCRUB_ADDR_LOW, 1);
 }
 
+void Opteron::optimise_linkbuffers(void)
+{
+	const int IsocRspData = 0, IsocNpReqData = 0, IsocRspCmd = 0, IsocPReq = 0, IsocNpReqCmd = 1;
+	const int RspData = 3, NpReqData = 3, ProbeCmd = 4, RspCmd = 9, PReq = 2, NpReqCmd = 8;
+
+	/* Ensure constraints are met */
+	int FreeCmd = 32 - NpReqCmd - PReq - RspCmd - ProbeCmd - IsocNpReqCmd - IsocPReq - IsocRspCmd;
+	int FreeData = 8 - NpReqData - RspData - PReq - IsocPReq - IsocNpReqData - IsocRspData;
+	assert((ProbeCmd + RspCmd + PReq + NpReqCmd + IsocRspCmd + IsocPReq + IsocNpReqCmd) <= 24);
+
+	uint32_t b1 = NpReqCmd | (PReq << 5) | (RspCmd << 8) | (ProbeCmd << 12) |
+	  (NpReqData << 16) | (RspData << 18) | (FreeCmd << 20) | (FreeData << 25);
+	uint32_t b2 = (IsocNpReqCmd << 16) | (IsocPReq << 19) | (IsocRspCmd << 22) |
+	  (IsocNpReqData << 25) | (IsocRspData << 27);
+
+	for (int link = 0; link < 4; link++) {
+		// Probe Filter doesn't affect IO link buffering
+		uint32_t val = read32(LINK_TYPE + link * 0x20);
+		if ((!(val & 1)) || (val & 4))
+			continue;
+
+		printf("BEFORE b1=%08x b2=%08x\n",
+		  read32(LINK_BASE_BUF_CNT + link * 0x20),
+		  read32(LINK_ISOC_BUF_CNT + link * 0x20));
+
+		write32(LINK_BASE_BUF_CNT + link * 0x20, b1 | (1 << 31));
+		write32(LINK_ISOC_BUF_CNT + link * 0x20, b2);
+
+		printf("AFTER b1=%08x b2=%08x\n",
+		  read32(LINK_BASE_BUF_CNT + link * 0x20),
+		  read32(LINK_ISOC_BUF_CNT + link * 0x20));
+	}
+}
+
 void Opteron::init(void)
 {
 	uint32_t vendev = read32(VENDEV);
@@ -396,6 +430,8 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	// disable legacy GARTs
 	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)
 		write32(reg, 0);
+
+	optimise_linkbuffers();
 
 	printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
 	for (int range = 0; range < 8; range++)

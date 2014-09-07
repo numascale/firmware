@@ -68,6 +68,7 @@ private:
 
 	void disable_atmmode(void);
 	static void reset(const enum reset mode, const int last);
+	void optimise_linkbuffers(void);
 public:
 	static const uint32_t VENDEV_MCP55     = 0x036910de;
 	static const uint32_t VENDEV_FAM10H    = 0x12001022;
@@ -81,6 +82,8 @@ public:
 	static const reg_t LINK_INIT_CTRL      = 0x006c;
 	static const reg_t LINK_CTRL           = 0x0084;
 	static const reg_t LINK_FREQ_REV       = 0x0088;
+	static const reg_t LINK_BASE_BUF_CNT   = 0x0090;
+	static const reg_t LINK_ISOC_BUF_CNT   = 0x0094;
 	static const reg_t LINK_TYPE           = 0x0098;
 	static const reg_t COH_LINK_TRAF_DIST  = 0x0164;
 	static const reg_t EXT_LINK_TRANS_CTRL = 0x0168;

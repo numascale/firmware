@@ -694,9 +694,8 @@ static void acpi_tables(void)
 
 static void finalise(void)
 {
-	critical_enter();
-
 	printf("Clearing DRAM");
+	critical_enter();
 	asm volatile("wbinvd; mfence");
 
 	// start clearing DRAM
@@ -727,18 +726,15 @@ static void finalise(void)
 		printf("\n");
 	}
 
-	check();
 	e820->test();
-	check();
 	setup_cores();
-	check();
 	acpi_tables();
-	check();
 	test_cores();
 }
 
 static void finished(void)
 {
+	check();
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
@@ -774,6 +770,7 @@ int main(const int argc, const char *argv[])
 
 	e820 = new E820();
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
+	local_node->iohub->ldtstop();
 
 	if (options->init_only) {
 		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
@@ -882,11 +879,8 @@ int main(const int argc, const char *argv[])
 		}
 	} while (pos < nnodes);
 
-	check();
 	scan();
-	check();
 	remap();
-	check();
 	copy_inherit();
 	if (options->tracing)
 		setup_gsm();

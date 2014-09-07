@@ -42,4 +42,5 @@ public:
 	void smi_disable(void);
 	void smi_enable(void);
 	void limits(const uint64_t limit);
+	void ldtstop(void);
 };
