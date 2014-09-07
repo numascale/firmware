@@ -95,7 +95,7 @@ void Opteron::check(void)
 	}
 #endif
 	for (unsigned link = 0; link < 4; link++) {
-		uint32_t val = read32(LINK_FREQ_REV * link * 0x20);
+		uint32_t val = read32(LINK_CTRL + link * 0x20);
 		if (val & 0x300)
 			warning("HT link %u CRC error", link);
 
@@ -136,7 +136,7 @@ void Opteron::check(void)
 	}
 
 	uint32_t v = read32(MC_NB_DRAM);
-	if (v & 0xfff) {
+	if (v & 0xff) { // looks like bits 7:0 only are usable
 		warning("DRAM machine check 0x%08x on SCI%03x#%u", v, sci, ht);
 		write32(MC_NB_DRAM, 0);
 	}
