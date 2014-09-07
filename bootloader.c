@@ -52,17 +52,30 @@ char *asm_relocated;
 
 static uint64_t dram_top;
 static unsigned nnodes;
+static uint8_t pic1_mask, pic2_mask;
 
 static void critical_enter(void)
 {
 	asm volatile("cli");
 	local_node->iohub->smi_disable();
+
+	// disable XT-PIC
+	pic1_mask = inb(PIC_MASTER_IMR);
+	outb(0xff, PIC_MASTER_IMR);
+	pic2_mask = inb(PIC_SLAVE_IMR);
+	outb(0xff, PIC_SLAVE_IMR);
 }
 
 static void critical_leave(void)
 {
 	local_node->iohub->smi_enable();
 	asm volatile("sti");
+
+	// enable XT-PIC
+	inb(PIC_MASTER_IMR);
+	outb(pic1_mask, PIC_MASTER_IMR);
+	inb(PIC_SLAVE_IMR);
+	outb(pic2_mask, PIC_SLAVE_IMR);
 }
 
 static void check(void)
