@@ -30,6 +30,8 @@ public:
 	ht_t neigh_ht;
 	link_t neigh_link;
 	link_t neigh_sublink;
+	uint16_t apics[56];
+	uint8_t napics;
 	unsigned nopterons;
 	unsigned cores;
 	Opteron *opterons[7];

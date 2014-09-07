@@ -108,6 +108,8 @@ class ACPI {
 	struct acpi_rsdp *rptr;
 	struct acpi_sdt *rsdt, *xsdt;
 	bool bios_shadowed;
+	char *allocated;
+	unsigned nallocated, used;
 
 	void shadow_bios(void);
 	acpi_rsdp *find_rsdp(const char *start, int len);
@@ -118,6 +120,7 @@ public:
 	uint8_t apics[256];
 	uint8_t napics;
 
+	void allocate(unsigned len);
 	static void dump(const acpi_sdt *table, const unsigned limit = 0);
 	static void assert_checksum(const acpi_sdt *table, const int len);
 	static checked uint8_t checksum(const char *addr, const int len);

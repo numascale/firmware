@@ -345,6 +345,24 @@ static void copy_inherit(void)
 	}
 }
 
+static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
+{
+	*REL32(cpu_status) = vector;
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
+	  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+
+    printf(" %u", apicid);
+
+    for (unsigned i = 0; i < 1000000; i++) {
+        if (*REL32(cpu_status) == status)
+            return 0;
+        cpu_relax();
+    }
+
+	return 1;
+}
+
 static void setup_cores(void)
 {
 	// read fixed MSRs
@@ -379,10 +397,7 @@ static void setup_cores(void)
 	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
 	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
 
-	volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
-	// renumber BSC to apicid 0
-	uint32_t val = apic[0x20/4];
-	apic[0x20/4] = (val & 0xffffff) | (0 << 24);
+	critical_enter();
 
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -390,32 +405,22 @@ static void setup_cores(void)
 		printf("APICs on %03x:", (*node)->sci);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
-			// skip BSC
-			if (node == &nodes[0] && n == 0)
+			(*node)->apics[n] = ((node - nodes) << Numachip2::APIC_NODE_SHIFT) + acpi->apics[n];
+			// renumber BSP APICID
+			if (node == &nodes[0] && n == 0) {
+				volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
+				apic[0x20/4] = (apic[0x20/4] & 0xffffff) | ((*node)->apics[n] << 24);
 				continue;
-
-			uint8_t apicid = acpi->apics[n];
-			uint16_t new_apicid = apicid - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-			*REL8(cpu_apic_renumber) = new_apicid;
-			*REL8(cpu_apic_hi) = new_apicid >> 8;
-			printf(" %u->", apicid);
-
-			local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
-			  (5 << 8)); // init
-			*REL32(cpu_status) = VECTOR_SETUP;
-			local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
-			  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
-
-			printf("%u", new_apicid);
-
-			for (unsigned i = 0; i < 1000000; i++) {
-				if (*REL32(cpu_status) == 0x70)
-					break;
-				cpu_relax();
 			}
 
-			assertf(*REL32(cpu_status) == 0x70, "APIC %u->%u has status 0x%x", apicid, new_apicid, *REL32(cpu_status));
+			*REL8(cpu_apic_renumber) = (*node)->apics[n];
+			*REL8(cpu_apic_hi) = (*node)->apics[n] >> 8;
+
+			if (boot_core(acpi->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
+				fatal("APIC %u->%u has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(cpu_status));
+			printf("->%u", (*node)->apics[n]);
 		}
+		(*node)->napics = acpi->napics;
 		printf("\n");
 	}
 
@@ -426,80 +431,72 @@ static void setup_cores(void)
 			(*node)->numachip->apicatt.range(start, start + (1 << Numachip2::APIC_NODE_SHIFT) - 1, (*dnode)->sci);
 		}
 	}
+
+	critical_leave();
 }
 
 static void tracing_arm(void)
 {
+	if (options->tracing != 2)
+		return;
+
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[local_node->neigh_ht]->tracing_arm();
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->tracing_arm();
 }
 
 static void tracing_start(void)
 {
+	if (options->tracing != 2)
+		return;
+
 	printf("Tracing started on:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		printf(" %03x#%u", (*node)->sci, (*node)->neigh_ht);
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			printf(" %03x#%u", (*nb)->sci, (*nb)->ht);
 	printf("\n");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[(*node)->neigh_ht]->tracing_start();
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->tracing_start();
 }
 
 static void tracing_stop(void)
 {
+	if (options->tracing != 2)
+		return;
+
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->opterons[(*node)->neigh_ht]->tracing_stop();
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->tracing_stop();
 	printf("Tracing stopped on:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		printf(" %03x#%u", (*node)->sci, (*node)->neigh_ht);
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			printf(" %03x#%u", (*nb)->sci, (*nb)->ht);
 	printf("\n");
-}
-
-static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
-{
-	*REL32(cpu_status) = vector;
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
-	  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
-
-    printf(" %u", apicid);
-
-    for (unsigned i = 0; i < 1000000; i++) {
-        if (*REL32(cpu_status) == status)
-            return 0;
-        cpu_relax();
-    }
-
-	return 1;
 }
 
 static void test_cores(void)
 {
 	critical_enter();
-
-	if (options->tracing)
-		tracing_start();
+	tracing_start();
 
 	printf("Testing APICs:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < acpi->napics; n++) {
-			// skip BSC
+		for (unsigned n = 0; n < (*node)->napics; n++) {
 			if (node == &nodes[0] && n == 0)
-				continue;
+				continue; // skip BSC
 
-			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-
-			if (boot_core(new_apicid, VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
+			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				if (options->tracing)
 					tracing_stop();
-				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
 			}
 
 			lib::udelay(100000);
 
-			if (boot_core(new_apicid, VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
-				if (options->tracing)
-					tracing_stop();
-				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
+				tracing_stop();
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
 			}
 		}
 	}
@@ -507,221 +504,201 @@ static void test_cores(void)
 
 	printf("Starting APICs:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < acpi->napics; n++) {
+		for (unsigned n = 0; n < (*node)->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-
-			if (boot_core(new_apicid, VECTOR_TEST_START, 0x80)) {
-				if (options->tracing)
-					tracing_stop();
-				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
+				tracing_stop();
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
 			}
 		}
 	}
 	printf("\n");
 
-	lib::udelay(2000000);
+	lib::udelay(5000000);
 	printf("Stopping APICs:");
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < acpi->napics; n++) {
+		for (unsigned n = 0; n < (*node)->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			uint16_t new_apicid = acpi->apics[n] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-
-			if (boot_core(new_apicid, VECTOR_TEST_STOP, 0x90)) {
-				if (options->tracing)
-					tracing_stop();
-				fatal("APIC %u has status 0x%x", new_apicid, *REL32(cpu_status));
+			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
+				tracing_stop();
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
 			}
 		}
 	}
 	printf("\n");
 
-	if (options->tracing) {
-		tracing_stop();
-		tracing_arm();
-	}
+	tracing_stop();
+	tracing_arm();
 	critical_leave();
 }
 
 static void acpi_tables(void)
 {
-	{
-		AcpiTable mcfg("MCFG", 1);
+	AcpiTable mcfg("MCFG", 1);
 
-		// MCFG 'reserved field'
-		const uint64_t reserved = 0;
-		mcfg.append((const char *)&reserved, sizeof(reserved));
+	// MCFG 'reserved field'
+	const uint64_t reserved = 0;
+	mcfg.append((const char *)&reserved, sizeof(reserved));
 
-		uint16_t segment = 0;
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			struct acpi_mcfg ent;
-			ent.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
-			ent.pci_segment = segment++;
-			ent.start_bus_number = 0;
-			ent.end_bus_number = 255;
-			ent.reserved = 0;
-			mcfg.append((const char *)&ent, sizeof(ent));
-		}
-
-		acpi->replace(mcfg);
+	uint16_t segment = 0;
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		struct acpi_mcfg ent;
+		ent.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
+		ent.pci_segment = segment++;
+		ent.start_bus_number = 0;
+		ent.end_bus_number = 255;
+		ent.reserved = 0;
+		mcfg.append((const char *)&ent, sizeof(ent));
 	}
 
-	{
-		// cores
-		const acpi_sdt *oapic = acpi->find_sdt("APIC");
-		AcpiTable apic("APIC", 3);
-		apic.append((const char *)&oapic->data[0], 4); // Local Interrupt Controller Address
-		apic.append((const char *)&oapic->data[4], 4); // Flags
+	// cores
+	const acpi_sdt *oapic = acpi->find_sdt("APIC");
+	AcpiTable apic("APIC", 3);
+	apic.append((const char *)&oapic->data[0], 4); // Local Interrupt Controller Address
+	apic.append((const char *)&oapic->data[4], 4); // Flags
 
-		// append new x2APIC entries
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			unsigned n = 0;
+	// append new x2APIC entries
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned n = 0;
 
-			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-				for (unsigned m = 0; m < (*nb)->cores; m++) {
-					uint16_t apicid = acpi->apics[n+m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-					struct acpi_x2apic_apic ent;
-					ent.type = 9;
-					ent.length = 16;
-					ent.reserved = 0;
-					ent.x2apic_id = apicid;
-					ent.flags = 1;
-					ent.acpi_uid = 0;
-					apic.append((const char *)&ent, sizeof(ent));
-				}
-
-				n += (*nb)->cores;
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+			for (unsigned m = 0; m < (*nb)->cores; m++) {
+				struct acpi_x2apic_apic ent;
+				ent.type = 9;
+				ent.length = 16;
+				ent.reserved = 0;
+				ent.x2apic_id = (*node)->apics[n + m];
+				ent.flags = 1;
+				ent.acpi_uid = 0;
+				apic.append((const char *)&ent, sizeof(ent));
 			}
+
+			n += (*nb)->cores;
 		}
-
-		// copying all entries except x2APIC (9) and APIC (0)
-		unsigned pos = 8;
-		while (pos < (oapic->len - sizeof(struct acpi_sdt))) {
-			uint8_t type = oapic->data[pos];
-			uint8_t len = oapic->data[pos + 1];
-			assert(len > 0 && len < 64);
-
-			if (type != 0 && type != 9)
-				apic.append((const char *)&oapic->data[pos], len);
-			pos += len;
-		}
-
-		acpi->replace(apic);
 	}
 
-	{
-		// core to node mapping
-		AcpiTable srat("SRAT", 3);
+	// copying all entries except x2APIC (9) and APIC (0)
+	unsigned pos = 8;
+	while (pos < (oapic->len - sizeof(struct acpi_sdt))) {
+		uint8_t type = oapic->data[pos];
+		uint8_t len = oapic->data[pos + 1];
+		assert(len > 0 && len < 64);
 
-		uint32_t reserved1 = 1;
-		srat.append((const char *)&reserved1, sizeof(reserved1));
-		uint64_t reserved2 = 0;
-		srat.append((const char *)&reserved2, sizeof(reserved2));
+		if (type != 0 && type != 9)
+			apic.append((const char *)&oapic->data[pos], len);
+		pos += len;
+	}
 
-		uint32_t domain = 0;
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			unsigned n = 0;
+	// core to node mapping
+	AcpiTable srat("SRAT", 3);
 
-			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-				struct acpi_mem_affinity ment;
-				ment.type = 1;
-				ment.length = 40;
-				ment.proximity = domain;
-				ment.reserved1 = 0;
-				ment.base = (*nb)->dram_base;
-				ment.lengthlo = (uint32_t)(*nb)->dram_size;
-				ment.lengthhi = (uint32_t)((*nb)->dram_size >> 32);
-				ment.reserved2 = 0;
-				ment.flags = 1;
-				ment.reserved3[0] = 0;
-				ment.reserved3[1] = 0;
-				srat.append((const char *)&ment, sizeof(ment));
+	uint32_t reserved1 = 1;
+	srat.append((const char *)&reserved1, sizeof(reserved1));
+	uint64_t reserved2 = 0;
+	srat.append((const char *)&reserved2, sizeof(reserved2));
 
-				for (unsigned m = 0; m < (*nb)->cores; m++) {
-					uint16_t apicid = acpi->apics[n + m] - acpi->apics[0] + ((node - nodes) << Numachip2::APIC_NODE_SHIFT);
-					struct acpi_x2apic_affinity ent;
-					ent.type = 2;
-					ent.length = 24;
-					ent.reserved1 = 0;
-					ent.proximity = domain;
-					ent.x2apicid = apicid;
-					ent.flags = 1;
-					ent.clock = (uint32_t)(node - nodes);
-					ent.reserved2 = 0;
-					srat.append((const char *)&ent, sizeof(ent));
-				}
+	uint32_t domain = 0;
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned n = 0;
 
-				n += (*nb)->cores;
-				domain++;
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+			struct acpi_mem_affinity ment;
+			ment.type = 1;
+			ment.length = 40;
+			ment.proximity = domain;
+			ment.reserved1 = 0;
+			ment.base = (*nb)->dram_base;
+			ment.lengthlo = (uint32_t)(*nb)->dram_size;
+			ment.lengthhi = (uint32_t)((*nb)->dram_size >> 32);
+			ment.reserved2 = 0;
+			ment.flags = 1;
+			ment.reserved3[0] = 0;
+			ment.reserved3[1] = 0;
+			srat.append((const char *)&ment, sizeof(ment));
+
+			for (unsigned m = 0; m < (*nb)->cores; m++) {
+				struct acpi_x2apic_affinity ent;
+				ent.type = 2;
+				ent.length = 24;
+				ent.reserved1 = 0;
+				ent.proximity = domain;
+				ent.x2apicid = (*node)->apics[n + m];
+				ent.flags = 1;
+				ent.clock = (uint32_t)(node - nodes);
+				ent.reserved2 = 0;
+				srat.append((const char *)&ent, sizeof(ent));
 			}
-		}
 
-		acpi->replace(srat);
+			n += (*nb)->cores;
+			domain++;
+		}
 	}
 
-	{
-		const acpi_sdt *oslit = acpi->find_sdt("SLIT");
-		uint8_t *odist = NULL;
-		if (oslit) {
-			odist = (uint8_t *)&(oslit->data[8]);
-			assert(odist[0] <= 13);
-		}
+	const acpi_sdt *oslit = acpi->find_sdt("SLIT");
+	uint8_t *odist = NULL;
+	if (oslit) {
+		odist = (uint8_t *)&(oslit->data[8]);
+		assert(odist[0] <= 13);
+	}
 
-		AcpiTable slit("SLIT", 1);
+	AcpiTable slit("SLIT", 1);
 
-		// number of localities
-		uint64_t *n = (uint64_t *)slit.reserve(8);
-		*n = 0;
+	// number of localities
+	uint64_t *n = (uint64_t *)slit.reserve(8);
+	*n = 0;
 
-		printf("Topology distances:\n   ");
-		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
-			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
-				printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
-		printf("\n");
+	printf("Topology distances:\n   ");
+	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
+		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
+			printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
+	printf("\n");
 
-		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
-			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
-				printf("%3u", 000); // FIXME
+	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
+		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
+			printf("%3u", 000); // FIXME
 
-				for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
-					for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
-						uint8_t dist;
-						if (*snode == *dnode) {
-							if (*snb == *dnb)
-								dist = 10;
-							else
-								dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
-						} else
-							dist = 160;
+			for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
+				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
+					uint8_t dist;
+					if (*snode == *dnode) {
+						if (*snb == *dnb)
+							dist = 10;
+						else
+							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
+					} else
+						dist = 160;
 
-						printf(" %3u", dist);
-						slit.append((const char *)&dist, sizeof(dist));
-					}
+					printf(" %3u", dist);
+					slit.append((const char *)&dist, sizeof(dist));
 				}
-				printf("\n");
-				(*n)++;
 			}
+			printf("\n");
+			(*n)++;
 		}
-
-		acpi->replace(slit);
 	}
 
+	acpi->allocate(1024 + sizeof(struct acpi_sdt) * 4 + mcfg.used + apic.used + srat.used + slit.used);
+	acpi->replace(mcfg);
+	acpi->replace(apic);
+	acpi->replace(srat);
+	acpi->replace(slit);
 	acpi->check();
 }
 
 static void finalise(void)
 {
-	printf("Clearing DRAM");
 	critical_enter();
 
-#ifdef FIXME // hangs
+	printf("Clearing DRAM");
+	asm volatile("wbinvd; mfence");
+
 	// start clearing DRAM
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		unsigned start = node == nodes ? 1 : 0;
@@ -735,7 +712,6 @@ static void finalise(void)
 		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
 	}
-#endif
 
 	critical_leave();
 	printf("\n");
@@ -751,11 +727,14 @@ static void finalise(void)
 		printf("\n");
 	}
 
+	check();
 	e820->test();
+	check();
 	setup_cores();
-	test_cores();
+	check();
 	acpi_tables();
 	check();
+	test_cores();
 }
 
 static void finished(void)
@@ -883,7 +862,7 @@ int main(const int argc, const char *argv[])
 	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
 	assert(nodes);
 	nodes[0] = local_node;
-
+	local_node->check();
 	printf("Servers ready:\n");
 
 	unsigned pos = 1;
@@ -903,8 +882,11 @@ int main(const int argc, const char *argv[])
 		}
 	} while (pos < nnodes);
 
+	check();
 	scan();
+	check();
 	remap();
+	check();
 	copy_inherit();
 	if (options->tracing)
 		setup_gsm();

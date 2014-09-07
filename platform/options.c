@@ -184,7 +184,7 @@ Options::Options(const int argc, const char *argv[]): next_label("menu.c32"), co
 	printf("\n");
 	assertf(!errors, "Invalid arguments specified");
 
-	if (tracing == 1) {
+	if (tracing == 1 || tracing == 2) {
 		printf("Defaulting to 512MB trace buffers\n");
 		tracing = 512ULL << 20;
 	}

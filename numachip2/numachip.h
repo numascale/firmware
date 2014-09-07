@@ -170,7 +170,7 @@ public:
 
 	static const unsigned SIU_ATT_SHIFT  = 32;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
-	static const unsigned APIC_NODE_SHIFT = 6; // max 64 cores per server
+	static const unsigned APIC_NODE_SHIFT = 8; // max 64 cores per server
 	static const unsigned GSM_SHIFT      = 43;
 	static const unsigned GSM_SIZE_SHIFT = 43;
 	static const unsigned APIC_ATT_SHIFT     = 4;

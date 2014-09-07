@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -40,5 +41,28 @@ namespace lib
 		u ^= u << 25; // b
 		u ^= u >> 27; // c
 		return u * 2685821657736338717LL;
+	}
+
+	// allocate memory at top near ACPI area to avoid conflicts
+	static inline void *zalloc_top(const size_t size)
+	{
+		void *allocs[32]; // enough for 4GB of 128MB allocations
+		int nallocs = 0;
+
+		// allocate 128MB blocks until exhaustion
+		while ((allocs[nallocs] = malloc(128 << 20)))
+			nallocs++;
+
+		// free last one guaranteeing space for allocation
+		free(allocs[nallocs--]);
+
+		// allocate requested size
+		void *ptr = zalloc(size);
+
+		// free remaining allocations
+		while (nallocs)
+			free(allocs[nallocs--]);
+
+		return ptr;
 	}
 }

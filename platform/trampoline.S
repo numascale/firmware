@@ -235,7 +235,7 @@ break:
 	mov	%eax, %cs:SYM_OFFSET(msr_smm_base_rem)
 	mov	%edx, %cs:SYM_OFFSET(msr_smm_base_rem + 4)
 
-	STATUS(0x70)
+	STATUS(VECTOR_SETUP_DONE)
 1:
 	cli
 	hlt
@@ -381,7 +381,7 @@ init_readback_apic:
 
 // print asciiz string at by cs:si
 print_strz:
-#if DEBUG
+#ifdef DEBUG
 	xor	%bx, %bx
 	xor	%dx, %dx
 1:
@@ -399,7 +399,7 @@ print_strz:
 	ret
 
 print_hex32:
-#if DEBUG
+#ifdef DEBUG
 	push	%eax
 	push	%ebx
 	push	%ecx
@@ -493,7 +493,7 @@ EXPORT(cpu_apic_hi)
 	.byte 0
 EXPORT(counter)
 	.long 0
-#if DEBUG
+#ifdef DEBUG
 cpu_mtrr:
 	.asciz	"\r\nMTRR "
 cpu_cr:

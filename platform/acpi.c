@@ -347,6 +347,14 @@ acpi_sdt *ACPI::find_sdt(const char *sig)
 	return NULL;
 }
 
+void ACPI::allocate(unsigned len)
+{
+	allocated = (char *)lib::zalloc_top(len);
+	assert(allocated);
+	nallocated = len;
+	used = 0;
+}
+
 void ACPI::dump(const acpi_sdt *table, const unsigned limit)
 {
 	printf("Dumping %.4s:\n", table->sig.s);
@@ -675,8 +683,11 @@ char *AcpiTable::reserve(const unsigned len)
 
 void ACPI::replace(const AcpiTable &table)
 {
-	acpi_sdt *table2 = (acpi_sdt *)e820->expand(E820::ACPI, table.header.len);
+	acpi_sdt *table2 = (acpi_sdt *)(allocated + used);
+	//(acpi_sdt *)e820->expand(E820::ACPI, table.header.len);
 
+	used += sizeof(struct acpi_sdt) + table.used;
+	assert(used < nallocated);
 	memcpy(table2, &table.header, sizeof(struct acpi_sdt));
 	memcpy((char *)table2 + sizeof(struct acpi_sdt), table.payload, table.used);
 

@@ -18,6 +18,7 @@
 #pragma once
 
 #define VECTOR_SETUP 1
+#define VECTOR_SETUP_DONE 0x70
 #define VECTOR_TEST_START 2
 #define VECTOR_TEST_STARTED 0x80
 #define VECTOR_TEST_STOP 3
