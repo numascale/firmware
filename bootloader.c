@@ -770,13 +770,15 @@ int main(const int argc, const char *argv[])
 
 	e820 = new E820();
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
-	local_node->iohub->ldtstop();
 
 	if (options->init_only) {
 		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
 		syslinux->exec(options->next_label);
 		return 0;
 	}
+
+	// Initialize SPI/SPD, DRAM, NODEID etc. etc.
+	local_node->numachip->late_init();
 
 	// add global MCFG maps
 	for (unsigned i = 0; i < local_node->nopterons; i++)

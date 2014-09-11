@@ -91,6 +91,23 @@ ht_t Numachip2::probe(const sci_t sci)
 	return 0;
 }
 
+void Numachip2::late_init(void)
+{
+	dram_init();
+	fabric_init();
+
+//	write32(TIMEOUT_RESP, TIMEOUT_VAL);
+//	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
+
+	write32(SIU_NODEID, sci);
+
+	// set master SCI ID for PCI IO routing
+	uint32_t val = read32(PIU_APIC_SHIFT) & ~0xfff;
+	write32(PIU_APIC_SHIFT, val | master);
+
+	fabric_routing();
+}
+
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t _master):
   local(_local), master(_master), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
@@ -112,17 +129,4 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
-
-	dram_init();
-	fabric_init();
-
-//	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
-
-	write32(SIU_NODEID, _sci);
-
-	// set master SCI ID for PCI IO routing
-	uint32_t val = read32(PIU_APIC_SHIFT) & ~0xfff;
-	write32(PIU_APIC_SHIFT, val | master);
-
-	fabric_routing();
 }
