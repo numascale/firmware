@@ -66,7 +66,7 @@ private:
 	uint32_t scrub;
 	bool local;
 
-	void disable_atmmode(void);
+	static void disable_atmmode(const unsigned nnodes);
 	static void reset(const enum reset mode, const int last);
 	void optimise_linkbuffers(void);
 public:

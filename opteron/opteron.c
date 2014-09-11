@@ -30,57 +30,6 @@ uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
 int Opteron::family;
 
-void Opteron::disable_atmmode(void)
-{
-	// skip is ATMMode not enabled
-	uint32_t val = read32(LINK_TRANS_CTRL);
-	if (!(val & (1 << 12)))
-		return;
-
-	/* 1. Disable the L3 and DRAM scrubbers on all nodes in the system:
-	   - F3x58[L3Scrub]=00h
-	   - F3x58[DramScrub]=00h
-	   - F3x5C[ScrubRedirEn]=0 */
-	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
-	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
-	   See erratum 505 */
-	write32(DCT_CONF_SEL, 0);
-	uint32_t scrubv = read32(SCRUB_RATE_CTRL);
-	write32(SCRUB_RATE_CTRL, scrubv & ~0x1f00001f);
-	val = read32(SCRUB_ADDR_LOW);
-	write32(SCRUB_ADDR_LOW, val & ~1);
-
-	// 2.  Wait 40us for outstanding scrub requests to complete
-	lib::udelay(40);
-	/* 3.  Disable all cache activity in the system by setting
-	   CR0.CD for all active cores in the system */
-	// 4.  Issue WBINVD on all active cores in the system
-	disable_cache();
-
-	// 5.  Set F3x1C4[L3TagInit]=1
-	// 6.  Wait for F3x1C4[L3TagInit]=0
-
-	// 7.  Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0
-	val = read32(LINK_TRANS_CTRL);
-	write32(LINK_TRANS_CTRL, val & ~(1 << 12));
-
-	val = read32(L3_CTRL);
-	write32(L3_CTRL, val & ~(1 << 27));
-
-	/* 8.  Enable all cache activity in the system by clearing
-	   CR0.CD for all active cores in the system */
-	enable_cache();
-
-	// 9. Restore L3 and DRAM scrubber register values
-	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
-	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
-	   See erratum 505 */
-	write32(DCT_CONF_SEL, 0);
-	write32(SCRUB_RATE_CTRL, scrubv);
-	val = read32(SCRUB_ADDR_LOW);
-	write32(SCRUB_ADDR_LOW, val | 1);
-}
-
 void Opteron::check(void)
 {
 #ifdef LOCAL
@@ -345,9 +294,6 @@ void Opteron::init(void)
 
 	if (options->debug.northbridge)
 		disable_syncflood(ht);
-
-	if (family >= 0x15)
-		disable_atmmode();
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {

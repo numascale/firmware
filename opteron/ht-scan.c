@@ -194,6 +194,68 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 }
 
+void Opteron::disable_atmmode(const unsigned nnodes)
+{
+	// skip is ATMMode not enabled
+	uint32_t val = lib::cht_read32(0, LINK_TRANS_CTRL);
+	if (!(val & (1 << 12)))
+		return;
+
+	printf("Disabling ATM mode");
+	/* 1. Disable the L3 and DRAM scrubbers on all nodes in the system:
+	   - F3x58[L3Scrub]=00h
+	   - F3x58[DramScrub]=00h
+	   - F3x5C[ScrubRedirEn]=0 */
+
+	uint32_t scrub[7];
+
+	for (ht_t ht = 0; ht <= nnodes; ht++) {
+		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
+		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
+		   See erratum 505 */
+		lib::cht_write32(ht, DCT_CONF_SEL, 0);
+		scrub[ht] = lib::cht_read32(ht, SCRUB_RATE_CTRL);
+		lib::cht_write32(ht, SCRUB_RATE_CTRL, scrub[ht] & ~0x1f00001f);
+		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
+		lib::cht_write32(ht, SCRUB_ADDR_LOW, val & ~1);
+	}
+
+	// 2.  Wait 40us for outstanding scrub requests to complete
+	lib::udelay(40);
+	/* 3.  Disable all cache activity in the system by setting
+	   CR0.CD for all active cores in the system */
+	// 4.  Issue WBINVD on all active cores in the system
+	disable_cache();
+
+	// 5.  Set F3x1C4[L3TagInit]=1
+	// 6.  Wait for F3x1C4[L3TagInit]=0
+
+	// 7.  Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0
+	for (ht_t ht = 0; ht <= nnodes; ht++) {
+		val = lib::cht_read32(ht, LINK_TRANS_CTRL);
+		lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 12));
+
+		val = lib::cht_read32(ht, L3_CTRL);
+		lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
+	}
+
+	/* 8.  Enable all cache activity in the system by clearing
+	   CR0.CD for all active cores in the system */
+	enable_cache();
+
+	// 9. Restore L3 and DRAM scrubber register values
+	for (ht_t ht = 0; ht <= nnodes; ht++) {
+		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
+		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
+		   See erratum 505 */
+		lib::cht_write32(ht, DCT_CONF_SEL, 0);
+		lib::cht_write32(ht, SCRUB_RATE_CTRL, scrub[ht]);
+		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
+		lib::cht_write32(ht, SCRUB_ADDR_LOW, val | 1);
+	}
+	printf("\n");
+}
+
 ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const uint32_t vendev)
 {
 	ht_t nc;
@@ -282,8 +344,11 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d found on HT%d.%d\n", rev, neigh, link);
 
-		/* Ramp up link speed and width before adding to coherent fabric */
+		// ramp up link speed and width before adding to coherent fabric
 		ht_optimize_link(nc, neigh, link);
+
+		if (family >= 0x15)
+			disable_atmmode(nnodes);
 
 		printf("Adjusting HT fabric");
 
