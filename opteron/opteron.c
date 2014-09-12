@@ -275,14 +275,14 @@ void Opteron::optimise_linkbuffers(void)
 
 void Opteron::init(void)
 {
-	uint32_t vendev = read32(VENDEV);
+	uint32_t val = read32(CLK_CTRL_0);
+	if (val & (1 << 13))
+		fatal("Please disable C1E support in the BIOS");
 
-	if (vendev == VENDEV_FAM15H)
+	if (family >= 0x15)
 		mmiomap = new MmioMap15(*this);
-	else if (vendev == VENDEV_FAM10H)
-		mmiomap = new MmioMap10(*this);
 	else
-		fatal("Unexpected Opteron vendev 0x%08x", vendev);
+		mmiomap = new MmioMap10(*this);
 
 	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
 	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link
@@ -297,7 +297,7 @@ void Opteron::init(void)
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
-		uint32_t val = read32(DRAM_HOLE);
+		val = read32(DRAM_HOLE);
 		if (val & 1) {
 			dram_size -= (val & 0xff00) << (23 - 7);
 			write32(DRAM_HOLE, val & ~0xff81);
@@ -307,7 +307,7 @@ void Opteron::init(void)
 	// detect number of cores
 	cores = 1;
 	if (family < 0x15) {
-		uint32_t val = read32(LINK_TRANS_CTRL);
+		val = read32(LINK_TRANS_CTRL);
 		if (val & 0x20)
 			cores++; /* Cpu1En */
 
@@ -316,7 +316,7 @@ void Opteron::init(void)
 			if (val & (1 << i))
 				cores++;
 	} else {
-		uint32_t val = read32(NB_CAP_2);
+		val = read32(NB_CAP_2);
 		cores += val & 0xff;
 
 		val = read32(DOWNCORE_CTRL);

@@ -523,7 +523,7 @@ void ACPI::check(void)
 
 void ACPI::handover(void)
 {
-	printf("ACPI handoff: ");
+	printf("ACPI handover: ");
 	acpi_sdt *fadt = find_sdt("FACP");
 
 	if (!fadt) {
@@ -549,12 +549,12 @@ void ACPI::handover(void)
 		sci_en = inb(acpipm1cntblk);
 
 		if ((sci_en & 1) == 1) {
-			printf("legacy handoff succeeded\n");
+			printf("legacy handover succeeded\n");
 			return;
 		}
 	} while (--limit);
 
-	printf("ACPI handoff timed out\n");
+	printf("ACPI handover timed out\n");
 }
 
 void ACPI::get_cores(void)

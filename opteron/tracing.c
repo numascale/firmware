@@ -22,10 +22,13 @@
 
 void Opteron::tracing_arm(void)
 {
-	write32(TRACE_BUF_BASELIM, ((trace_base & ((1ULL << 40) - 1)) >> 24) | (((trace_limit & ((1ULL << 40) - 1)) >> 24) << 16));
-	write32(TRACE_BUF_ADDR_HIGH, (trace_base >> 40) | ((trace_limit >> 40) << 8));
+	assert((trace_base & 0xffffff) == 0);
+	assert((trace_limit & 0xffffff) == 0xffffff);
+
+printf("ARM\n");
+	write32(TRACE_BUF_BASELIM, ((trace_base >> 24) & 0xffff) | (((trace_limit >> 24) & 0xffff) << 16));
+	write32(TRACE_BUF_ADDR_HIGH, (trace_base >> 40) | ((trace_limit >> 40) << 8) | ((trace_base >> 40) << 16));
 	write32(TRACE_BUF_ADDR, trace_base >> 6);
-	write32(TRACE_BUF_CTRL, 0);
 }
 
 void Opteron::tracing_start(void)
@@ -40,10 +43,7 @@ void Opteron::tracing_start(void)
 		}
 	}
 
-	write32(TRACE_BUF_ADDR_HIGH, 0);
-	write32(TRACE_BUF_BASELIM,
-		(((trace_limit >> (24 - 16)) - 1) & 0xffff0000) | (trace_base >> 24));
-	write32(TRACE_BUF_ADDR, trace_base >> 6);
+	tracing_arm();
 
 	uint32_t val = read32(TRACE_BUF_CTRL);
 	write32(TRACE_BUF_CTRL, val & ~1);

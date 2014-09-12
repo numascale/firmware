@@ -105,7 +105,7 @@ bool E820::overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, cons
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
 	if (options->debug.e820)
-		printf("Adding e820 %011llx:%011llx (%011llx) %s (%u)\n", base, base + length, length, names[type], type);
+		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
 
 	assert(base < (base + length));
 

@@ -308,13 +308,10 @@ static void remap(void)
 			if (options->tracing) {
 				(*nb)->trace_base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
 				(*nb)->trace_limit = (*nb)->trace_base + options->tracing - 1;
-				assert(((*nb)->trace_base & 0xffffff) == 0);
-				assert(((*nb)->trace_limit & 0xffffff) == 0xffffff);
 
 				// disable DRAM stutter scrub
 				uint32_t val = (*nb)->read32(Opteron::CLK_CTRL_0);
 				(*nb)->write32(Opteron::CLK_CTRL_0, val & ~(1 << 15));
-
 				(*nb)->tracing_arm();
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 			}
@@ -437,9 +434,6 @@ static void setup_cores(void)
 
 static void tracing_arm(void)
 {
-	if (options->tracing != 2)
-		return;
-
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->tracing_arm();
@@ -820,7 +814,8 @@ int main(const int argc, const char *argv[])
 
 		printf("\n");
 		syslinux->cleanup();
-		acpi->handover();
+		if (!options->handover_acpi) // handover performed earlier
+			acpi->handover();
 		handover_legacy(local_node->sci);
 
 		local_node->iohub->smi_disable();
