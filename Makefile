@@ -23,7 +23,7 @@ reset:
 
 .PHONY: check
 check:
-	cppcheck --enable=all $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
+	cppcheck --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
 
 .PHONY: clean
 clean:
