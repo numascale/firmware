@@ -122,10 +122,8 @@ void Config::parse_json(json_t *root)
 	int errors = 0;
 
 	const json_t *fab = json_find_first_label(root, "fabric");
-	if (!fab) {
-		error("Label <fabric> not found in fabric configuration file");
-		errors++;
-	}
+	if (!fab)
+		fatal("Label <fabric> not found in fabric configuration file");
 
 	if (!parse_json_num(fab->child, "x-size", &size[0], 0)) {
 		error("Label <x-size> not found in fabric configuration file");
