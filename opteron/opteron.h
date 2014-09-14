@@ -143,7 +143,7 @@ public:
 
 	uint64_t dram_base, dram_size;
 	uint64_t trace_base, trace_limit;
-	static int family;
+	static uint8_t family;
 	static uint32_t ioh_vendev;
 	static uint32_t tsc_mhz;
 	static uint8_t mc_banks;

@@ -28,7 +28,7 @@
 uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
-int Opteron::family;
+uint8_t Opteron::family;
 
 void Opteron::check(void)
 {
