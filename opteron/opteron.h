@@ -186,3 +186,5 @@ public:
 	void tracing_start(void);
 	void tracing_stop(void);
 };
+
+extern Opteron *opteron;

@@ -46,3 +46,6 @@ public:
 	Node(const sci_t _sci, const ht_t ht);
 	Node(const sci_t _sci, const sci_t master);
 };
+
+extern Node *local_node;
+extern Node **nodes;

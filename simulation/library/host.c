@@ -15,23 +15,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "../../platform/os.h"
+#include "../../platform/e820.h"
+#include <stdlib.h>
+#include <stdint.h>
 
-#include "../library/base.h"
+OS::OS(void)
+{
+}
 
-class Numachip2;
+char *OS::read_file(const char *filename, int *const len)
+{
+	return 0;
+}
 
-class Fabric {
-	const Numachip2 &numachip;
-	uint16_t usage[16][6];
-	uint8_t route[16 + 16 + 16], bestroute[16 + 16 + 16];
-	uint32_t shadow[6][Numachip2::LC_SIZE];
-	unsigned bestcost;
+void OS::exec(const char *label)
+{
+	exit(0);
+}
 
-	uint16_t lcbase(const uint8_t lc) const;
-	void find(const sci_t src, const sci_t dst, const uint16_t cost, const int offset);
-	void update(const sci_t src, const sci_t dst);
-public:
-	Fabric(Numachip2 &_numachip);
-	void init(void);
-};
+void OS::memmap_start(void)
+{
+}
+
+bool OS::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
+{
+	*base = 0x0;
+	*length = 128ULL << 30;
+	*type = E820::RAM;
+
+	return 0;
+}

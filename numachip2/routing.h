@@ -17,26 +17,23 @@
 
 #pragma once
 
-extern "C" {
-	#include <syslinux/pxe.h>
-}
-#include <netinet/in.h>
+#include "../library/base.h"
 
-class Syslinux
-{
-	struct e820entry *ent;
-	com32sys_t state;
+class Numachip2;
 
-	void get_hostname(void);
+class RingRouter {
+//	const Numachip2 &numachip;
+	uint8_t sizes[3];
+	unsigned usage[4096];
+	uint8_t route[16 + 16 + 16], bestroute[16 + 16 + 16];
+//	uint32_t shadow[6][Numachip2::LC_SIZE];
+	unsigned bestcost;
+
+//	uint16_t lcbase(const uint8_t lc) const;
+	void find(const sci_t src, const sci_t dst, const unsigned cost, const unsigned offset);
+	sci_t neigh(const sci_t src, const uint8_t lc) const;
+	void update(const sci_t src, const sci_t dst);
 public:
-	struct in_addr ip;
-	const char *hostname;
-	uint8_t mac[6];
-
-	Syslinux(void);
-	char *read_file(const char *filename, int *const len);
-	void exec(const char *label);
-	void memmap_start(void);
-	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
-	void cleanup(void);
+	RingRouter(void); //const Numachip2 &_numachip);
+//	void init(void);
 };

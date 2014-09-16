@@ -30,21 +30,6 @@
 
 #define cpu_relax() asm volatile("pause" ::: "memory")
 
-#define disable_cache() do { \
-    asm volatile( \
-	"mov %%cr0, %%eax\n" \
-	"or $0x40000000, %%eax\n" \
-	"mov %%eax, %%cr0\n" \
-	"wbinvd\n" ::: "eax", "memory"); \
-	} while (0)
-
-#define enable_cache() do { \
-    asm volatile( \
-	"mov %%cr0, %%eax\n" \
-	"and $~0x40000000, %%eax\n" \
-	"mov %%eax, %%cr0\n" ::: "eax", "memory"); \
-	} while (0)
-
 #define RTC_SECONDS     0
 #define RTC_MINUTES     2
 #define RTC_HOURS       4
@@ -56,6 +41,25 @@
 
 #define PIC_MASTER_IMR          0x21
 #define PIC_SLAVE_IMR           0xa1
+
+static inline void disable_cache(void)
+{
+#ifndef SIM
+	asm volatile("mov %%cr0, %%eax\n"
+	  "or $0x40000000, %%eax\n"
+	  "mov %%eax, %%cr0\n"
+	  "wbinvd\n" ::: "eax", "memory");
+#endif
+}
+
+static inline void enable_cache(void)
+{
+#ifndef SIM
+	asm volatile("mov %%cr0, %%eax\n"
+	  "and $~0x40000000, %%eax\n"
+	  "mov %%eax, %%cr0\n" ::: "eax", "memory");
+#endif
+}
 
 namespace lib
 {

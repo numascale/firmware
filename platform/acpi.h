@@ -135,3 +135,5 @@ public:
 	ACPI(void);
 	void replace(const AcpiTable &table);
 };
+
+extern ACPI *acpi;

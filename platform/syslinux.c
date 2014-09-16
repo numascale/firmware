@@ -24,12 +24,12 @@ extern "C" {
 	#include <consoles.h>
 }
 
-#include "syslinux.h"
+#include "os.h"
 #include "../bootloader.h"
 #include "../library/base.h"
 #include "../library/utils.h"
 
-void Syslinux::get_hostname(void)
+void OS::get_hostname(void)
 {
 	char *dhcpdata;
 	size_t dhcplen;
@@ -67,7 +67,7 @@ void Syslinux::get_hostname(void)
 	}
 }
 
-Syslinux::Syslinux(void): ent(0), hostname(NULL)
+OS::OS(void): ent(0), hostname(NULL)
 {
 	/* Ensure console drains before opening */
 	lib::udelay(100000);
@@ -75,7 +75,7 @@ Syslinux::Syslinux(void): ent(0), hostname(NULL)
 	get_hostname();
 }
 
-char *Syslinux::read_file(const char *filename, int *const len)
+char *OS::read_file(const char *filename, int *const len)
 {
 	com32sys_t inargs, outargs;
 	char *buf = (char *)lmalloc(strlen(filename) + 1);
@@ -115,7 +115,7 @@ char *Syslinux::read_file(const char *filename, int *const len)
 	return buf;
 }
 
-void Syslinux::exec(const char *label)
+void OS::exec(const char *label)
 {
 	com32sys_t rm;
 	memset(&rm, 0, sizeof(rm));
@@ -128,12 +128,12 @@ void Syslinux::exec(const char *label)
 	__intcall(0x22, &rm, NULL);
 }
 
-void Syslinux::memmap_start(void)
+void OS::memmap_start(void)
 {
 	memset(&state, 0, sizeof(state));
 }
 
-bool Syslinux::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
+bool OS::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 {
 	state.eax.l = 0xe820;
 	state.edx.l = STR_DW_N("SMAP");
@@ -152,7 +152,7 @@ bool Syslinux::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 	return state.ebx.l > 0;
 }
 
-void Syslinux::cleanup(void)
+void OS::cleanup(void)
 {
 	static com32sys_t rm;
 	rm.eax.w[0] = 0x000C;

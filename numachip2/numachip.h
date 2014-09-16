@@ -210,3 +210,5 @@ public:
 	void fabric_reset(void);
 	void dram_check(void);
 };
+
+extern Numachip2 *numachip;

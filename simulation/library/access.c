@@ -1,37 +1,22 @@
-#include <string.h>
+/*
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#include "../numachip2/numachip.h"
-//#include "../library/base.h"
-//#include "../library/access.h"
-//#include "../platform/acpi.h"
-#include "../platform/options.h"
-#include "../platform/syslinux.h"
-#include "../platform/e820.h"
-#include "../platform/config.h"
-//#include "../platform/acpi.h"
-//#include "../opteron/msrs.h"
-#include "../nodes.h"
-
-Syslinux *syslinux;
-Options *options;
-Config *config;
-E820 *e820;
-Node *local_node;
-//Node **nodes;
-//ACPI *acpi;
-
-void *zalloc(size_t size)
-{
-	void *addr = malloc(size);
-	assert(addr);
-	memset(addr, 0, size);
-	return addr;
-}
-
-void lfree(void *addr)
-{
-	free(addr);
-}
+#include "../../library/base.h"
+#include <stdint.h>
 
 namespace lib
 {
@@ -112,21 +97,7 @@ namespace lib
 	{
 	}
 
-	void mcfg_write64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
+	void mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
 	{
 	}
-}
-
-int main(const int argc, const char *argv[])
-{
-	options = new Options(argc, argv); // needed before first PCI access
-
-	Numachip2 *numachips[2];
-	numachips[0] = new Numachip2(0x000);
-	numachips[1] = new Numachip2(0x001);
-
-	delete numachips[0];
-	delete numachips[1];
-
-	return 0;
 }

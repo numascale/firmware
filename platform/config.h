@@ -46,3 +46,5 @@ public:
 	Config(void);
 	Config(const char *filename);
 };
+
+extern Config *config;

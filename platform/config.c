@@ -18,13 +18,16 @@
 #include <string.h>
 
 #include "../library/base.h"
-#include "../bootloader.h"
+#include "../platform/os.h"
+#include "../node.h"
 #include "options.h"
 #include "config.h"
 
+#ifndef SIM
 extern "C" {
 	#include "com32.h"
 }
+#endif
 
 static const char *json_errors[] = {
 	"Unknown",
@@ -225,7 +228,7 @@ struct Config::node *Config::find(const sci_t sci)
 Config::Config(const char *filename)
 {
 	int len;
-	const char *data = syslinux->read_file(filename, &len);
+	const char *data = os->read_file(filename, &len);
 
 #ifdef DEBUG
 	if (options->debug.config)
@@ -269,14 +272,14 @@ Config::Config(const char *filename)
 		}
 #endif
 
-		if (!memcmp(syslinux->mac, nodes[i].mac, sizeof(syslinux->mac))) {
+		if (!memcmp(os->mac, nodes[i].mac, sizeof(os->mac))) {
 			if (options->debug.config)
 				printf("MAC matches node %u", i);
 			local_node = &nodes[i];
 			break;
 		}
 
-		if (!strcmp(syslinux->hostname, nodes[i].hostname)) {
+		if (!strcmp(os->hostname, nodes[i].hostname)) {
 			if (options->debug.config)
 				printf("Hostname matches node %u", i);
 			local_node = &nodes[i];

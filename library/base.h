@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -50,12 +51,14 @@
             #cond, __FUNCTION__, __FILE__, __LINE__); while (1) cpu_relax(); \
     } } while (0)
 
+#ifndef assert
 #define assert(cond) do { if (!(cond)) {				\
 	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
 	    #cond, __FUNCTION__, __FILE__, __LINE__);			\
 	printf(COL_DEFAULT);						\
 	while (1) cpu_relax();						\
     } } while (0)
+#endif
 
 #define fatal(format, args...) do {					\
 	printf(COL_RED "Error: ");					\
@@ -99,6 +102,20 @@ typedef uint16_t reg_t;
 typedef uint32_t msr_t;
 typedef uint16_t apic_t;
 
+#ifdef SIM
+inline void lfree(void *ptr)
+{
+	free(ptr);
+}
+
+inline void *zalloc(size_t size)
+{
+	void *addr = malloc(size);
+	assert(addr);
+	memset(addr, 0, size);
+	return addr;
+}
+#else
 inline void *operator new(const size_t size)
 {
 	void *p = zalloc(size);
@@ -122,6 +139,7 @@ inline void operator delete[](void *const p)
 {
 	free(p);
 }
+#endif
 
 template<class T> class Vector {
 	unsigned lim;

@@ -15,29 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../numachip2/routing.h"
-#include "../platform/os.h"
-#include "../platform/config.h"
-#include "../platform/options.h"
-#include "../node.h"
-#include <string.h>
+#pragma once
 
-OS *os;
-Config *config;
-Options *options;
-Node *local_node;
-
-int main(void)
-{
-	os = new OS();
-	config = new Config();
-
-	const sci_t me = 0x000;
-	local_node = new Node(me, me);
-	RingRouter *router = new RingRouter();
-
-	delete router;
-	delete local_node;
-
-	return 0;
+#ifndef SIM
+extern "C" {
+	#include <syslinux/pxe.h>
 }
+#endif
+#include <netinet/in.h>
+
+class OS
+{
+	struct e820entry *ent;
+#ifndef SIM
+	com32sys_t state;
+#endif
+	void get_hostname(void);
+public:
+	struct in_addr ip;
+	const char *hostname;
+	uint8_t mac[6];
+
+	OS(void);
+	char *read_file(const char *filename, int *const len);
+	void exec(const char *label);
+	void memmap_start(void);
+	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
+	void cleanup(void);
+};
+
+extern OS *os;

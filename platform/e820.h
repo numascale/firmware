@@ -56,3 +56,5 @@ public:
 	uint64_t memlimit(void);
 	void test(void);
 };
+
+extern E820 *e820;

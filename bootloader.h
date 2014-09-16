@@ -21,7 +21,7 @@
 #include <stdbool.h>
 
 #include "platform/config.h"
-#include "platform/syslinux.h"
+#include "platform/os.h"
 #include "platform/options.h"
 #include "platform/e820.h"
 #include "platform/acpi.h"
@@ -45,14 +45,3 @@ struct info {
 	bool symmetric;
 	bool io;
 } __attribute__((packed));
-
-/* Global constants found in initialization */
-extern Syslinux *syslinux;
-extern Options *options;
-extern Config *config;
-extern Opteron *opteron;
-extern Numachip2 *numachip;
-extern E820 *e820;
-extern Node *local_node;
-extern Node **nodes;
-extern ACPI *acpi;

@@ -23,9 +23,11 @@
 #include "../library/utils.h"
 #include "../bootloader.h"
 
+#ifndef SIM
 extern "C" {
 	#include "com32.h"
 }
+#endif
 
 const char *E820::names[] = {"type 0", "usable", "reserved", "ACPI data", "ACPI NVS", "unusable",
   "type 6", "type 7", "type 8", "type 9"};
@@ -213,11 +215,11 @@ E820::E820(void)
 
 	// read existing E820 entries
 	uint64_t base, length, type;
-	syslinux->memmap_start();
+	os->memmap_start();
 
 	bool last;
 	do {
-		last = syslinux->memmap_entry(&base, &length, &type);
+		last = os->memmap_entry(&base, &length, &type);
 		add(base, length, type);
 	} while (last);
 
@@ -300,13 +302,13 @@ void E820::test(void)
 
 	// read existing E820 entries
 	uint64_t base, length, type;
-	syslinux->memmap_start();
+	os->memmap_start();
 
 	bool left;
 	test_errors = 0;
 
 	do {
-		left = syslinux->memmap_entry(&base, &length, &type);
+		left = os->memmap_entry(&base, &length, &type);
 		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
 		if (type == RAM)
 			test_range(base, base + length);
