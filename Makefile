@@ -27,7 +27,7 @@ check:
 
 .PHONY: clean
 clean:
-	rm -f $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) version.h bootloader.c32 bootloader.elf
+	@rm -f $(addsuffix *~, $(DIRS)) $(addsuffix *.o, $(DIRS)) $(addsuffix .*.o.d, $(DIRS)) version.h bootloader.c32 bootloader.elf
 
 .PHONY: realclean
 realclean: clean
