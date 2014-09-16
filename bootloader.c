@@ -360,6 +360,21 @@ static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32
 	return 1;
 }
 
+static void setup_cores_observer(void)
+{
+	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
+
+	local_node->numachip->apicatt.range(0, 0xff, local_node->sci);
+	printf("APICs:");
+
+	critical_enter();
+	for (unsigned n = 1; n < acpi->napics; n++)
+		if (boot_core(acpi->apics[n], VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
+			fatal("APIC %u has status 0x%x", acpi->apics[n], *REL32(cpu_status));
+	critical_leave();
+	printf("\n");
+}
+
 static void setup_cores(void)
 {
 	// read fixed MSRs
@@ -792,6 +807,7 @@ int main(const int argc, const char *argv[])
 		local_node->numachip->fabric_train();
 
 	if (!config->local_node->partition) {
+		setup_cores_observer();
 		setup_info();
 		finished();
 	}

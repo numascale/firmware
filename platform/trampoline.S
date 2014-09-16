@@ -40,6 +40,8 @@ EXPORT(init_dispatch)
 	STATUS(0x9);
 	cmpl $VECTOR_SETUP, %edx
 	je setup
+	cmpl $VECTOR_SETUP_OBSERVER, %edx
+	je setup_observer
 	cmpl $VECTOR_TEST_START, %edx
 	je test_start
 	cmpl $VECTOR_TEST_STOP, %edx
@@ -50,7 +52,6 @@ EXPORT(init_dispatch)
 	cli
 	hlt
 	jmp	1b
-
 setup:
 	// disable caching
 	mov	%cr0, %eax
@@ -225,15 +226,16 @@ break:
 	or	%ebx, %eax
 	wrmsr
 
-	mov	$MSR_MCFG, %ecx
-	mov	%cs:SYM_OFFSET(msr_mcfg), %eax
-	mov	%cs:SYM_OFFSET(msr_mcfg + 4), %edx
-	wrmsr
-
 	mov	$MSR_SMM_BASE, %ecx
 	rdmsr
 	mov	%eax, %cs:SYM_OFFSET(msr_smm_base_rem)
 	mov	%edx, %cs:SYM_OFFSET(msr_smm_base_rem + 4)
+
+setup_observer:
+	mov	$MSR_MCFG, %ecx
+	mov	%cs:SYM_OFFSET(msr_mcfg), %eax
+	mov	%cs:SYM_OFFSET(msr_mcfg + 4), %edx
+	wrmsr
 
 	STATUS(VECTOR_SETUP_DONE)
 1:
