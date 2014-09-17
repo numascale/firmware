@@ -110,10 +110,8 @@ void SR56x0::smi_enable(void)
 
 void SR56x0::ldtstop(void)
 {
-	printf("Asserting LDTSTOP# to optimise HT buffer allocation...");
 	uint8_t val8 = lib::pmio_read8(0x8a);
 	lib::pmio_write8(0x8a, 0xf0);
 	lib::pmio_write8(0x87, 1);
 	lib::pmio_write8(0x8a, val8);
-	printf("done\n");
 }

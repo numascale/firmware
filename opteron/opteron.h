@@ -85,9 +85,13 @@ public:
 	static const reg_t LINK_BASE_BUF_CNT   = 0x0090;
 	static const reg_t LINK_ISOC_BUF_CNT   = 0x0094;
 	static const reg_t LINK_TYPE           = 0x0098;
+	static const reg_t LINK_FREQ_EXT       = 0x009c;
+	static const reg_t LINK_RETRY          = 0x0130;
 	static const reg_t COH_LINK_TRAF_DIST  = 0x0164;
 	static const reg_t EXT_LINK_TRANS_CTRL = 0x0168;
+	static const reg_t LINK_GLO_CTRL_EXT   = 0x016c;
 	static const reg_t LINK_EXT_CTRL       = 0x0170;
+	static const reg_t LINK_INIT_STATUS    = 0x01a0;
 	static const reg_t DRAM_MAP_BASE       = 0x1040;
 	static const reg_t DRAM_MAP_LIMIT      = 0x1044;
 	static const reg_t MMIO_MAP_BASE       = 0x1080;
@@ -165,6 +169,7 @@ public:
 	void write32(const reg_t reg, const uint32_t val) const;
 	void set32(const reg_t reg, const uint32_t mask) const;
 	void clear32(const reg_t reg, const uint32_t mask) const;
+	void clearset32(const reg_t reg, const uint32_t setmask, const uint32_t clearmask) const;
 
 	static void prepare(void);
 #ifdef NOTNEEDED
@@ -185,6 +190,7 @@ public:
 	void tracing_arm(void);
 	void tracing_start(void);
 	void tracing_stop(void);
+	void discover(void);
 };
 
 extern Opteron *opteron;

@@ -167,6 +167,12 @@ void Opteron::clear32(const reg_t reg, const uint32_t mask) const
 	write32(reg, val & ~mask);
 }
 
+void Opteron::clearset32(const reg_t reg, const uint32_t clearmask, const uint32_t setmask) const
+{
+	uint32_t val = read32(reg);
+	write32(reg, (val & ~clearmask) | setmask);
+}
+
 void Opteron::prepare(void)
 {
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
@@ -395,4 +401,40 @@ void Opteron::dram_clear_wait(void)
 		cpu_relax();
 
 	clear32(MCTL_CONF_HIGH, 3 << 12); // reenable memory controller prefetch
+}
+
+void Opteron::discover(void)
+{
+	uint32_t links = read32(LINK_INIT_STATUS); // F0x1A0
+	assert(links & (1 << 31)); // ensure valid
+	for (unsigned l = 0; l < 3; l++) {
+		// skip connected links
+		if (!(links & (1 << (1 + l * 2))))
+			continue;
+
+		printf("HT%u.%u ", ht, l);
+
+		set32(LINK_GLO_CTRL_EXT, 1 << 8); // set GlblLinkTrain[ConnDly]
+		set32(LINK_EXT_CTRL + l * 4, 1); // set LinkTrain[Ganged]
+		clear32(LINK_RETRY + l * 4, 1);  // adjust Retry Control[Retry Enable]
+		const uint8_t freq = 0; // 200MHz freq
+		clearset32(LINK_FREQ_REV + l * 0x20, 0x1f << 8, (freq & 15) << 8);
+		clearset32(LINK_FREQ_EXT + l * 0x20, 1, freq >> 4);
+		const uint8_t width = 0; // 8-bit width
+		clearset32(LINK_CTRL + l * 0x20, (7 << 28) | (7 << 24), (width << 28) | (width << 24));
+
+		clear32(LINK_CTRL + l * 0x20, 1 << 6); // clear Link Control[End Of Chain]
+		clear32(LINK_CTRL + l * 0x20, 1 << 7); // clear Link Control[TXOff]
+
+		local_node->iohub->ldtstop();
+
+		// wait for InitComplete and not ConnPend
+		uint32_t val;
+		do {
+			cpu_relax();
+			val = read32(LINK_TYPE + l * 0x20);
+		} while ((val & (1 << 4)) || (!(val & 1)));
+
+		printf("%sconnected and %scoherent\n", val & 1 ? "" : "not ", val & 4 ? "non-" : "");
+	}
 }

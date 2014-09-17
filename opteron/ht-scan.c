@@ -161,7 +161,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		uint8_t max_supported = 0;
 
 		printf("+");
-		val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV);
+		val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV); // FIXME use LINK_FREQ_EXT
 		printf(".");
 
 		/* Find maximum supported frequency */
@@ -170,16 +170,19 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<NC freq=%d>",max_supported);
+			// FIXME use LINK_FREQ_EXT
 			lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
 
 		printf(".");
+		// FIXME use LINK_FREQ_EXT
 		val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
 		printf(".");
 
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<CPU freq=%d>",max_supported);
+			// FIXME use LINK_FREQ_EXT
 			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
