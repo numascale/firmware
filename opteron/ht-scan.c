@@ -187,6 +187,26 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
+
+		/* If HT3, enable scrambling and retry mode */
+		if (max_supported >= 7) {
+			printf("*");
+			val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
+			printf(".");
+			if ((val & 8) == 0) {
+				printf("<scrambling>");
+				lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 8);
+				reboot = 1;
+			}
+			printf("*");
+			val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
+			printf(".");
+			if ((val & 1) == 0) {
+				printf("<retry>");
+				lib::cht_write32(neigh, LINK_RETRY + link * 4, val | 1);
+				reboot = 1;
+			}
+		}
 	}
 
 	printf("\n");
