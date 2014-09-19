@@ -144,7 +144,7 @@ unsigned Opteron::MmioMap::unused(void)
 	fatal("No free NB MMIO ranges");
 }
 
-void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
 {
 	const bool ovw = 1;
 
@@ -173,7 +173,7 @@ void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, cons
 		fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 	}
 
-	uint32_t val2 = ((base >> 16) << 8) | 3;
+	uint32_t val2 = ((base >> 16) << 8) | (!ro << 1) | 1;
 	uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
 	uint32_t val4 = ((limit >> 40) << 16) | (base >> 40);
 
@@ -197,7 +197,7 @@ void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, cons
 	opteron.write32(MMIO_MAP_BASE + loff + range * 8, val2);
 }
 
-void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link)
+void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
 {
 	const bool ovw = 1;
 
@@ -222,7 +222,7 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 			fatal("Overwriting NB MMIO range %u 0x%08llx:0x%08llx on SCI%03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 		}
 
-		uint32_t val2 = ((base >> 16) << 8) | 3;
+		uint32_t val2 = ((base >> 16) << 8) | (!ro << 1) | 1;
 		uint32_t val3 = ((limit >> 16) << 8) | dest | (link << 4);
 
 		// check if locked

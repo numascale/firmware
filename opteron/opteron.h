@@ -30,21 +30,21 @@ class Opteron {
 		MmioMap(Opteron &_opteron, const unsigned _ranges): opteron(_opteron), ranges(_ranges) {};
 		virtual void remove(const unsigned range);
 		virtual bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
-		virtual void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		virtual void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 	};
 public:
 	class MmioMap15: public MmioMap {
 	public:
 		MmioMap15(Opteron &_opteron): MmioMap(_opteron, 12) {};
-		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
 		void remove(const unsigned range);
 	};
 
 	class MmioMap10: public MmioMap {
 	public:
-		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link);
+		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
 		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
 		void remove(const unsigned range);

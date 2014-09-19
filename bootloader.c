@@ -202,9 +202,10 @@ static void setup_gsm_early(void)
 		if (config->nodes[n].partition)
 			continue;
 
+		// setup read-only map on observer
 		for (unsigned i = 0; i < local_node->nopterons; i++) {
 			uint64_t base = 1ULL << Numachip2::GSM_SHIFT;
-			local_node->opterons[i]->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0);
+			local_node->opterons[i]->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0, 1);
 		}
 	}
 }
