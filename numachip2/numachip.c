@@ -26,37 +26,37 @@ const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
 
 uint64_t Numachip2::read64(const reg_t reg) const
 {
-	assert(ht);
+	xassert(ht);
 	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write64_split(const reg_t reg, const uint64_t val) const
 {
-	assert(ht);
+	xassert(ht);
 	lib::mcfg_write64_split(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint32_t Numachip2::read32(const reg_t reg) const
 {
-	assert(ht);
+	xassert(ht);
 	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
-	assert(ht);
+	xassert(ht);
 	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const reg_t reg) const
 {
-	assert(ht);
+	xassert(ht);
 	return lib::mcfg_read8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const reg_t reg, const uint8_t val) const
 {
-	assert(ht);
+	xassert(ht);
 	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
@@ -111,7 +111,7 @@ void Numachip2::late_init(void)
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t _master):
   local(_local), master(_master), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this), apicatt(*this)
 {
-	assert(ht);
+	xassert(ht);
 
 	if (!local) {
 		printf("Waiting for slave to become ready");
@@ -124,7 +124,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	}
 
 	uint32_t vendev = read32(VENDEV);
-	assert(vendev == VENDEV_NC2);
+	xassert(vendev == VENDEV_NC2);
 
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);

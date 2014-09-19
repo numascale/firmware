@@ -22,8 +22,8 @@
 
 void Opteron::tracing_arm(void)
 {
-	assert((trace_base & 0xffffff) == 0);
-	assert((trace_limit & 0xffffff) == 0xffffff);
+	xassert((trace_base & 0xffffff) == 0);
+	xassert((trace_limit & 0xffffff) == 0xffffff);
 
 	write32(TRACE_BUF_BASELIM, ((trace_base >> 24) & 0xffff) | (((trace_limit >> 24) & 0xffff) << 16));
 	write32(TRACE_BUF_ADDR_HIGH, (trace_base >> 40) | ((trace_limit >> 40) << 8) | ((trace_base >> 40) << 16));

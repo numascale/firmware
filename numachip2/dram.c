@@ -48,7 +48,7 @@ void Numachip2::dram_test(void)
 		if (!(qw % 0x100000))
 			printf(" %llu", qw >> (20 - 3));
 
-		assert(read64(NCACHE_MCTR_DATA) == lib::hash64(qw));
+		xassert(read64(NCACHE_MCTR_DATA) == lib::hash64(qw));
 	}
 
 	write32(NCACHE_CTRL, 0);
@@ -190,7 +190,7 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, (ncache + ctag) >> 19);
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
 
-	assert(read32(NCACHE_CTRL) & (1 << 6));
+	xassert(read32(NCACHE_CTRL) & (1 << 6));
 	printf("%s %s partitions: %lluMB nCache",
 	  lib::pr_size(total), nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 

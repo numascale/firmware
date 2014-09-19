@@ -33,7 +33,7 @@ void ACPI::shadow_bios(void)
 {
 	printf("Shadowing BIOS...");
 	int *area = (int *)malloc(SHADOW_LEN);
-	assert(area);
+	xassert(area);
 	memcpy(area, (void *)SHADOW_BASE, SHADOW_LEN);
 	uint64_t val = lib::rdmsr(MSR_SYSCFG);
 
@@ -95,7 +95,7 @@ acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const int pt
 	// DSDT is linked from FACP table
 	if (!strcmp("DSDT", sig)) {
 		acpi_sdt *dsdt, *facp = find_child("FACP", parent, ptrsize);
-		assert(facp);
+		xassert(facp);
 		memcpy(&dsdt, &facp->data[4], sizeof(facp));
 		return dsdt;
 	}
@@ -235,7 +235,7 @@ bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt 
 		goto again;
 
 	parent->len += ptrsize;
-	assert(parent->len < RSDT_MAX);
+	xassert(parent->len < RSDT_MAX);
 	parent->checksum += checksum((const char *)parent, parent->len);
 	return 1;
 
@@ -272,7 +272,7 @@ void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *parent, const unsign
 		goto again;
 
 	parent->len += ptrsize;
-	assert(parent->len < RSDT_MAX);
+	xassert(parent->len < RSDT_MAX);
 	parent->checksum += checksum((const char *)parent, parent->len);
 	return;
 
@@ -300,7 +300,7 @@ acpi_sdt *ACPI::find_root(const char *sig)
 			if ((xsdtp == 0) || (xsdtp == ~0ULL))
 				return NULL;
 
-			assert(xsdtp < 0x100000000);
+			xassert(xsdtp < 0x100000000);
 			acpi_sdt *val;
 			memcpy(&val, &xsdtp, sizeof(xsdt));
 			return val;
@@ -350,7 +350,7 @@ acpi_sdt *ACPI::find_sdt(const char *sig)
 void ACPI::allocate(unsigned len)
 {
 	allocated = (char *)lib::zalloc_top(len);
-	assert(allocated);
+	xassert(allocated);
 	nallocated = len;
 	used = 0;
 }
@@ -570,7 +570,7 @@ void ACPI::get_cores(void)
 			    (struct acpi_apic_affinity *)&(srat->data[i]);
 
 			if (ent->flags & 1) {
-				assert(ent->apicid != 0xff);
+				xassert(ent->apicid != 0xff);
 				apics[napics] = ent->apicid;
 				napics++;
 			}
@@ -614,13 +614,13 @@ ACPI::ACPI(void): bios_shadowed(0)
 	// find table root in alternative location
 	if (!rptr)
 		rptr = find_rsdp((const char *)0xe0000, 131072);
-	assert(rptr);
+	xassert(rptr);
 
 	xsdt = find_root("XSDT");
-	assert(xsdt);
+	xassert(xsdt);
 
 	rsdt = find_root("RSDT");
-	assert(rsdt);
+	xassert(rsdt);
 
 	if (options->debug.acpi)
 		printf("RSDT at %p; XSDT at %p\n", rsdt, xsdt);
@@ -647,7 +647,7 @@ void AcpiTable::extend(const unsigned len)
 	if (used + len > allocated) {
 		allocated = roundup(used + len, chunk);
 		payload = (char *)realloc((void *)payload, allocated);
-		assert(payload);
+		xassert(payload);
 	}
 }
 
@@ -687,7 +687,7 @@ void ACPI::replace(const AcpiTable &table)
 	//(acpi_sdt *)e820->expand(E820::ACPI, table.header.len);
 
 	used += sizeof(struct acpi_sdt) + table.used;
-	assert(used < nallocated);
+	xassert(used < nallocated);
 	memcpy(table2, &table.header, sizeof(struct acpi_sdt));
 	memcpy((char *)table2 + sizeof(struct acpi_sdt), table.payload, table.used);
 
@@ -695,7 +695,7 @@ void ACPI::replace(const AcpiTable &table)
 	table2->checksum = checksum((const char *)table2, table2->len);
 
 	if (rsdt)
-		assert(replace_child(table2->sig.s, table2, rsdt, 4));
+		xassert(replace_child(table2->sig.s, table2, rsdt, 4));
 	if (xsdt)
-		assert(replace_child(table2->sig.s, table2, xsdt, 8));
+		xassert(replace_child(table2->sig.s, table2, xsdt, 8));
 }

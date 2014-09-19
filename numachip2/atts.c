@@ -42,12 +42,12 @@ void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const 
 	if (options->debug.maps)
 		printf("SCI%03x: DRAM ATT 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
 
-	assert(limit > base);
-	assert(limit < (1ULL << depth));
+	xassert(limit > base);
+	xassert(limit < (1ULL << depth));
 
 	const uint64_t mask = (1ULL << SIU_ATT_SHIFT) - 1;
-	assert((base & mask) == 0);
-	assert((limit & mask) == mask);
+	xassert((base & mask) == 0);
+	xassert((limit & mask) == mask);
 
 	numachip.write32(SIU_ATT_INDEX, (1 << 31) | (base >> SIU_ATT_SHIFT));
 
@@ -68,10 +68,10 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 	if (options->debug.maps)
 		printf("SCI%03x: MMIO32 ATT 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
 
-	assert(limit > base);
+	xassert(limit > base);
 	const uint64_t mask = (1ULL << MMIO32_ATT_SHIFT) - 1;
-	assert((base & mask) == 0);
-	assert((limit & mask) == mask);
+	xassert((base & mask) == 0);
+	xassert((limit & mask) == mask);
 
 	numachip.write32(PIU_ATT_INDEX, (1 << 31) | (0 << 30) | (base >> MMIO32_ATT_SHIFT));
 
@@ -95,10 +95,10 @@ void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const 
 	if (options->debug.maps)
 		printf("SCI%03x: APIC ATT 0x%04x:0x%04x to SCI%03x", numachip.sci, base, limit, dest);
 
-	assert(limit > base);
+	xassert(limit > base);
 	const uint16_t mask = (1 << APIC_ATT_SHIFT) - 1;
-	assert((base & mask) == 0);
-	assert((limit & mask) == mask);
+	xassert((base & mask) == 0);
+	xassert((limit & mask) == mask);
 
 	numachip.write32(PIU_ATT_INDEX, (1 << 31) | (1 << 30) | (base >> APIC_ATT_SHIFT));
 

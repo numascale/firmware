@@ -82,7 +82,7 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 void SR56x0::limits(uint64_t limit)
 {
 	printf("Setting limits on %03x IOH to 0x%llx", sci, limit);
-	assert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
+	xassert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
 
 	// limit to HyperTransport range
 	limit = min(Opteron::HT_BASE, limit);

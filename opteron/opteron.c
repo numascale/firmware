@@ -114,7 +114,7 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
 	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
 	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-//	val |= 1 << 8;     // disable WDT
+	val |= 1 << 8;     // disable WDT
 	lib::cht_write32(nb, MC_NB_CONF, val);
 
 	val = lib::cht_read32(nb, MC_NB_CONF_EXT);
@@ -253,7 +253,7 @@ void Opteron::optimise_linkbuffers(void)
 	/* Ensure constraints are met */
 	int FreeCmd = 32 - NpReqCmd - PReq - RspCmd - ProbeCmd - IsocNpReqCmd - IsocPReq - IsocRspCmd;
 	int FreeData = 8 - NpReqData - RspData - PReq - IsocPReq - IsocNpReqData - IsocRspData;
-	assert((ProbeCmd + RspCmd + PReq + NpReqCmd + IsocRspCmd + IsocPReq + IsocNpReqCmd) <= 24);
+	xassert((ProbeCmd + RspCmd + PReq + NpReqCmd + IsocRspCmd + IsocPReq + IsocNpReqCmd) <= 24);
 
 	uint32_t b1 = NpReqCmd | (PReq << 5) | (RspCmd << 8) | (ProbeCmd << 12) |
 	  (NpReqData << 16) | (RspData << 18) | (FreeCmd << 20) | (FreeData << 25);
@@ -406,7 +406,7 @@ void Opteron::dram_clear_wait(void)
 void Opteron::discover(void)
 {
 	uint32_t links = read32(LINK_INIT_STATUS); // F0x1A0
-	assert(links & (1 << 31)); // ensure valid
+	xassert(links & (1 << 31)); // ensure valid
 	for (unsigned l = 0; l < 3; l++) {
 		// skip connected links
 		if (!(links & (1 << (1 + l * 2))))

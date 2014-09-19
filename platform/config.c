@@ -154,7 +154,7 @@ void Config::parse_json(json_t *root)
 		nnodes++;
 
 	nodes = (struct node *)zalloc(nnodes * sizeof(*nodes));
-	assert(nodes);
+	xassert(nodes);
 
 	int i;
 	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
@@ -205,7 +205,7 @@ Config::Config(void)
 
 	nnodes = 1;
 	nodes = (struct node *)zalloc(sizeof(*nodes));
-	assert(nodes);
+	xassert(nodes);
 
 	nodes->uuid = ::local_node->numachip->uuid;
 	nodes->sci = 0;

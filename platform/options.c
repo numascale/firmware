@@ -32,10 +32,10 @@ struct optargs {
 
 void Options::parse_string(const char *val, void *stringp)
 {
-	assert(val);
+	xassert(val);
 	char **string = (char **)stringp;
 	*string = strdup(val);
-	assert(*string);
+	xassert(*string);
 }
 
 void Options::parse_bool(const char *val, void *voidp)

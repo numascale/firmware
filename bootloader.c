@@ -230,11 +230,11 @@ static void setup_gsm(void)
 				continue;
 
 			// FIXME: use observer instance
-			assert(limit > base);
+			xassert(limit > base);
 
 			const uint64_t mask = (1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
-			assert((base & mask) == 0);
-			assert((limit & mask) == mask);
+			xassert((base & mask) == 0);
+			xassert((limit & mask) == mask);
 
 			lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht, Numachip2::SIU_ATT_INDEX >> 12,
 			  Numachip2::SIU_ATT_INDEX & 0xfff, (1 << 31) | (base >> Numachip2::SIU_ATT_SHIFT));
@@ -365,6 +365,7 @@ static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32
 static void setup_cores_observer(void)
 {
 	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
+	*REL64(msr_cpuwdt) = lib::rdmsr(MSR_CPUWDT);
 
 	local_node->numachip->apicatt.range(0, 0xff, local_node->sci);
 	printf("APICs:");
@@ -600,7 +601,7 @@ static void acpi_tables(void)
 	while (pos < (oapic->len - sizeof(struct acpi_sdt))) {
 		uint8_t type = oapic->data[pos];
 		uint8_t len = oapic->data[pos + 1];
-		assert(len > 0 && len < 64);
+		xassert(len > 0 && len < 64);
 
 		if (type != 0 && type != 9)
 			apic.append((const char *)&oapic->data[pos], len);
@@ -656,7 +657,7 @@ static void acpi_tables(void)
 	uint8_t *odist = NULL;
 	if (oslit) {
 		odist = (uint8_t *)&(oslit->data[8]);
-		assert(odist[0] <= 13);
+		xassert(odist[0] <= 13);
 	}
 
 	AcpiTable slit("SLIT", 1);
@@ -872,7 +873,7 @@ int main(const int argc, const char *argv[])
 	config->local_node->added = 1;
 
 	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
-	assert(nodes);
+	xassert(nodes);
 	nodes[0] = local_node;
 	local_node->check();
 	printf("Servers ready:\n");

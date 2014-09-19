@@ -33,7 +33,7 @@ void OS::get_hostname(void)
 {
 	char *dhcpdata;
 	size_t dhcplen;
-	assert(pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen) == 0);
+	xassert(pxe_get_cached_info(PXENV_PACKET_TYPE_DHCP_ACK, (void **)&dhcpdata, &dhcplen) == 0);
 
 	/* Save MyIP for later (in udp_open) */
 	ip.s_addr = ((pxe_bootp_t *)dhcpdata)->yip;
@@ -62,7 +62,7 @@ void OS::get_hostname(void)
 
 		/* Create a private copy */
 		hostname = strndup(&dhcpdata[offset + 2], len);
-		assert(hostname);
+		xassert(hostname);
 		break;
 	}
 }
@@ -96,7 +96,7 @@ char *OS::read_file(const char *filename, int *const len)
 	assertf(fd && *len > 0, "Failed to open file");
 
 	buf = (char *)lzalloc(roundup(*len, bsize));
-	lassert(buf);
+	xassert(buf);
 
 	memset(&inargs, 0, sizeof inargs);
 	inargs.eax.w[0] = 0x0007; /* Read file */
@@ -142,8 +142,8 @@ bool OS::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 	state.es = SEG(ent);
 
 	__intcall(0x15, &state, &state);
-	assert(state.eax.l == STR_DW_N("SMAP"));
-	assert(ent->length);
+	xassert(state.eax.l == STR_DW_N("SMAP"));
+	xassert(ent->length);
 
 	*base = ent->base;
 	*length = ent->length;

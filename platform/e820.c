@@ -41,9 +41,9 @@ void E820::dump(void)
 		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
 		if (i) {
-			lassert(map[i].base >= (last_base + last_length));
-			lassert(map[i].length);
-			lassert(map[i].length < (16ULL << 40));
+			xassert(map[i].base >= (last_base + last_length));
+			xassert(map[i].length);
+			xassert(map[i].length < (16ULL << 40));
 			last_base = map[i].base;
 			last_length = map[i].length;
 		}
@@ -82,7 +82,7 @@ void E820::insert(struct e820entry *pos)
 		memmove(pos + 1, pos, sizeof(*pos) * n);
 
 	*used += 1;
-	assert(*used < E820_MAP_MAX);
+	xassert(*used < E820_MAP_MAX);
 }
 
 void E820::remove(struct e820entry *start, struct e820entry *end)
@@ -109,7 +109,7 @@ void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 	if (options->debug.e820)
 		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
 
-	assert(base < (base + length));
+	xassert(base < (base + length));
 
 	struct e820entry *last = map + *used;
 	struct e820entry *spos = position(base);
@@ -237,7 +237,7 @@ E820::E820(void)
 
 uint64_t E820::memlimit(void)
 {
-	assert(*used > 0);
+	xassert(*used > 0);
 	struct e820entry *pos = map + *used - 1;
 
 	// assume some usable memory exists

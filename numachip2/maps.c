@@ -28,10 +28,10 @@ void Numachip2::MmioMap::add(const int range, const uint64_t base, const uint64_
 		printf("Adding NC MMIO range %d on SCI%03x: 0x%08llx:0x%08llx to %d\n",
 			range, numachip.sci, base, limit, dht);
 
-	assert(limit > base);
-	assert(range < 8);
-	assert((base & 0xffff) == 0);
-	assert((limit & 0xffff) == 0xffff);
+	xassert(limit > base);
+	xassert(range < 8);
+	xassert((base & 0xffff) == 0);
+	xassert((limit & 0xffff) == 0xffff);
 
 	uint32_t a = ((base >> 16) << 8) | 3;
 	uint32_t b = ((limit >> 16) << 8) | dht;
@@ -46,7 +46,7 @@ void Numachip2::MmioMap::del(const int range)
 	if (options->debug.maps)
 		printf("Deleting NC MMIO range %d on SCI%03x\n", range, numachip.sci);
 
-	assert(range < 8);
+	xassert(range < 8);
 
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(MMIO_MAP_BASE, 0);
@@ -55,7 +55,7 @@ void Numachip2::MmioMap::del(const int range)
 
 bool Numachip2::MmioMap::read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht)
 {
-	assert(range < 8);
+	xassert(range < 8);
 
 	numachip.write32(MAP_INDEX, range);
 	uint32_t a = numachip.read32(MMIO_MAP_BASE);
@@ -66,7 +66,7 @@ bool Numachip2::MmioMap::read(const int range, uint64_t *base, uint64_t *limit, 
 	*dht = b & 7;
 
 	/* Ensure read and write bits are consistent */
-	assert(!(a & 1) == !(a & 2));
+	xassert(!(a & 1) == !(a & 2));
 
 	return a & 3;
 }
@@ -90,10 +90,10 @@ void Numachip2::DramMap::add(const int range, const uint64_t base, const uint64_
 		printf("Adding NC DRAM range %d on SCI%03x: 0x%012llx:0x%012llx to %d\n",
 			range, numachip.sci, base, limit, dht);
 
-	assert(limit > base);
-	assert(range < 8);
-	assert((base & 0xffffff) == 0);
-	assert((limit & 0xffffff) == 0xffffff);
+	xassert(limit > base);
+	xassert(range < 8);
+	xassert((base & 0xffffff) == 0);
+	xassert((limit & 0xffffff) == 0xffffff);
 
 	uint32_t a = ((base >> 24) << 8) | 3;
 	uint32_t b = ((limit >> 24) << 8) | dht;
@@ -108,7 +108,7 @@ void Numachip2::DramMap::del(const int range)
 	if (options->debug.maps)
 		printf("Deleting NC DRAM range %d on SCI%03x\n", range, numachip.sci);
 
-	assert(range < 8);
+	xassert(range < 8);
 
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(DRAM_MAP_BASE, 0);
@@ -126,7 +126,7 @@ bool Numachip2::DramMap::read(const int range, uint64_t *base, uint64_t *limit, 
 	*dht = b & 7;
 
 	/* Ensure read and write bits are consistent */
-	assert(!(a & 1) == !(a & 2));
+	xassert(!(a & 1) == !(a & 2));
 
 	return a & 3;
 }

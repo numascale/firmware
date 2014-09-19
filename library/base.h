@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -30,6 +31,8 @@
 #define poweroftwo(x) (!((x) & ((x) - 1)))
 #define roundup_pow2(x, y) ({uint64_t power = (y); while (power < (x)) power <<=1; power;})
 #define cpu_relax() asm volatile("pause" ::: "memory")
+#define halt() while (1) asm volatile("cli; hlt" ::: "memory")
+
 #define PRInode "node 0x%03x (%s)"
 
 #define checked __attribute__ ((warn_unused_result))
@@ -46,29 +49,25 @@
 #define STR_DW_N(a) (uint32_t)((a[0] << 24) + (a[1] << 16) + (a[2] << 8) + a[3])
 #define STR_DW_H(a) (uint32_t)(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
 
-#define lassert(cond) do { if (!(cond)) { \
-        printf("Error: assertion '%s' failed in %s at %s:%d\n", \
-            #cond, __FUNCTION__, __FILE__, __LINE__); while (1) cpu_relax(); \
-    } } while (0)
+// prevent null syslinux assert being used
+#undef assert
 
-#ifndef assert
-#define assert(cond) do { if (!(cond)) {				\
+#define xassert(cond) do { if (!(cond)) {				\
 	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
 	    #cond, __FUNCTION__, __FILE__, __LINE__);			\
 	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
+	halt();						\
     } } while (0)
-#endif
 
-#define fatal(format, args...) do {					\
+#define fatal(format, args...) do {				\
 	printf(COL_RED "Error: ");					\
 	printf(format, ## args);					\
 	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
+	halt();										\
    } while (0)
 
-#define warning(format, args...) do {					\
-	printf(COL_YELLOW "Warning: ");					\
+#define warning(format, args...) do {			\
+	printf(COL_YELLOW "Warning: ");				\
 	printf(format, ## args);					\
 	printf(COL_DEFAULT "\n");					\
    } while (0)
@@ -82,18 +81,18 @@
 	printed = 1;                                \
    }} while (0)
 
-#define error(format, args...) do {					\
+#define error(format, args...) do {				\
 	printf(COL_RED "Error: ");					\
 	printf(format, ## args);					\
 	printf(COL_DEFAULT "\n");					\
    } while (0)
 
-#define assertf(cond, format, args...) do { if (!(cond)) {		\
+#define assertf(cond, format, args...) do { if (!(cond)) { \
 	printf(COL_RED "Error: ");					\
 	printf(format, ## args);					\
 	printf(COL_DEFAULT);						\
-	while (1) cpu_relax();						\
-    } } while(0)
+	halt();										\
+    }} while(0)
 
 typedef uint8_t link_t;
 typedef uint8_t ht_t;
@@ -111,7 +110,7 @@ inline void lfree(void *ptr)
 inline void *zalloc(size_t size)
 {
 	void *addr = malloc(size);
-	assert(addr);
+	xassert(addr);
 	memset(addr, 0, size);
 	return addr;
 }
@@ -119,14 +118,14 @@ inline void *zalloc(size_t size)
 inline void *operator new(const size_t size)
 {
 	void *p = zalloc(size);
-	assert(p);
+	xassert(p);
 	return p;
 }
 
 inline void *operator new[](const size_t size)
 {
 	void *p = zalloc(size);
-	assert(p);
+	xassert(p);
 	return p;
 }
 
@@ -145,7 +144,7 @@ template<class T> class Vector {
 	unsigned lim;
 
 	void ensure(void) {
-		lassert(used <= lim);
+		xassert(used <= lim);
 		if (used == lim) {
 			lim += 8;
 			elements = (T *)realloc((void *)elements, sizeof(T) * lim);
@@ -167,7 +166,7 @@ public:
 	}
 
 	void del(const unsigned offset) {
-		lassert(offset < used);
+		xassert(offset < used);
 		memmove(&elements[offset], &elements[offset + 1], (used - offset - 1) * sizeof(T));
 		used--;
 		limit = &elements[used];

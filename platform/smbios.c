@@ -53,7 +53,7 @@ SMBIOS::SMBIOS(void)
 		const char *next;
 		struct smbios_header *h = (struct smbios_header *)data;
 
-		assert(h->length >= 4);
+		xassert(h->length >= 4);
 		if (h->type == 127)
 			break;
 
@@ -77,12 +77,12 @@ SMBIOS::SMBIOS(void)
 		i++;
 	}
 
-	assert(biosver);
-	assert(biosdate);
-	assert(sysmanuf);
-	assert(sysproduct);
-	assert(boardmanuf);
-	assert(boardproduct);
+	xassert(biosver);
+	xassert(biosdate);
+	xassert(sysmanuf);
+	xassert(sysproduct);
+	xassert(boardmanuf);
+	xassert(boardproduct);
 
 	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
 }

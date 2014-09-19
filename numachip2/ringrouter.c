@@ -21,13 +21,13 @@
 
 /*uint16_t RingRouter::lcbase(const uint8_t lc) const
 {
-	assert(lc < 7);
+	xassert(lc < 7);
 	return lc ? (Numachip2::LC_XBAR + (lc - 1) * Numachip2::LC_SIZE) : Numachip2::SIU_XBAR;
 }*/
 
 void RingRouter::find(const sci_t src, const sci_t dst, const unsigned cost, const unsigned offset)
 {
-	assert(offset < (sizes[0]-1U + sizes[1]-1U + sizes[2]-1U));
+	xassert(offset < (sizes[0]-1U + sizes[1]-1U + sizes[2]-1U));
 
 	// if reached goal, update best
 	if (src == dst && cost < bestcost) {
@@ -57,20 +57,20 @@ void RingRouter::update(const sci_t src, const sci_t dst)
 	sci_t sci = src;
 
 	for (unsigned offset = 0; bestroute[offset]; offset++) {
-		assert(offset < 45);
+		xassert(offset < 45);
 		uint8_t lc = bestroute[offset];
 		usage[sci]++;
 		sci = neigh(sci, lc);
 	}
 
-	assert(sci == dst);
+	xassert(sci == dst);
 }
 
 RingRouter::RingRouter(void) //uint8_t _sizes[])
 {
 /*	for (unsigned i = 0; i < 3; i++) {
-		assert(_sizes[i] >= 1);
-		assert(_sizes[i] <= 16);
+		xassert(_sizes[i] >= 1);
+		xassert(_sizes[i] <= 16);
 		sizes[i] = _sizes[i];
 	}*/
 
