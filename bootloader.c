@@ -276,8 +276,9 @@ static void remap(void)
 		local_node->numachip->drammap.add(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 
 	// 2. route higher access to NumaChip
-	for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
-		(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
+	if (nnodes > 1)
+		for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+			(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
 
 	// 3. setup NumaChip DRAM registers
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_BASE, local_node->dram_base >> 24);
