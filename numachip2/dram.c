@@ -104,7 +104,6 @@ void Numachip2::dram_init(void)
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
-	const uint64_t hosttotal = e820->memlimit();
 
 	printf("%uGB DIMM", 1 << (dram_total_shift - 30));
 
@@ -156,6 +155,7 @@ void Numachip2::dram_init(void)
 		warning("Correctable ECC errors detected on NumaConnect DIMM");
 
 #ifdef BROKEN
+	const uint64_t hosttotal = e820->memlimit();
 	uint64_t ncache = 1ULL << 30; /* Minimum */
 	uint64_t ctag = ncache >> 3;
 	/* Round up to mask constraints to allow manipulation */
