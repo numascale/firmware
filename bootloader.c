@@ -52,31 +52,6 @@ char *asm_relocated;
 
 static uint64_t dram_top;
 static unsigned nnodes;
-static uint8_t pic1_mask, pic2_mask;
-
-static void critical_enter(void)
-{
-	asm volatile("cli");
-	local_node->iohub->smi_disable();
-
-	// disable XT-PIC
-	pic1_mask = inb(PIC_MASTER_IMR);
-	outb(0xff, PIC_MASTER_IMR);
-	pic2_mask = inb(PIC_SLAVE_IMR);
-	outb(0xff, PIC_SLAVE_IMR);
-}
-
-static void critical_leave(void)
-{
-	local_node->iohub->smi_enable();
-	asm volatile("sti");
-
-	// enable XT-PIC
-	inb(PIC_MASTER_IMR);
-	outb(pic1_mask, PIC_MASTER_IMR);
-	inb(PIC_SLAVE_IMR);
-	outb(pic2_mask, PIC_SLAVE_IMR);
-}
 
 static void check(void)
 {
@@ -370,11 +345,11 @@ static void setup_cores_observer(void)
 	local_node->numachip->apicatt.range(0, 0xff, local_node->sci);
 	printf("APICs:");
 
-	critical_enter();
+	lib::critical_enter();
 	for (unsigned n = 1; n < acpi->napics; n++)
 		if (boot_core(acpi->apics[n], VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
 			fatal("APIC %u has status 0x%x", acpi->apics[n], *REL32(cpu_status));
-	critical_leave();
+	lib::critical_leave();
 	printf("\n");
 }
 
@@ -412,7 +387,7 @@ static void setup_cores(void)
 	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
 	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
 
-	critical_enter();
+	lib::critical_enter();
 
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -447,7 +422,7 @@ static void setup_cores(void)
 		}
 	}
 
-	critical_leave();
+	lib::critical_leave();
 }
 
 static void tracing_arm(void)
@@ -489,7 +464,7 @@ static void tracing_stop(void)
 
 static void test_cores(void)
 {
-	critical_enter();
+	lib::critical_enter();
 	tracing_start();
 
 	printf("Testing APICs:");
@@ -548,7 +523,7 @@ static void test_cores(void)
 
 	tracing_stop();
 	tracing_arm();
-	critical_leave();
+	lib::critical_leave();
 }
 
 static void acpi_tables(void)
@@ -707,7 +682,7 @@ static void acpi_tables(void)
 static void finalise(void)
 {
 	printf("Clearing DRAM");
-	critical_enter();
+	lib::critical_enter();
 	asm volatile("wbinvd; mfence");
 
 	// start clearing DRAM
@@ -724,7 +699,7 @@ static void finalise(void)
 			(*nb)->dram_clear_wait();
 	}
 
-	critical_leave();
+	lib::critical_leave();
 	printf("\n");
 
 	if (!options->tracing) {

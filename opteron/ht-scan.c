@@ -355,6 +355,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 
 		printf("Adjusting HT fabric");
 
+		lib::critical_enter();
 		for (i = nnodes; i >= 0; i--) {
 			uint32_t ltcr, val2;
 			/* Disable probes while adjusting */
@@ -371,6 +372,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			/* Reassert LimitCldtCfg */
 			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr | (1 << 15));
 		}
+		lib::critical_leave();
 
 		printf("\n");
 	}

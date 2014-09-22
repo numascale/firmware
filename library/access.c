@@ -39,6 +39,38 @@
 
 namespace lib
 {
+	static uint8_t pic1_mask, pic2_mask;
+
+	void critical_enter(void)
+	{
+		asm volatile("cli");
+
+		// FIXME: abstract
+		const uint8_t val = pmio_read8(0x53);
+		pmio_write8(0x53, val | (1 << 3));
+
+		// disable XT-PIC
+		pic1_mask = inb(PIC_MASTER_IMR);
+		outb(0xff, PIC_MASTER_IMR);
+		pic2_mask = inb(PIC_SLAVE_IMR);
+		outb(0xff, PIC_SLAVE_IMR);
+	}
+
+	void critical_leave(void)
+	{
+		// FIXME: abstract
+		const uint8_t val = pmio_read8(0x53);
+		pmio_write8(0x53, val & ~(1 << 3));
+
+		asm volatile("sti");
+
+		// enable XT-PIC
+		inb(PIC_MASTER_IMR);
+		outb(pic1_mask, PIC_MASTER_IMR);
+		inb(PIC_SLAVE_IMR);
+		outb(pic2_mask, PIC_SLAVE_IMR);
+	}
+
 	uint8_t rtc_read(const int addr)
 	{
 		outb(addr, 0x70);
