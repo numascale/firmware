@@ -123,8 +123,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		return;
 	}
 
+#ifndef SIM
 	uint32_t vendev = read32(VENDEV);
 	xassert(vendev == VENDEV_NC2);
+#endif
 
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
 	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);

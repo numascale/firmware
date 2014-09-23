@@ -20,6 +20,9 @@
 
 namespace lib
 {
+	void critical_enter(void) {};
+	void critical_leave(void) {};
+
 	uint8_t pmio_read8(const uint16_t offset)
 	{
 		return 0x0;

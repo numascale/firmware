@@ -19,6 +19,7 @@
 #include "../platform/os.h"
 #include "../platform/config.h"
 #include "../platform/options.h"
+#include "../platform/e820.h"
 #include "../node.h"
 #include <string.h>
 
@@ -26,14 +27,15 @@ OS *os;
 Config *config;
 Options *options;
 Node *local_node;
+E820 *e820;
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	os = new OS();
-	config = new Config();
-
 	const sci_t me = 0x000;
+	options = new Options(argc, argv);
 	local_node = new Node(me, me);
+	config = new Config();
 	RingRouter *router = new RingRouter();
 
 	delete router;

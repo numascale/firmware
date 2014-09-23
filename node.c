@@ -64,7 +64,11 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sc
 // instantiated for local nodes
 Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
 {
+#ifndef SIM
 	const ht_t nc = Opteron::ht_fabric_fixup(neigh_ht, neigh_link, neigh_sublink, Numachip2::VENDEV_NC2);
+#else
+	const ht_t nc = 1;
+#endif
 	assertf(nc, "NumaChip2 not found");
 
 	numachip = new Numachip2(sci, nc, local, master);
