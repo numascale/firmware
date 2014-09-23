@@ -39,7 +39,7 @@ public:
 		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge;
 	} debug;
 
-	Options(const int argc, const char *argv[]);
+	Options(const int argc, char *const argv[]);
 };
 
 extern Options *options;

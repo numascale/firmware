@@ -31,6 +31,6 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 	return 0;
 }
 
-void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
+void Numachip2::spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data)
 {
 }

@@ -88,7 +88,7 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 	fatal("Timeout waiting for SPI read FIFO to empty");
 }
 
-void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
+void Numachip2::spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data)
 {
 	/* Enable SPI Core */
 	spi_master_enable();
@@ -106,7 +106,7 @@ void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *dat
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Read SPI data */
-	for (int i = 0; i < len; i++) {
+	for (unsigned i = 0; i < len; i++) {
 		lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, 0); /* Dummy write */
 		data[i] = spi_master_read_fifo();
 	}

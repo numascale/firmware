@@ -31,6 +31,6 @@ void Numachip2::i2c_master_busywait(void)
 {
 }
 
-void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data)
+void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const unsigned len, uint8_t *data)
 {
 }

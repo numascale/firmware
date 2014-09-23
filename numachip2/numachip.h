@@ -82,13 +82,13 @@ class Numachip2 {
 	void i2c_master_init(void);
 	uint8_t i2c_master_irqwait(void);
 	void i2c_master_busywait(void);
-	void i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data);
+	void i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const unsigned len, uint8_t *data);
 
 	/* spi-master.c */
 	void spi_master_enable(void);
 	void spi_master_disable(void);
 	uint8_t spi_master_read_fifo(void);
-	void spi_master_read(const uint16_t addr, const int len, uint8_t *data);
+	void spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data);
 
 	/* dram.c */
 	void dram_test(void);

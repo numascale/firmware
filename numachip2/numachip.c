@@ -127,8 +127,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	uint32_t vendev = read32(VENDEV);
 	xassert(vendev == VENDEV_NC2);
 #endif
-
 	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
-	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)uuid);
+	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)&uuid);
 	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
 }
