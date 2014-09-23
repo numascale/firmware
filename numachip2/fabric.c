@@ -16,6 +16,8 @@
  */
 
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "numachip.h"
 #include "lc5.h"
@@ -69,7 +71,7 @@ void Numachip2::fabric_train(void)
 			if (options->debug.fabric) {
 				printf("<links not up:");
 				for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-					printf(" %llx", (*lc)->status());
+					printf(" %"PRIx64, (*lc)->status());
 				printf(">");
 			}
 			continue;
@@ -91,7 +93,7 @@ void Numachip2::fabric_train(void)
 				if (options->debug.fabric) {
 					printf("<errors:");
 					for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-						printf(" %016llx", (*lc)->status());
+						printf(" %016" PRIx64, (*lc)->status());
 					printf(">");
 				}
 				break;

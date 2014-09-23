@@ -16,6 +16,8 @@
  */
 
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "e820.h"
 #include "trampoline.h"
@@ -37,7 +39,7 @@ void E820::dump(void)
 	uint64_t last_base = map->base, last_length = map->length;
 
 	for (int i = 0; i < *used; i++) {
-		printf(" %011llx:%011llx (%011llx) %s\n",
+		printf(" %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s\n",
 		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
 		if (i) {
@@ -61,7 +63,7 @@ struct e820entry *E820::position(const uint64_t addr)
 	if (options->debug.e820) {
 		if (i < *used) {
 			if (options->debug.e820 > 1)
-				printf("Position at %011llx:%011llx (%011llx) %s",
+				printf("Position at %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s",
 				  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 		} else {
 			if (options->debug.e820 > 1)
@@ -107,7 +109,7 @@ bool E820::overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, cons
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
 	if (options->debug.e820)
-		printf("Adding e820 %011llx:%011llx (%011llx) %s\n", base, base + length, length, names[type]);
+		printf("Adding e820 %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s\n", base, base + length, length, names[type]);
 
 	xassert(base < (base + length));
 
@@ -191,7 +193,7 @@ uint64_t E820::expand(const uint64_t type, const uint64_t size)
 		}
 	}
 
-	fatal("Insufficient space to expand %s region by %llu bytes", names[type], size);
+	fatal("Insufficient space to expand %s region by %"PRIu64" bytes", names[type], size);
 out:
 	if (options->debug.e820)
 		printf("Expanding: ");
@@ -245,7 +247,7 @@ uint64_t E820::memlimit(void)
 		pos--;
 
 	const uint64_t limit = pos->base + pos->length;
-	printf("Memory limit at %lluGB\n", limit >> 30);
+	printf("Memory limit at %"PRIu64"GB\n", limit >> 30);
 
 	return limit;
 }
@@ -257,7 +259,7 @@ void E820::test_address(const uint64_t addr, const uint64_t val)
 
 	if (val2 != val) {
 		test_errors++;
-		warning("Readback of 0x%llx after writing 0x%016llx gives 0x%016llx", addr, val, val2);
+		warning("Readback of 0x%"PRIx64" after writing 0x%016"PRIx64" gives 0x%016"PRIx64, addr, val, val2);
 	}
 }
 
@@ -309,12 +311,12 @@ void E820::test(void)
 
 	do {
 		left = os->memmap_entry(&base, &length, &type);
-		printf("%011llx:%011llx (%011llx) %s", base, base + length, length, names[type]);
+		printf("%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
 		if (type == RAM)
 			test_range(base, base + length);
 		printf("\n");
 	} while (left);
 
 	if (test_errors)
-		warning("%llu errors", test_errors);
+		warning("%"PRIu64" errors", test_errors);
 }

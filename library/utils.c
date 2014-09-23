@@ -16,6 +16,8 @@
  */
 
 #include <stdio.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "utils.h"
 #include "../opteron/opteron.h"
@@ -56,9 +58,9 @@ namespace lib
 		}
 
 		if (units[i])
-			snprintf(pretty[index], PRETTY_SIZE, "%llu%cB", size, units[i]);
+			snprintf(pretty[index], PRETTY_SIZE, "%"PRIu64"%cB", size, units[i]);
 		else
-			snprintf(pretty[index], PRETTY_SIZE, "%lluB", size);
+			snprintf(pretty[index], PRETTY_SIZE, "%"PRIu64"B", size);
 
 		const char *ret = pretty[index];
 		index = (index + 1) % PRETTY_COUNT;

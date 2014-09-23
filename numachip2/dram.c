@@ -19,6 +19,9 @@
 #include "../bootloader.h"
 #include "../library/utils.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 void Numachip2::dram_check(void)
 {
 	uint32_t val = read32(NCACHE_CTRL);
@@ -35,7 +38,7 @@ void Numachip2::dram_test(void)
 
 	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
 		if (!(qw % 0x100000))
-			printf(" %llu", qw >> (20 - 3));
+			printf(" %"PRIu64, qw >> (20 - 3));
 
 		write64_split(NCACHE_MCTR_DATA, lib::hash64(qw));
 	}
@@ -46,7 +49,7 @@ void Numachip2::dram_test(void)
 
 	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
 		if (!(qw % 0x100000))
-			printf(" %llu", qw >> (20 - 3));
+			printf(" %"PRIu64, qw >> (20 - 3));
 
 		xassert(read64(NCACHE_MCTR_DATA) == lib::hash64(qw));
 	}
@@ -83,10 +86,10 @@ void Numachip2::dram_verify(void)
 
 	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
 		if (!(qw % 0x100000))
-			printf(" %llu", qw >> (20 - 3));
+			printf(" %"PRIu64, qw >> (20 - 3));
 
 		uint64_t val = read64(NCACHE_MCTR_DATA);
-		assertf(!val, "Address 0x%llx contains 0x%llx", qw, val);
+		assertf(!val, "Address 0x%"PRIx64" contains 0x%"PRIx64, qw, val);
 	}
 
 	write32(NCACHE_CTRL, 0);
@@ -146,7 +149,7 @@ void Numachip2::dram_init(void)
 		write32(NCACHE_MCTR_MASK, 0xfff);
 		break;
 	default:
-		error("Unexpected Numachip2 DIMM size of %lluMB", total);
+		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
 	}
 
 	uint32_t val = read32(MTAG_BASE + TAG_CTRL);
@@ -191,7 +194,7 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
 
 	xassert(read32(NCACHE_CTRL) & (1 << 6));
-	printf("%s %s partitions: %lluMB nCache",
+	printf("%s %s partitions: %"PRIu64"MB nCache",
 	  lib::pr_size(total), nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
 
 	for (int port = 0; port < 2; port++)
@@ -204,7 +207,7 @@ void Numachip2::dram_init(void)
 
 	/* FIXME: add NCache back in when implemented */
 	for (int port = 0; port < 2; port++) {
-		printf(" %lluMB %s", part[port], mctls[port]);
+		printf(" %"PRIu64"MB %s", part[port], mctls[port]);
 
 		uint32_t val;
 		do {

@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <sys/io.h>
 

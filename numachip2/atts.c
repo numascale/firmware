@@ -18,6 +18,9 @@
 #include "numachip.h"
 #include "../bootloader.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 {
 	// detect ATT depth
@@ -40,7 +43,7 @@ Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
 	if (options->debug.maps)
-		printf("SCI%03x: DRAM ATT 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
+		printf("SCI%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", numachip.sci, base, limit, dest);
 
 	xassert(limit > base);
 	xassert(limit < (1ULL << depth));
@@ -66,7 +69,7 @@ Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
 void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
 	if (options->debug.maps)
-		printf("SCI%03x: MMIO32 ATT 0x%llx:0x%llx to SCI%03x", numachip.sci, base, limit, dest);
+		printf("SCI%03x: MMIO32 ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", numachip.sci, base, limit, dest);
 
 	xassert(limit > base);
 	const uint64_t mask = (1ULL << MMIO32_ATT_SHIFT) - 1;

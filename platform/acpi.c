@@ -17,6 +17,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "../bootloader.h"
 #include "../platform/options.h"
@@ -105,7 +107,7 @@ acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const int pt
 		memcpy(&childp, &parent->data[i], ptrsize);
 
 		if (childp > 0xffffffffULL) {
-			printf("Error: Child pointer at %d (%p) outside 32-bit range (0x%llx)",
+			printf("Error: Child pointer at %d (%p) outside 32-bit range (0x%"PRIx64")",
 			       i, &parent->data[i], childp);
 			continue;
 		}
@@ -156,7 +158,7 @@ uint32_t ACPI::slack(acpi_sdt *parent)
 		acpi_sdt *table;
 
 		if (childp > 0xffffffffULL) {
-			printf("Error: XSDT child pointer at %d (%p) outside 32-bit range (0x%llx)",
+			printf("Error: XSDT child pointer at %d (%p) outside 32-bit range (0x%"PRIx64")",
 			       i, &xsdt_entries[i], childp);
 			continue;
 		}
@@ -203,7 +205,7 @@ bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt 
 		memcpy(&childp, &parent->data[i], ptrsize);
 
 		if (childp > 0xffffffffULL) {
-			printf("Error: Child pointer at %d (%p) outside 32-bit range (0x%llx)",
+			printf("Error: Child pointer at %d (%p) outside 32-bit range (0x%"PRIx64")",
 			       i, &parent->data[i], childp);
 			continue;
 		}

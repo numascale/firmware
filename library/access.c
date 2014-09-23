@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "../bootloader.h"
 #include "../opteron/msrs.h"
@@ -100,7 +102,7 @@ namespace lib
 	uint8_t mem_read8(const uint64_t addr)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx -> ", addr);
+			printf("MEM:0x%016"PRIx64" -> ", addr);
 		uint8_t val;
 		cli();
 		setup_fs(addr);
@@ -114,7 +116,7 @@ namespace lib
 	uint16_t mem_read16(const uint64_t addr)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx -> ", addr);
+			printf("MEM:0x%016"PRIx64" -> ", addr);
 		uint16_t val;
 		cli();
 		setup_fs(addr);
@@ -128,7 +130,7 @@ namespace lib
 	uint32_t mem_read32(const uint64_t addr)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx -> ", addr);
+			printf("MEM:0x%016"PRIx64" -> ", addr);
 		uint32_t val;
 		cli();
 		setup_fs(addr);
@@ -142,21 +144,21 @@ namespace lib
 	uint64_t mem_read64(const uint64_t addr)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx -> ", addr);
+			printf("MEM:0x%016"PRIx64" -> ", addr);
 		uint64_t val;
 		cli();
 		setup_fs(addr);
 		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&val) :"memory");
 		sti();
 		if (options->debug.access & 2)
-			printf("0x%016llx\n", val);
+			printf("0x%016"PRIx64"\n", val);
 		return val;
 	}
 
 	void mem_write8(const uint64_t addr, const uint8_t val)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx <- 0x%02x", addr, val);
+			printf("MEM:0x%016"PRIx64" <- 0x%02x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movb %0, %%fs:(0)" :: "a"(val));
@@ -168,7 +170,7 @@ namespace lib
 	void mem_write16(const uint64_t addr, const uint16_t val)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx <- 0x%04x", addr, val);
+			printf("MEM:0x%016"PRIx64" <- 0x%04x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
@@ -180,7 +182,7 @@ namespace lib
 	void mem_write32(const uint64_t addr, const uint32_t val)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx <- 0x%08x", addr, val);
+			printf("MEM:0x%016"PRIx64" <- 0x%08x", addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
@@ -192,7 +194,7 @@ namespace lib
 	void mem_write64(const uint64_t addr, const uint64_t val)
 	{
 		if (options->debug.access & 2)
-			printf("MEM:0x%016llx <- 0x%016llx", addr, val);
+			printf("MEM:0x%016"PRIx64" <- 0x%016"PRIx64, addr, val);
 		cli();
 		setup_fs(addr);
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
@@ -259,7 +261,7 @@ namespace lib
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		ret = mem_read64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
 		if (options->debug.access & 1)
-			printf("%016llx\n", ret);
+			printf("%016"PRIx64"\n", ret);
 		return ret;
 	}
 
@@ -302,7 +304,7 @@ namespace lib
 		xassert(reg < 0xfff);
 
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016llx", sci, bus, dev, func, reg, val);
+			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016"PRIx64, sci, bus, dev, func, reg, val);
 		const uint64_t addr = mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg);
 		mem_write32(addr, val);
 		mem_write32(addr + 4, val >> 32);

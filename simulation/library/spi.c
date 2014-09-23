@@ -15,24 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "../../numachip2/numachip.h"
+#include <stdint.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+void Numachip2::spi_master_enable(void)
+{
+}
 
-class SMBIOS {
-	struct smbios_header {
-		uint8_t type;
-		uint8_t length;
-		uint16_t handle;
-		uint8_t *data;
-	};
+void Numachip2::spi_master_disable(void)
+{
+}
 
-	const char *string(const char *table, uint8_t index);
-public:
-	const char *biosver, *biosdate;
-	const char *sysmanuf, *sysproduct;
-	const char *boardmanuf, *boardproduct;
+uint8_t Numachip2::spi_master_read_fifo(void)
+{
+	return 0;
+}
 
-	SMBIOS(void);
-};
+void Numachip2::spi_master_read(const uint16_t addr, const int len, uint8_t *data)
+{
+}

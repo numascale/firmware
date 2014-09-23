@@ -32,10 +32,9 @@ E820 *e820;
 int main(int argc, char *argv[])
 {
 	os = new OS();
-	const sci_t me = 0x000;
 	options = new Options(argc, argv);
-	local_node = new Node(me, me);
-	config = new Config();
+//	local_node = new Node(0x000, 0x000);
+//	config = new Config();
 	RingRouter *router = new RingRouter();
 
 	delete router;

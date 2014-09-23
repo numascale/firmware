@@ -18,6 +18,9 @@
 #include "numachip.h"
 #include "../bootloader.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 Numachip2::MmioMap::MmioMap(Numachip2 &_numachip): numachip(_numachip)
 {
 }
@@ -25,7 +28,7 @@ Numachip2::MmioMap::MmioMap(Numachip2 &_numachip): numachip(_numachip)
 void Numachip2::MmioMap::add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht)
 {
 	if (options->debug.maps)
-		printf("Adding NC MMIO range %d on SCI%03x: 0x%08llx:0x%08llx to %d\n",
+		printf("Adding NC MMIO range %d on SCI%03x: 0x%08"PRIx64":0x%08"PRIx64" to %d\n",
 			range, numachip.sci, base, limit, dht);
 
 	xassert(limit > base);
@@ -77,7 +80,7 @@ void Numachip2::MmioMap::print(const int range)
 	uint8_t dht;
 
 	if (read(range, &base, &limit, &dht))
-		printf("MMIO range %d on SCI%03x: 0x%08llx:0x%08llx to %d\n", range, numachip.sci, base, limit, dht);
+		printf("MMIO range %d on SCI%03x: 0x%08"PRIx64":0x%08"PRIx64" to %d\n", range, numachip.sci, base, limit, dht);
 }
 
 Numachip2::DramMap::DramMap(Numachip2 &_numachip): numachip(_numachip)
@@ -87,7 +90,7 @@ Numachip2::DramMap::DramMap(Numachip2 &_numachip): numachip(_numachip)
 void Numachip2::DramMap::add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht)
 {
 	if (options->debug.maps)
-		printf("Adding NC DRAM range %d on SCI%03x: 0x%012llx:0x%012llx to %d\n",
+		printf("Adding NC DRAM range %d on SCI%03x: 0x%012"PRIx64":0x%012"PRIx64" to %d\n",
 			range, numachip.sci, base, limit, dht);
 
 	xassert(limit > base);
@@ -137,6 +140,6 @@ void Numachip2::DramMap::print(const int range)
 	uint8_t dht;
 
 	if (read(range, &base, &limit, &dht))
-		printf("NC DRAM range %d on SCI%03x: 0x%012llx:0x%012llx to %d\n", range, numachip.sci, base, limit, dht);
+		printf("NC DRAM range %d on SCI%03x: 0x%012"PRIx64":0x%012"PRIx64" to %d\n", range, numachip.sci, base, limit, dht);
 }
 

@@ -24,6 +24,9 @@
 #include "../platform/trampoline.h"
 #include "../platform/options.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 // approximation before probing
 uint32_t Opteron::tsc_mhz = 2200;
 uint32_t Opteron::ioh_vendev;
@@ -39,7 +42,7 @@ void Opteron::check(void)
 		if (!(val & (1ULL << 63)))
 			continue;
 
-		printf("SCI%03x#%u: MSR%08x=0x%llx\n", sci, ht, msr, val);
+		printf("SCI%03x#%u: MSR%08x=0x%"PRIx64"\n", sci, ht, msr, val);
 		lib::wrmsr(msr, 0);
 	}
 #endif
@@ -64,20 +67,20 @@ void Opteron::check(void)
 		  "Probe Filter Error", "Compute Unit Data Error"};
 
 		warning("%s on SCI%03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
-		printf("- ErrorCode=0x%llx ErrorCodeExt=0x%llx Syndrome=0x%llx\n",
+		printf("- ErrorCode=0x%"PRIx64" ErrorCodeExt=0x%"PRIx64" Syndrome=0x%"PRIx64"\n",
 		  s & 0xffff, (s >> 16) & 0xf, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
-		printf("- Link=%llu Scrub=%llu SubLink=%llu McaStatSubCache=%llu\n",
+		printf("- Link=%"PRIu64" Scrub=%"PRIu64" SubLink=%"PRIu64" McaStatSubCache=%"PRIu64"\n",
 		  (s >> 26) & 0xf, (s >> 40) & 1, (s >> 41) & 1, (s >> 42) & 3);
-		printf("- UECC=%llu CECC=%llu PCC=%llu\n",
+		printf("- UECC=%"PRIu64" CECC=%"PRIu64" PCC=%"PRIu64"\n",
 		  (s >> 45) & 1, (s >> 46) & 1, (s >> 57) & 1);
-		printf("- MiscV=%llu En=%llu UC=%llu Overflow=%llu\n",
+		printf("- MiscV=%"PRIu64" En=%"PRIu64" UC=%"PRIu64" Overflow=%"PRIu64"\n",
 		  (s >> 59) & 1, (s >> 60) & 1, (s >> 61) & 1, (s >> 62) & 1);
 
 		if ((s >> 56) & 1) // ErrCoreIdVal
-			printf(" ErrCoreId=%llu", (s >> 32) & 0xf);
+			printf(" ErrCoreId=%"PRIu64, (s >> 32) & 0xf);
 
 		if ((s >> 58) & 1) // AddrV
-			printf(" Address=0x%016llx", read64(MC_NB_ADDR));
+			printf(" Address=0x%016"PRIx64, read64(MC_NB_ADDR));
 
 		write64_split(MC_NB_ADDR, 0);
 		write64_split(MC_NB_STAT, 0);

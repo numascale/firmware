@@ -17,6 +17,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
 #include "../library/base.h"

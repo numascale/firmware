@@ -15,24 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+unsigned asm_relocate_start, asm_relocate_end;
+unsigned asm_relocated;
+unsigned new_e820_map_relocate, new_e820_len_relocate;
+unsigned new_e820_handler_relocate;
+unsigned old_int15_vec_relocate;
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-
-class SMBIOS {
-	struct smbios_header {
-		uint8_t type;
-		uint8_t length;
-		uint16_t handle;
-		uint8_t *data;
-	};
-
-	const char *string(const char *table, uint8_t index);
-public:
-	const char *biosver, *biosdate;
-	const char *sysmanuf, *sysproduct;
-	const char *boardmanuf, *boardproduct;
-
-	SMBIOS(void);
-};

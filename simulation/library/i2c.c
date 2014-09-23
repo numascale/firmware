@@ -15,24 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "../../numachip2/numachip.h"
+#include <stdint.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+void Numachip2::i2c_master_init(void)
+{
+}
 
-class SMBIOS {
-	struct smbios_header {
-		uint8_t type;
-		uint8_t length;
-		uint16_t handle;
-		uint8_t *data;
-	};
+uint8_t Numachip2::i2c_master_irqwait(void)
+{
+	return 0;
+}
 
-	const char *string(const char *table, uint8_t index);
-public:
-	const char *biosver, *biosdate;
-	const char *sysmanuf, *sysproduct;
-	const char *boardmanuf, *boardproduct;
+void Numachip2::i2c_master_busywait(void)
+{
+}
 
-	SMBIOS(void);
-};
+void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte_addr, const int len, uint8_t *data)
+{
+}

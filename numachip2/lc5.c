@@ -16,6 +16,8 @@
  */
 
 #include <string.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 
 #include "lc5.h"
 #include "../bootloader.h"
@@ -31,7 +33,7 @@ void LC5::check(void)
 {
 	const uint64_t val = status();
 	if (val != 0x0000000080000000)
-		warning("Fabric link %u on %03x has issues 0x%016llx", num, numachip.sci, val);
+		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, num, numachip.sci, val);
 }
 
 void LC5::clear(void)
