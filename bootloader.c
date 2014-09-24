@@ -231,7 +231,15 @@ static void setup_info(void)
 	memset(info, 0, sizeof(info));
 	infop->partition = config->local_node->partition;
 	infop->fabric_nodes = config->nnodes;
-	infop->part_start = local_node->sci;
+
+	// find first node of partition
+	for (unsigned n = 0; n < config->nnodes; n++) {
+		if (config->nodes[n].partition == config->local_node->partition) {
+			infop->part_start = config->nodes[n].sci;
+			break;
+		}
+	}
+
 	infop->part_nodes = nnodes;
 	infop->ver = 0;
 	infop->neigh_ht = local_node->neigh_ht;
