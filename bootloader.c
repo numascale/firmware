@@ -268,6 +268,7 @@ static void remap(void)
 
 	// 5. set top of memory
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
+	push_msr(MSR_TOPMEM2, dram_top);
 
 	// 6. add NumaChip MMIO32 ranges
 	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
@@ -322,15 +323,15 @@ static void copy_inherit(void)
 
 static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
 {
-	*REL32(cpu_status) = vector;
+	*REL32(status) = vector;
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
-	  (6 << 8) | ((uint32_t)REL32(init_dispatch) >> 12)); // startup
+	  (6 << 8) | ((uint32_t)REL32(vector) >> 12)); // startup
 
     printf(" %u", apicid);
 
     for (unsigned i = 0; i < 1000000; i++) {
-        if (*REL32(cpu_status) == status)
+        if (*REL32(status) == status)
             return 0;
         cpu_relax();
     }
@@ -340,22 +341,20 @@ static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32
 
 static void setup_cores_observer(void)
 {
-	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
-	*REL64(msr_cpuwdt) = lib::rdmsr(MSR_CPUWDT);
-
 	local_node->numachip->apicatt.range(0, 0xff, local_node->sci);
 	printf("APICs:");
 
 	lib::critical_enter();
 	for (unsigned n = 1; n < acpi->napics; n++)
 		if (boot_core(acpi->apics[n], VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
-			fatal("APIC %u has status 0x%x", acpi->apics[n], *REL32(cpu_status));
+			fatal("APIC %u has status 0x%x", acpi->apics[n], *REL32(status));
 	lib::critical_leave();
 	printf("\n");
 }
 
 static void setup_cores(void)
 {
+#ifdef UNNEEDED
 	// read fixed MSRs
 	uint64_t *mtrr_fixed = REL64(mtrr_fixed);
 	uint32_t *fixed_mtrr_regs = REL32(fixed_mtrr_regs);
@@ -379,14 +378,7 @@ static void setup_cores(void)
 			printf("- 0x%011"PRIx64":0x%011"PRIx64" %s\n", mtrr_var_base[i] & ~0xfffULL,
 			  mtrr_var_mask[i] & ~0xfffULL, MTRR_TYPE(mtrr_var_base[i] & 0xffULL));
 	}
-
-	*REL64(msr_hwcr) = lib::rdmsr(MSR_HWCR);
-	*REL64(msr_cpuwdt) = lib::rdmsr(MSR_CPUWDT);
-	*REL64(msr_lscfg) = lib::rdmsr(MSR_LSCFG);
-	*REL64(msr_cucfg2) = lib::rdmsr(MSR_CU_CFG2);
-	*REL64(msr_topmem) = lib::rdmsr(MSR_TOPMEM);
-	*REL64(msr_topmem2) = lib::rdmsr(MSR_TOPMEM2);
-	*REL64(msr_mcfg) = lib::rdmsr(MSR_MCFG);
+#endif
 
 	lib::critical_enter();
 
@@ -404,11 +396,11 @@ static void setup_cores(void)
 				continue;
 			}
 
-			*REL8(cpu_apic_renumber) = (*node)->apics[n];
-			*REL8(cpu_apic_hi) = (*node)->apics[n] >> 8;
+			*REL8(apic_low) = (*node)->apics[n];
+			*REL8(apic_high) = (*node)->apics[n] >> 8;
 
 			if (boot_core(acpi->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
-				fatal("APIC %u->%u has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(cpu_status));
+				fatal("APIC %u->%u has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
 			printf("->%u", (*node)->apics[n]);
 		}
 		(*node)->napics = acpi->napics;
@@ -477,14 +469,14 @@ static void test_cores(void)
 			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				if (options->tracing)
 					tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 
 			lib::udelay(100000);
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}
@@ -499,7 +491,7 @@ static void test_cores(void)
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}
@@ -516,7 +508,7 @@ static void test_cores(void)
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(cpu_status));
+				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}
@@ -744,6 +736,7 @@ int main(const int argc, char *argv[])
 		inet_ntoa(os->ip), os->hostname ? os->hostname : "<none>");
 
 	options = new Options(argc, argv); // needed before first PCI access
+	e820 = new E820();
 	Opteron::prepare();
 	acpi = new ACPI();
 
@@ -756,7 +749,6 @@ int main(const int argc, char *argv[])
 	else
 		config = new Config(options->config_filename);
 
-	e820 = new E820();
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
 	if (options->init_only) {
@@ -765,7 +757,7 @@ int main(const int argc, char *argv[])
 		return 0;
 	}
 
-	// Initialize SPI/SPD, DRAM, NODEID etc. etc.
+	// initialize SPI/SPD, DRAM, NODEID etc
 	local_node->numachip->late_init();
 
 	// add global MCFG maps
@@ -777,7 +769,9 @@ int main(const int argc, char *argv[])
 	e820->add(NC_MCFG_BASE, NC_MCFG_LIM - NC_MCFG_BASE + 1, E820::RESERVED);
 
 	// setup local MCFG access
-	lib::wrmsr(MSR_MCFG, NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21);
+	const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21;
+	lib::wrmsr(MSR_MCFG, mcfg);
+	push_msr(MSR_MCFG, mcfg);
 
 	if (options->tracing)
 		setup_gsm_early();
@@ -826,7 +820,7 @@ int main(const int argc, char *argv[])
 		inb(PIC_SLAVE_IMR);
 		outb(0xff, PIC_SLAVE_IMR);
 
-		printf(BANNER "\nThis server SCI%03x/%s is part of a %d-server NumaConnect2 system\n"
+		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
 		  nnodes, config->master->sci, config->master->hostname);
 

@@ -17,6 +17,10 @@
 
 #pragma once
 
+#ifndef __ASSEMBLER__
+#include "../library/base.h"
+#endif
+
 #define VECTOR_SETUP 1
 #define VECTOR_SETUP_OBSERVER 2
 #define VECTOR_SETUP_DONE 0x70
@@ -25,9 +29,8 @@
 #define VECTOR_TEST_STOP 4
 #define VECTOR_TEST_STOPPED 0x90
 
-#define APIC_VECTOR_MASKED 0x00010000
-#define MSR_VECTOR_MASKED 0xc010000001000000
 #define E820_MAP_MAX 2560
+#define MSR_MAX 32
 
 #ifndef __ASSEMBLER__
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate
@@ -39,38 +42,41 @@
 extern unsigned char asm_relocate_start, asm_relocate_end;
 extern char *asm_relocated;
 
-IMPORT_RELOCATED(init_dispatch);
-IMPORT_RELOCATED(cpu_status);
-IMPORT_RELOCATED(cpu_apic_renumber);
-IMPORT_RELOCATED(cpu_apic_hi);
-IMPORT_RELOCATED(msr_mcfg);
-IMPORT_RELOCATED(msr_topmem);
-IMPORT_RELOCATED(msr_topmem2);
-IMPORT_RELOCATED(msr_cpuwdt);
-IMPORT_RELOCATED(mtrr_default);
-IMPORT_RELOCATED(fixed_mtrr_regs);
-IMPORT_RELOCATED(mtrr_fixed);
-IMPORT_RELOCATED(mtrr_var_base);
-IMPORT_RELOCATED(mtrr_var_mask);
-IMPORT_RELOCATED(msr_syscfg);
-IMPORT_RELOCATED(msr_topmem_rem);
-IMPORT_RELOCATED(msr_smm_base_rem);
-IMPORT_RELOCATED(msr_hwcr);
-IMPORT_RELOCATED(msr_mc4_misc0);
-IMPORT_RELOCATED(msr_mc4_misc1);
-IMPORT_RELOCATED(msr_mc4_misc2);
-IMPORT_RELOCATED(msr_osvw_id_len);
-IMPORT_RELOCATED(msr_osvw_status);
-IMPORT_RELOCATED(msr_int_halt);
-IMPORT_RELOCATED(msr_readback);
-IMPORT_RELOCATED(apic_offset);
-IMPORT_RELOCATED(apic_readback);
-IMPORT_RELOCATED(msr_lscfg);
-IMPORT_RELOCATED(msr_cucfg2);
+IMPORT_RELOCATED(vector);
+IMPORT_RELOCATED(msrs);
+IMPORT_RELOCATED(status);
+IMPORT_RELOCATED(apic_low);
+IMPORT_RELOCATED(apic_high);
 IMPORT_RELOCATED(old_int15_vec);
 IMPORT_RELOCATED(new_e820_len);
 IMPORT_RELOCATED(new_e820_map);
 IMPORT_RELOCATED(new_e820_handler);
-IMPORT_RELOCATED(new_mpfp);
-IMPORT_RELOCATED(new_mptable);
+
+struct msr_ent {
+	uint32_t num;
+	uint64_t val;
+};
+
+static inline void push_msr(const uint32_t num, const uint64_t val)
+{
+	printf("Global MSR%08x -> %016llx\n", num, val);
+	xassert(asm_relocated);
+	struct msr_ent *msrp = (struct msr_ent *)REL32(msrs);
+	unsigned i = 0;
+
+	while (msrp[i].num) {
+		// update existing entry
+		if (msrp[i].num == num) {
+			warning("Updating MSR%08x twice", num);
+			msrp[i].val = val;
+			break;
+		}
+		xassert(++i < MSR_MAX);
+	}
+
+	// add new extry
+	msrp[i].num = num;
+	msrp[i].val = val;
+}
+
 #endif

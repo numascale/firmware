@@ -20,7 +20,7 @@
 
 #define EXPORT(sym) .global sym ## _relocate; sym ## _relocate: sym:
 #define SYM_OFFSET(sym) ((sym) - asm_relocate_start)
-#define STATUS(val) movl $val, %cs:SYM_OFFSET(cpu_status)
+#define STATUS(val) movl $val, %cs:SYM_OFFSET(status)
 
 	.code16
 	.text
@@ -28,7 +28,7 @@
 
 	.global asm_relocate_start
 asm_relocate_start:
-EXPORT(init_dispatch)
+EXPORT(vector)
 	cli
 
 	mov	%cs, %ax
@@ -36,8 +36,8 @@ EXPORT(init_dispatch)
 	mov	%ax, %ss
 	mov	$(stack_end - stack_start), %sp
 
-	movl %cs:SYM_OFFSET(cpu_status), %edx
-	STATUS(0x9);
+	movl %cs:SYM_OFFSET(status), %edx
+	STATUS(0x80);
 	cmpl $VECTOR_SETUP, %edx
 	je setup
 	cmpl $VECTOR_SETUP_OBSERVER, %edx
@@ -47,134 +47,12 @@ EXPORT(init_dispatch)
 	cmpl $VECTOR_TEST_STOP, %edx
 	je test_stop
 
-	STATUS(0x10);
-1:
-	cli
+	STATUS(0x81);
+1:	cli
 	hlt
 	jmp	1b
 setup:
-	// disable caching
-	mov	%cr0, %eax
-	or	$0x40000000, %eax
-	mov	%eax, %cr0
-	wbinvd
-
-	// disable all MTRR entries
-	mov	$MSR_MTRR_PHYS_MASK0, %ecx
-1:
-	xor	%eax, %eax
-	xor	%edx, %edx
-	wrmsr
-	add	$2, %ecx
-	cmp	$MSR_MTRR_PHYS_MASK7, %ecx
-	jna	1b
-
-	STATUS(0x30)
-
-	// set fixed MTRRs
-	mov	$SYM_OFFSET(fixed_mtrr_regs), %edi // 32-bit MSR to use
-	mov	$SYM_OFFSET(mtrr_fixed), %esi  // 64-bit value to write
-1:
-	mov	%cs:(%edi), %ecx // MSR number
-	add	$4, %edi
-
-	cmp $0xffffffff, %ecx
-	je break
-
-	mov	%cs:(%esi), %eax // value[0]
-	add	$4, %esi
-	mov	%cs:(%esi), %edx // value[1]
-	add	$4, %esi
-
-	wrmsr
-	jmp	1b
-
-	STATUS(0x40)
-
-break:
-	// set variable MTRRs
-	mov	$MSR_MTRR_PHYS_BASE0, %ecx
-	mov	$SYM_OFFSET(mtrr_var_base), %esi
-	mov	$SYM_OFFSET(mtrr_var_mask), %edi
-1:
-	mov	%cs:(%esi), %eax
-	add	$4, %esi
-	mov	%cs:(%esi), %edx
-	add	$4, %esi
-	wrmsr
-	inc	%ecx
-
-	mov	%cs:(%edi), %eax
-	add	$4, %edi
-	mov	%cs:(%edi), %edx
-	add	$4, %edi
-	wrmsr
-	inc	%ecx
-
-	cmp	$MSR_MTRR_PHYS_MASK7, %ecx
-	jna	1b
-
-	// reenable caching
-	mov	%cr0, %eax
-	and	$~0x40000000, %eax
-	mov	%eax, %cr0
-
-	// copy old TOP_MEM value, set global value
-	mov	$MSR_TOPMEM, %ecx
-	rdmsr
-	mov	%eax, %cs:SYM_OFFSET(msr_topmem_rem)
-	mov	%edx, %cs:SYM_OFFSET(msr_topmem_rem + 4)
-	mov	%cs:SYM_OFFSET(msr_topmem), %eax
-	mov	%cs:SYM_OFFSET(msr_topmem + 4), %edx
-	wrmsr
-
-	mov	%cs:SYM_OFFSET(msr_topmem2), %eax
-	mov	%cs:SYM_OFFSET(msr_topmem2 + 4), %edx
-	mov	$MSR_TOPMEM2, %ecx
-	wrmsr
-
-	mov	%cs:SYM_OFFSET(msr_cpuwdt), %eax
-	mov	%cs:SYM_OFFSET(msr_cpuwdt + 4), %edx
-	mov	$MSR_CPUWDT, %ecx
-	wrmsr
-
-	mov	%cs:SYM_OFFSET(msr_hwcr), %eax
-	mov	%cs:SYM_OFFSET(msr_hwcr + 4), %edx
-	mov	$MSR_HWCR, %ecx
-	wrmsr
-
-	STATUS(0x50)
-
-	mov	%cs:SYM_OFFSET(msr_lscfg), %eax
-	mov	%cs:SYM_OFFSET(msr_lscfg + 4), %edx
-	mov	$MSR_LSCFG, %ecx
-	wrmsr
-
-	mov	%cs:SYM_OFFSET(msr_cucfg2), %eax
-	mov	%cs:SYM_OFFSET(msr_cucfg2 + 4), %edx
-	mov	$MSR_CU_CFG2, %ecx
-	wrmsr
-
-	STATUS(0x51)
-
-#ifdef DEBUG
-	mov	$SYM_OFFSET(cpu_cr), %si
-	call	print_strz
-
-	mov	%cr0, %eax
-	call	print_hex32
-
-	mov	%cr3, %eax
-	call	print_hex32
-
-	mov	%cr4, %eax
-	call	print_hex32
-
-	mov	$SYM_OFFSET(cpu_done1), %si
-	call	print_strz
-#endif
-	STATUS(0x52)
-
+STATUS(0x90);
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax
@@ -193,24 +71,22 @@ break:
 	mov	%es:0x30, %eax
 	call	print_hex32
 
-	STATUS(0x53)
+	STATUS(0x82)
 
-	mov	%cs:SYM_OFFSET(cpu_apic_renumber), %al
+	mov	%cs:SYM_OFFSET(apic_low), %al
 	shl	$24, %eax
 	mov	%eax, %es:0x20
 	mov	%es:0x20, %eax
 	call print_hex32
 
-	STATUS(0x54)
+	STATUS(0x83)
 
 	pop	%eax
 	and	$~0x100, %eax	// clear BSP flag to let core accept INIT and STARTUP IPIs
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
-	rdmsr
-	call print_hex32
 
-	STATUS(0x60)
+	STATUS(0x84)
 
 	mov	$MSR_NODE_ID, %ecx
 	rdmsr
@@ -221,27 +97,30 @@ break:
 	   could just take some liberties with the register. */
 	and	$~0xfc0, %eax
 	xor	%ebx, %ebx
-	mov	%cs:SYM_OFFSET(cpu_apic_hi), %bl
+	mov	%cs:SYM_OFFSET(apic_high), %bl
 	shl	$6, %ebx
 	or	%ebx, %eax
 	wrmsr
 
-	mov	$MSR_SMM_BASE, %ecx
-	rdmsr
-	mov	%eax, %cs:SYM_OFFSET(msr_smm_base_rem)
-	mov	%edx, %cs:SYM_OFFSET(msr_smm_base_rem + 4)
-
 setup_observer:
-	mov	$MSR_MCFG, %ecx
-	mov	%cs:SYM_OFFSET(msr_mcfg), %eax
-	mov	%cs:SYM_OFFSET(msr_mcfg + 4), %edx
-	wrmsr
+	mov	$SYM_OFFSET(msrs), %edi
+1:	mov	%cs:(%edi), %ecx // MSR number
+	add	$4, %edi
 
-	STATUS(VECTOR_SETUP_DONE)
-1:
-	cli
-	hlt
+	cmp $0, %ecx
+	je 2f
+
+	mov	%cs:(%edi), %eax // value[0]
+	add	$4, %edi
+	mov	%cs:(%edi), %edx // value[1]
+	add	$4, %edi
+
+	wrmsr
 	jmp	1b
+2:	STATUS(VECTOR_SETUP_DONE)
+3:	cli
+	hlt
+	jmp	3b
 
 // seed passed in EBX
 // random number returned in EAX
@@ -264,8 +143,7 @@ read32:
 test_start:
 	STATUS(VECTOR_TEST_STARTED)
 	mov $1, %ebx
-1:
-	call prng
+1:	call prng
 	and $~63, %eax // align access
 	mov $0x1, %edx // 4GB base
 	call read32
@@ -274,120 +152,16 @@ test_start:
 
 test_stop:
 	STATUS(VECTOR_TEST_STOPPED)
-1:
-	cli
+1:	cli
 	hlt
 	jmp 1b
-
-init_probefilter_early_f10:
-	// disable cacheing
-	mov	%cr0, %eax
-	or	$0x40000000, %eax
-	mov	%eax, %cr0
-	wbinvd
-
-	// enable probe filter support
-	mov $MSR_CU_CFG2, %ecx
-	rdmsr
-	or	$(1 << (42 - 32)), %edx
-	wrmsr // FIXME: read MSR
-
-	STATUS(0)
-1:
-	cli
-	hlt
-	jmp	1b
-
-init_probefilter_early_f15:
-	// ensure CD bit is shared amongst cores
-	mov $MSR_CU_CFG3, %ecx
-	rdmsr
-	or	$(1 << (49 - 32)), %edx
-	wrmsr // FIXME: read MSR
-
-	// disable cacheing
-	mov	%cr0, %eax
-	or	$0x40000000, %eax
-	mov	%eax, %cr0
-	wbinvd
-
-	// enable probe filter support
-	mov $MSR_CU_CFG2, %ecx
-	rdmsr
-	or	$(1 << (42 - 32)), %edx
-	wrmsr // FIXME: read MSR
-
-	STATUS(0)
-1:
-	cli
-	hlt
-	jmp	1b
-
-init_enable_cache:
-	// reenable caching
-	mov	%cr0, %eax
-	and	$~0x40000000, %eax
-	mov	%eax, %cr0
-
-	STATUS(0)
-1:
-	cli
-	hlt
-	jmp	1b
-
-init_readback_msr:
-	mov	%cs:SYM_OFFSET(msr_readback), %ecx
-	rdmsr
-	mov	%eax, %cs:SYM_OFFSET(msr_readback)
-	mov	%edx, %cs:SYM_OFFSET(msr_readback + 4)
-
-	STATUS(0)
-1:
-	cli
-	hlt
-	jmp	1b
-
-init_readback_apic:
-	mov $MSR_APIC_BAR, %ecx
-	rdmsr
-
-	// store value for later rewrite
-	mov %eax, %esi
-	mov %edx, %edi
-
-	and $0xfff, %eax // clear base address bits
-	mov $0, %edx
-	or $SYM_OFFSET(apic_base), %eax
-	wrmsr
-
-	mov $SYM_OFFSET(apic_base), %eax
-	add %cs:SYM_OFFSET(apic_offset), %eax
-	mov (%eax), %ebx
-	mov %ebx, %cs:SYM_OFFSET(apic_readback)
-
-	// mask APIC vector to prevent hangs due to SMIs/NMIs
-	mov $APIC_VECTOR_MASKED, %ebx
-	mov %ebx, (%eax)
-
-	// restore APIC base address
-	mov $MSR_APIC_BAR, %ecx
-	mov %esi, %eax
-	mov %edi, %edx
-	wrmsr
-
-	STATUS(0)
-1:
-	cli
-	hlt
-	jmp	1b
 
 // print asciiz string at by cs:si
 print_strz:
 #ifdef DEBUG
 	xor	%bx, %bx
 	xor	%dx, %dx
-1:
-	mov	%cs:(%si), %al
+1:	mov	%cs:(%si), %al
 	inc	%si
 	or	%al, %al
 	jz	2f
@@ -410,15 +184,15 @@ print_hex32:
 	mov	%eax, %ebx
 	mov	$8, %ecx
 	mov	$SYM_OFFSET(hex32_buf) + 8, %si
-1:
-	mov	%bl, %al
+
+1:	mov	%bl, %al
 	and	$0x0f, %al
 	add	$0x30, %al
 	cmp	$0x3a, %al
 	jb	2f
 	add	$0x27, %al
-2:
-	mov	%al, %cs:(%si)
+
+2:	mov	%al, %cs:(%si)
 	dec	%si
 	shr	$4, %ebx
 	loop	1b
@@ -434,67 +208,14 @@ print_hex32:
 	ret
 
 	.align 64
-EXPORT(msr_mcfg)
-	.long 0, 0
-EXPORT(msr_topmem)
-	.long 0, 0
-EXPORT(msr_topmem2)
-	.long 0, 0
-EXPORT(msr_cpuwdt)
-	.long 0, 0
-EXPORT(mtrr_default)
-	.long 0, 0
-EXPORT(fixed_mtrr_regs)
-	.long MSR_MTRR_FIX64K_00000
-	.long MSR_MTRR_FIX16K_80000
-	.long MSR_MTRR_FIX16K_A0000
-	.long MSR_MTRR_FIX4K_C0000
-	.long MSR_MTRR_FIX4K_C8000
-	.long MSR_MTRR_FIX4K_D0000
-	.long MSR_MTRR_FIX4K_D8000
-	.long MSR_MTRR_FIX4K_E0000
-	.long MSR_MTRR_FIX4K_E8000
-	.long MSR_MTRR_FIX4K_F0000
-	.long MSR_MTRR_FIX4K_F8000
-	.long 0xffffffff
-EXPORT(mtrr_fixed)
-	.skip 11*8, 0
-EXPORT(mtrr_var_base)
-	.skip 8*8, 0
-EXPORT(mtrr_var_mask)
-	.skip 8*8, 0
-EXPORT(msr_syscfg)
-	.long 0, 0
-EXPORT(msr_topmem_rem)
-	.long 0, 0
-EXPORT(msr_smm_base_rem)
-	.long 0, 0
-EXPORT(msr_hwcr)
-	.long 0, 0
-EXPORT(msr_mc4_misc0)
-	.long 0, 0
-EXPORT(msr_mc4_misc1)
-	.long 0, 0
-EXPORT(msr_mc4_misc2)
-	.long 0, 0
-EXPORT(msr_readback)
-	.long 0, 0
-EXPORT(msr_lscfg)
-	.long 0, 0
-EXPORT(msr_cucfg2)
-	.long 0, 0
-EXPORT(apic_offset)
+EXPORT(msrs)
+	.skip MSR_MAX * 12, 0
+EXPORT(status)
 	.long 0
-EXPORT(apic_readback)
-	.long 0
-EXPORT(cpu_status)
-	.long 0
-EXPORT(cpu_apic_renumber)
+EXPORT(apic_low)
 	.byte 0
-EXPORT(cpu_apic_hi)
+EXPORT(apic_high)
 	.byte 0
-EXPORT(counter)
-	.long 0
 #ifdef DEBUG
 cpu_mtrr:
 	.asciz	"\r\nMTRR "

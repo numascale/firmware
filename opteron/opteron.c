@@ -181,6 +181,7 @@ void Opteron::prepare(void)
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
 	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
 	lib::wrmsr(MSR_HWCR, msr);
+	push_msr(MSR_HWCR, msr);
 
 	// enable 64-bit config access
 	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
@@ -189,6 +190,7 @@ void Opteron::prepare(void)
 	if (family >= 0x15)
 		msr |= 1ULL << 27;
 	lib::wrmsr(MSR_CU_CFG2, msr);
+	push_msr(MSR_CU_CFG2, msr);
 
 	// detect processor family
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
@@ -206,6 +208,7 @@ void Opteron::prepare(void)
 		// disable HT lock mechanism as unsupported by Numachip
 		msr = lib::rdmsr(MSR_LSCFG) | (1ULL << 44);
 		lib::wrmsr(MSR_LSCFG, msr);
+		push_msr(MSR_LSCFG, msr);
 	}
 
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
@@ -215,6 +218,7 @@ void Opteron::prepare(void)
 
 	// disable core WDT
 	lib::wrmsr(MSR_CPUWDT, 0);
+	push_msr(MSR_CPUWDT, 0);
 }
 
 void Opteron::dram_scrub_disable(void)
