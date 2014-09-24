@@ -715,6 +715,7 @@ static void finalise(void)
 static void finished(void)
 {
 	check();
+	asm volatile("wbinvd" ::: "memory");
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
