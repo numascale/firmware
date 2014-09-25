@@ -358,12 +358,14 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			lib::cht_write32(i, ROUTING + nc * 4, val);
 		}
 
-		printf("HT selftest");
-		for (i = 0; i < 500000; i++) {
-			val = lib::cht_read32(nc, Numachip2::VENDEV);
-			assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
+		if (options->ht_selftest) {
+			printf("HT selftest");
+			for (i = 0; i < 500000; i++) {
+				val = lib::cht_read32(nc, Numachip2::VENDEV);
+				assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
+			}
+			printf("\n");
 		}
-		printf("\n");
 
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d found on HT%d.%d\n", rev, neigh, link);
