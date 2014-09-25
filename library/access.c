@@ -35,7 +35,7 @@
 /* Since we use FS to access these areas, the address needs to be in canonical form (sign extended from bit47) */
 #define canonicalize(a) (((a) & (1ULL << 47)) ? ((a) | (0xffffULL << 48)) : (a))
 #define setup_fs(addr) do { \
-  asm volatile("mov %%ds, %%ax\n\tmov %%ax, %%fs" ::: "eax"); \
+  asm volatile("mov %%ds, %%ax; mov %%ax, %%fs" ::: "eax"); \
   asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(MSR_FS_BASE)); \
   } while(0)
 
@@ -106,7 +106,7 @@ namespace lib
 		uint8_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("movb %%fs:(0), %%al" : "=a"(val));
+		asm volatile("movb %%fs:(0), %%al" : "=a"(val) :: "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("0x%02x\n", val);
@@ -120,7 +120,7 @@ namespace lib
 		uint16_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("movw %%fs:(0), %%ax" : "=a"(val));
+		asm volatile("movw %%fs:(0), %%ax" : "=a"(val) :: "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("0x%04x\n", val);
@@ -134,7 +134,7 @@ namespace lib
 		uint32_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("mov %%fs:(0), %%eax" : "=a"(val));
+		asm volatile("mov %%fs:(0), %%eax" : "=a"(val) :: "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("0x%08x\n", val);
@@ -148,7 +148,7 @@ namespace lib
 		uint64_t val;
 		cli();
 		setup_fs(addr);
-		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" : :"r"(&val) :"memory");
+		asm volatile("movq %%fs:(0), %%mm0; movq %%mm0, (%0)" :: "r"(&val) : "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("0x%016"PRIx64"\n", val);
@@ -161,7 +161,7 @@ namespace lib
 			printf("MEM:0x%016"PRIx64" <- 0x%02x", addr, val);
 		cli();
 		setup_fs(addr);
-		asm volatile("movb %0, %%fs:(0)" :: "a"(val));
+		asm volatile("movb %0, %%fs:(0)" :: "a"(val) : "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("\n");
@@ -173,7 +173,7 @@ namespace lib
 			printf("MEM:0x%016"PRIx64" <- 0x%04x", addr, val);
 		cli();
 		setup_fs(addr);
-		asm volatile("movw %0, %%fs:(0)" :: "a"(val));
+		asm volatile("movw %0, %%fs:(0)" :: "a"(val) : "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("\n");
@@ -185,7 +185,7 @@ namespace lib
 			printf("MEM:0x%016"PRIx64" <- 0x%08x", addr, val);
 		cli();
 		setup_fs(addr);
-		asm volatile("mov %0, %%fs:(0)" :: "a"(val));
+		asm volatile("mov %0, %%fs:(0)" :: "a"(val) : "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("\n");
@@ -197,7 +197,7 @@ namespace lib
 			printf("MEM:0x%016"PRIx64" <- 0x%016"PRIx64, addr, val);
 		cli();
 		setup_fs(addr);
-		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" : :"r"(&val) :"memory");
+		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" :: "r"(&val) : "memory");
 		sti();
 		if (options->debug.access & 2)
 			printf("\n");

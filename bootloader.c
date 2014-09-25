@@ -246,7 +246,7 @@ static void setup_info(void)
 	infop->neigh_link = local_node->neigh_link;
 	infop->neigh_link = local_node->neigh_sublink;
 	infop->symmetric = 1;
-	infop->io = config->local_node->master;
+	infop->devices = config->local_node->devices;
 
 	for (unsigned n = 0; n < nnodes; n++)
 		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++)
@@ -684,7 +684,6 @@ static void finalise(void)
 {
 	printf("Clearing DRAM");
 	lib::critical_enter();
-	asm volatile("wbinvd; mfence");
 
 	// start clearing DRAM
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -723,7 +722,7 @@ static void finalise(void)
 static void finished(void)
 {
 	check();
-	asm volatile("wbinvd" ::: "memory");
+	asm volatile("mfence; wbinvd" ::: "memory");
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
@@ -833,11 +832,10 @@ int main(const int argc, char *argv[])
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
 		  nnodes, config->master->sci, config->master->hostname);
 
+		disable_cache();
+
 		// set 'go-ahead'
 		local_node->numachip->write32(Numachip2::INFO, 7 << 29);
-
-		disable_cache();
-		asm volatile("mfence" ::: "memory");
 
 		// reenable wrap32
 		val = lib::rdmsr(MSR_HWCR);

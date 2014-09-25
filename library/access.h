@@ -72,22 +72,14 @@ namespace lib
 
 	static inline uint64_t rdmsr(const msr_t msr)
 	{
-		union {
-			uint32_t dw[2];
-			uint64_t qw;
-		} val;
-		asm volatile("rdmsr" : "=d"(val.dw[1]), "=a"(val.dw[0]) : "c"(msr));
-		return val.qw;
+		uint64_t val;
+		asm volatile("rdmsr" : "=A" (val) : "c" (msr));
+		return val;
 	}
 
-	static inline void wrmsr(const msr_t msr, const uint64_t v)
+	static inline void wrmsr(const msr_t msr, const uint64_t val)
 	{
-		union {
-			uint32_t dw[2];
-			uint64_t qw;
-		} val;
-		val.qw = v;
-		asm volatile("wrmsr" :: "d"(val.dw[1]), "a"(val.dw[0]), "c"(msr));
+		asm volatile("wrmsr" :: "c" (msr), "A" (val));
 	}
 
 	void critical_enter(void);

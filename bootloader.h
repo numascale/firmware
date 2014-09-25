@@ -44,5 +44,5 @@ struct info {
 	uint8_t neigh_link : 2;
 	uint8_t neigh_sublink : 1;
 	bool symmetric;
-	bool io;
+	bool devices;
 } __attribute__((packed));
