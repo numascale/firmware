@@ -395,6 +395,9 @@ static void setup_cores(void)
 		local_node->numachip->apicatt.range(0, 0xff, (*node)->sci);
 		printf("APICs on %03x:", (*node)->sci);
 
+		const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
+		push_msr(MSR_MCFG, mcfg);
+
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			(*node)->apics[n] = ((node - nodes) << Numachip2::APIC_NODE_SHIFT) + acpi->apics[n];
 			// renumber BSP APICID
