@@ -358,6 +358,9 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			lib::cht_write32(i, ROUTING + nc * 4, val);
 		}
 
+		val = lib::cht_read32(nc, Numachip2::VENDEV);
+		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
+
 		if (options->ht_selftest) {
 			printf("HT selftest");
 			for (i = 0; i < 500000; i++) {
