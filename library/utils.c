@@ -25,6 +25,25 @@
 #define PRETTY_SIZE 16
 #define PRETTY_COUNT 4
 
+void *operator new(const size_t n)
+{
+	void *p = zalloc(n);
+	xassert(p);
+	return p;
+}
+
+// placement new
+void *operator new(const size_t n, void *const p)
+{
+	memset(p, 0, n);
+	return p;
+}
+
+void operator delete(void *const p)
+{
+	free(p);
+}
+
 namespace lib
 {
 	void wait_key(const char *msg)

@@ -115,30 +115,6 @@ inline void *zalloc(size_t size)
 	memset(addr, 0, size);
 	return addr;
 }
-#else
-inline void *operator new(const size_t size)
-{
-	void *p = zalloc(size);
-	xassert(p);
-	return p;
-}
-
-inline void *operator new[](const size_t size)
-{
-	void *p = zalloc(size);
-	xassert(p);
-	return p;
-}
-
-inline void operator delete(void *const p)
-{
-	free(p);
-}
-
-inline void operator delete[](void *const p)
-{
-	free(p);
-}
 #endif
 
 template<class T> class Vector {
