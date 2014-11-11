@@ -1,4 +1,19 @@
-// g++ test-router.c -g -o test-router -O3 -Wall && ./test-router
+/*
+ * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,8 +21,8 @@
 #include <string.h>
 #include <assert.h>
 
-#define XS 2
-#define YS 0
+#define XS 3
+#define YS 3
 #define ZS 0
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #define max(x,y) ((x) > (y) ? (x) : (y))
@@ -17,7 +32,7 @@
 #define XBAR_USAGE_COST 1
 #define LC_COST 1
 #define LC_USAGE_COST 1
-#define ROUTER_DEBUG 1
+#define ROUTER_DEBUG 2
 #define debugf(l, ...) do { if (l <= ROUTER_DEBUG) fprintf(stderr, __VA_ARGS__); } while (0)
 #define SCI(x,y,z) ((x) | ((y) << 4) | ((z) << 8))
 #define CONVEX 1
@@ -31,129 +46,162 @@ class Router {
 	unsigned xbar_usage[4096]; // only used when changing rings
 	unsigned lc_usage[4096][6]; // send buffering
 	uint8_t route[MAXPATH], bestroute[MAXPATH];
-	unsigned bestcost;
 	uint8_t possible_lcs;
+	unsigned bestcost;
+	sci_t src, dst;
 
-	uint8_t lcs(const sci_t src, const sci_t dst, const uint8_t lastlc) const;
-	void find(const sci_t src, const sci_t dst, const unsigned cost, const unsigned offset, const uint8_t lastlc);
-	sci_t neigh(sci_t src, const uint8_t lc) const;
-	void update(const sci_t src, const sci_t dst);
-	void router(const sci_t src, const sci_t dst);
+	uint8_t lcs(const sci_t pos, const uint8_t available_lcs, const uint8_t lastlc) const;
+	sci_t neigh(sci_t pos, const uint8_t lc) const;
+	void find(const sci_t pos, const unsigned cost, const unsigned offset, const uint8_t available_lcs, const uint8_t lastlc);
+	void dump();
+	void update();
+	void router(const sci_t _src, const sci_t _dst);
 public:
-	Router(void);
-	void show_usage(void) const;
+	Router();
+	void show_usage() const;
 };
 
-// increment path usage
-void Router::update(const sci_t src, const sci_t dst)
+void Router::dump()
 {
-	debugf(1, "route %03x > %03x has cost %u:", src, dst, bestcost);
-	sci_t sci = src;
+	sci_t pos = src;
 
+	for (unsigned offset = 0; route[offset]; offset++) {
+		uint8_t lc = route[offset];
+		debugf(3, " %u", lc);
+		pos = neigh(pos, lc);
+	}
+
+	debugf(3, "\n");
+}
+
+// increment path usage
+void Router::update()
+{
+	if (bestcost == ~0U) {
+		debugf(1, "route %03x > %03x failed to route\n", src, dst);
+		return;
+	}
+
+	debugf(2, "route %03x > %03x has cost %u:", src, dst, bestcost);
+	sci_t pos = src;
 	uint8_t last_lc = 0;
 
 	for (unsigned offset = 0; bestroute[offset]; offset++) {
 		uint8_t lc = bestroute[offset];
-		debugf(1, " %u", lc);
-		lc_usage[sci][lc - 1]++;
+		debugf(2, " %u", lc);
+		lc_usage[pos][lc - 1]++;
 
 		if (last_lc != lc) // ring change, Xbar involved
-			xbar_usage[sci]++;
+			xbar_usage[pos]++;
 
-		sci = neigh(sci, lc);
+		pos = neigh(pos, lc);
 	}
 
-	debugf(1, "\n");
+	debugf(2, "\n");
 
-	assert(sci == dst);
+	assert(pos == dst);
 }
 
 // return bitmask of possible LCs, restricting to any adjacent axes
-uint8_t Router::lcs(const sci_t src, const sci_t dst, const uint8_t lastlc) const
+uint8_t Router::lcs(const sci_t pos, const uint8_t available_lcs, const uint8_t lastlc) const
 {
-	uint8_t ret = possible_lcs;
-#if CONVEX
+#ifdef CONVEX
 	// if already on a ring, stay in ring until adjacent in another axis
 	if (lastlc) {
 		const uint8_t axis = (lastlc - 1) / 2; // 0-2
-		if (((src >> (axis * 4)) & 0xf) != ((dst >> (axis * 4)) & 0xf))
+		if (((pos >> (axis * 4)) & 0xf) != ((dst >> (axis * 4)) & 0xf))
 			return 1 << lastlc;
 	}
-#endif
+#else
 	// if adjacent on any ring
 	for (unsigned i = 0; i < 3; i++)
-		if (((src >> (i * 4)) & 0xf) == ((dst >> (i * 4)) & 0xf))
-			ret &= ~(3 << (i * 2 + 1));
+		if (((pos >> (i * 4)) & 0xf) == ((dst >> (i * 4)) & 0xf))
+			available_lcs &= ~(3 << (i * 2 + 1));
 #endif
-	return ret;
+	return available_lcs;
+}
+
+sci_t Router::neigh(sci_t pos, const uint8_t lc) const
+{
+	const uint8_t axis = (lc - 1) / 2; // 0-2
+	int ring_pos = (pos >> (axis * 4)) & 0xf;
+	const bool dir = (lc - 1) & 1;
+
+	debugf(4, "<neigh: pos=0x%03x lc=%u axis=%u", pos, lc, axis);
+	if (dir) {
+		if (--ring_pos == -1)
+			ring_pos = sizes[axis] - 1;
+	} else
+		ring_pos = (ring_pos + 1) % sizes[axis];
+
+	pos &= ~(0xf << (axis * 4));
+	pos |= ring_pos << (axis * 4);
+
+	debugf(4, " pos=%03x>", pos);
+	return pos;
 }
 
 // calculate optimal route
- void Router::find(const sci_t src, const sci_t dst, const unsigned cost, const unsigned offset, const uint8_t lastlc)
+ void Router::find(const sci_t pos, const unsigned cost, const unsigned offset, const uint8_t available_lcs, const uint8_t lastlc)
 {
-	debugf(2, "<pos=%03x cost=%u offset=%u>", src, cost, offset);
+	debugf(3, "<find: pos=%03x cost=%u offset=%u available=0x%x>", pos, cost, offset, available_lcs);
 
 	// long route
 	if (cost >= bestcost) {
-		debugf(3, " high cost %u\n", cost);
+		debugf(3, " high cost %u:", cost);
+		dump();
 		return;
 	}
-	
+
 	if (offset > dnc_node_count) {
-		debugf(3, " too distant %u\n", offset);
+		debugf(3, " too distant %u:", offset);
+		dump();
 		return;
 	}
 
 	// if reached goal, update best
-	if (src == dst) {
+	if (pos == dst) {
 		memcpy(bestroute, route, offset * sizeof(route[0]));
 		bestroute[offset] = 0;
 		bestcost = cost;
-		debugf(3, " goal, cost=%u\n", cost);
+		debugf(4, " goal, cost=%u\n", cost);
 		return;
 	}
 
-	const uint8_t llcs = lcs(src, dst, lastlc);
-	debugf(3, " lcs=0x%x\n", llcs);
-	for (uint8_t lc = 1; lc <= 7; lc++) {
-		// skip unavailable LCs 
+	const uint8_t llcs = lcs(pos, available_lcs, lastlc);
+	for (uint8_t lc = 1; lc <= 6; lc++) {
+		// skip unavailable LCs
 		if (!(llcs & (1 << lc)))
 			continue;
 
-		const sci_t next = neigh(src, lc);
+		const sci_t next = neigh(pos, lc);
 		route[offset] = lc;
 
-		unsigned newcost = cost + LC_COST + lc_usage[src][lc - 1] * LC_USAGE_COST;
+		unsigned newcost = cost + LC_COST + lc_usage[pos][lc - 1] * LC_USAGE_COST;
 		if (lc != lastlc)
-			newcost += XBAR_COST + xbar_usage[src] * XBAR_USAGE_COST;
+			newcost += XBAR_COST + xbar_usage[pos] * XBAR_USAGE_COST;
 
-		find(next, dst, newcost, offset + 1, lc);
+		find(next, newcost, offset + 1, available_lcs & ~(1 << lc), lc);
 	}
+
+	debugf(4, "\n");
 }
 
-sci_t Router::neigh(sci_t src, const uint8_t lc) const
+void Router::router(const sci_t _src, const sci_t _dst)
 {
-	const uint8_t axis = (lc - 1) / 2; // 0-2
-	int pos = (src >> (axis * 4)) & 0xf;
-	const bool dir = (lc - 1) & 1;
+	src = _src;
+	dst = _dst;
 
-	if (dir) {
-		if (--pos == -1)
-			pos = sizes[axis];
-	} else
-		pos = (pos + 1) % sizes[axis];
+	uint8_t available_lcs = 0;
 
-	src &= ~(0xf << (axis * 4));
-	src |= pos << (axis * 4);
-	return src;
-}
+	for (uint8_t i = 0; i < 3; i++)
+		if ((sizes[i]) && (src ^ dst) & (0xf << (i * 4)))
+			available_lcs |= 3 << (i * 2 + 1);
 
-void Router::router(const sci_t src, const sci_t dst)
-{
 	bestcost = ~0U;
-	debugf(2, "%03x > %03x\n", src, dst);
-	find(src, dst, 0, 0, 0);
-	update(src, dst);
+	debugf(3, "%03x > %03x\n", src, dst);
+	find(src, 0, 0, available_lcs, 0);
+	update();
 }
 
 Router::Router(void): possible_lcs(0)
