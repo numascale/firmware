@@ -168,7 +168,7 @@ public:
 	static const reg_t LC_ERRORCNT       = 0xcc;
 	static const reg_t HSS_PLLCTL        = 0x2f00;
 
-	static const unsigned SIU_ATT_SHIFT  = 32;
+	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
 	static const unsigned APIC_NODE_SHIFT = 8; // max 64 cores per server
 	static const unsigned GSM_SHIFT      = 43;

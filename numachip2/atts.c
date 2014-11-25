@@ -32,7 +32,7 @@ Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 		if (val & (1 << i))
 			break;
 
-	depth = i + 33;
+	depth = i + 35;
 
 	if (numachip.local) {
 		printf("SIU ATT limited to %dTB\n", 1 << (depth - 40));
@@ -86,15 +86,18 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 
 Numachip2::ApicAtt::ApicAtt(Numachip2 &_numachip): numachip(_numachip)
 {
+#ifdef REMOVED
 	if (numachip.local)
 		range(0x000, 0xfff, 0xfff);
 
 	uint32_t val = numachip.read32(PIU_APIC_SHIFT) & ~(3 << 16);
 	numachip.write32(PIU_APIC_SHIFT, val | ((APIC_ATT_SHIFT - 1) << 16));
+#endif
 }
 
 void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const sci_t dest)
 {
+#ifdef REMOVED
 	if (options->debug.maps)
 		printf("SCI%03x: APIC ATT 0x%04x:0x%04x to SCI%03x", numachip.sci, base, limit, dest);
 
@@ -109,4 +112,5 @@ void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const 
 		numachip.write32(PIU_ATT_ENTRY, dest);
 
 	printf("\n");
+#endif
 }
