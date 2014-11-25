@@ -98,6 +98,11 @@ void Numachip2::dram_verify(void)
 
 void Numachip2::dram_init(void)
 {
+	// release soft-reset from all three users of MCTR
+	write32(MTAG_BASE + TAG_CTRL, 0);
+	write32(CTAG_BASE + TAG_CTRL, 0);
+	write32(NCACHE_CTRL, 0);
+
 	printf("DRAM init: ");
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
