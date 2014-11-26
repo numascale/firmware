@@ -58,13 +58,6 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
-	class ApicAtt {
-		const Numachip2 &numachip;
-	public:
-		ApicAtt(Numachip2 &_numachip);
-		void range(const uint16_t base, const uint16_t limit, const sci_t dest);
-	};
-
 	static const unsigned training_period = 20000;
 	static const unsigned stability_period = 500000;
 	static const unsigned i2c_timeout = 1000;
@@ -128,7 +121,7 @@ public:
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
 	static const reg_t PIU_APIC          = 0x1080;
-	static const reg_t PIU_APIC_SHIFT    = 0x1084;
+	static const reg_t PIU_PCIIO_NODE    = 0x1084;
 	static const reg_t INFO              = 0x1090;
 	static const reg_t INFO_SIZE         = 0x8;
 	static const reg_t TIMEOUT_RESP      = 0x10b0;
@@ -170,10 +163,8 @@ public:
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
-	static const unsigned APIC_NODE_SHIFT = 8; // max 64 cores per server
 	static const unsigned GSM_SHIFT      = 43;
 	static const unsigned GSM_SIZE_SHIFT = 43;
-	static const unsigned APIC_ATT_SHIFT     = 4;
 
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
@@ -191,8 +182,6 @@ public:
 	friend class DramAtt;
 	MmioAtt mmioatt;
 	friend class MmioAtt;
-	ApicAtt apicatt;
-	friend class ApicAtt;
 
 	uint32_t uuid;
 

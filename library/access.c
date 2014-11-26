@@ -48,6 +48,7 @@ namespace lib
 		asm volatile("cli");
 
 		// FIXME: abstract
+		// disable IOH SMI generation
 		const uint8_t val = pmio_read8(0x53);
 		pmio_write8(0x53, val | (1 << 3));
 
@@ -61,6 +62,7 @@ namespace lib
 	void critical_leave(void)
 	{
 		// FIXME: abstract
+		// enable IOH SMI generation
 		const uint8_t val = pmio_read8(0x53);
 		pmio_write8(0x53, val & ~(1 << 3));
 

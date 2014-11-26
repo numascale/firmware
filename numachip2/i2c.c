@@ -45,11 +45,9 @@ void Numachip2::i2c_master_init(void)
 
 uint8_t Numachip2::i2c_master_irqwait(void)
 {
-	uint8_t val;
-
 	// wait for completion
 	for (unsigned i = i2c_timeout; i; i--) {
-		val = read8(I2C_REG1);
+		uint8_t val = read8(I2C_REG1);
 		if (val & I2C_MASTER_SR_IRQ)
 			return val;
 
@@ -61,11 +59,9 @@ uint8_t Numachip2::i2c_master_irqwait(void)
 
 void Numachip2::i2c_master_busywait(void)
 {
-	uint8_t val;
-
 	// wait for busy to de-assert
 	for (unsigned i = i2c_timeout; i; i--) {
-		val = read8(I2C_REG1);
+		uint8_t val = read8(I2C_REG1);
 		if (!(val & I2C_MASTER_SR_BUSY))
 			return;
 

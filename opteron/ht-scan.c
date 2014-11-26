@@ -53,11 +53,10 @@ void Opteron::reset(const enum reset mode, const int last)
 uint32_t Opteron::get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct)
 {
 	const int base = 0x180 + link * 8;
-	uint32_t reg;
 	lib::cht_write32(ht, 0x4000 | base, idx | (direct << 29));
 
 	for (int i = 0; i < 1000; i++) {
-		reg = lib::cht_read32(ht, 0x4000 | base);
+		uint32_t reg = lib::cht_read32(ht, 0x4000 | base);
 		if (reg & 0x80000000)
 			return lib::cht_read32(ht, 0x4000 | (base + 4));
 		cpu_relax();

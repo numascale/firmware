@@ -73,7 +73,7 @@ STATUS(0x90);
 
 	STATUS(0x82)
 
-	mov	%cs:SYM_OFFSET(apic_low), %al
+	mov	%cs:SYM_OFFSET(apic_local), %al
 	shl	$24, %eax
 	mov	%eax, %es:0x20
 	mov	%es:0x20, %eax
@@ -87,21 +87,18 @@ STATUS(0x90);
 	wrmsr
 
 	STATUS(0x84)
-
+#ifdef TEST
 	mov	$MSR_NODE_ID, %ecx
 	rdmsr
 
-	/* "Bios scratch" given as [11:6], so we're limited to an
-	   8-bit prefix here for the time being.  Ideally we want 8 bits,
-	   and since all upper bits of this MSR appear to be r/w, we
-	   could just take some liberties with the register. */
-	and	$~0xfc0, %eax
+	// BIOS scratch register, and seemingly unused bits above
+	and	$~0x3fffc0, %eax
 	xor	%ebx, %ebx
 	mov	%cs:SYM_OFFSET(apic_high), %bl
 	shl	$6, %ebx
 	or	%ebx, %eax
 	wrmsr
-
+#endif
 setup_observer:
 	mov	$SYM_OFFSET(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
@@ -212,10 +209,12 @@ EXPORT(msrs)
 	.skip MSR_MAX * 12, 0
 EXPORT(status)
 	.long 0
-EXPORT(apic_low)
+EXPORT(apic_local)
 	.byte 0
+#ifdef TEST
 EXPORT(apic_high)
-	.byte 0
+	.word 0
+#endif
 #ifdef DEBUG
 cpu_mtrr:
 	.asciz	"\r\nMTRR "

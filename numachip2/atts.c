@@ -83,34 +83,3 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 
 	printf("\n");
 }
-
-Numachip2::ApicAtt::ApicAtt(Numachip2 &_numachip): numachip(_numachip)
-{
-#ifdef REMOVED
-	if (numachip.local)
-		range(0x000, 0xfff, 0xfff);
-
-	uint32_t val = numachip.read32(PIU_APIC_SHIFT) & ~(3 << 16);
-	numachip.write32(PIU_APIC_SHIFT, val | ((APIC_ATT_SHIFT - 1) << 16));
-#endif
-}
-
-void Numachip2::ApicAtt::range(const uint16_t base, const uint16_t limit, const sci_t dest)
-{
-#ifdef REMOVED
-	if (options->debug.maps)
-		printf("SCI%03x: APIC ATT 0x%04x:0x%04x to SCI%03x", numachip.sci, base, limit, dest);
-
-	xassert(limit > base);
-	const uint16_t mask = (1 << APIC_ATT_SHIFT) - 1;
-	xassert((base & mask) == 0);
-	xassert((limit & mask) == mask);
-
-	numachip.write32(PIU_ATT_INDEX, (1 << 31) | (1 << 30) | (base >> APIC_ATT_SHIFT));
-
-	for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << APIC_ATT_SHIFT)
-		numachip.write32(PIU_ATT_ENTRY, dest);
-
-	printf("\n");
-#endif
-}

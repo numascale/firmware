@@ -329,14 +329,14 @@ static void copy_inherit(void)
 	}
 }
 
-static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32_t status)
+static bool boot_core(const uint32_t apic, const uint32_t vector, const uint32_t status)
 {
 	*REL32(status) = vector;
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) | (5 << 8)); // init
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apicid << 16) |
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) | (5 << 8)); // init
+	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) |
 	  (6 << 8) | ((uint32_t)REL32(vector) >> 12)); // startup
 
-    printf(" %u", apicid);
+    printf(" 0x%05x", apic);
 
     for (unsigned i = 0; i < 1000000; i++) {
         if (*REL32(status) == status)
@@ -349,13 +349,16 @@ static bool boot_core(const uint16_t apicid, const uint32_t vector, const uint32
 
 static void setup_cores_observer(void)
 {
-	local_node->numachip->apicatt.range(0, 0xff, local_node->sci);
 	printf("APICs:");
 
 	lib::critical_enter();
-	for (unsigned n = 1; n < acpi->napics; n++)
-		if (boot_core(acpi->apics[n], VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
-			fatal("APIC %u has status 0x%x", acpi->apics[n], *REL32(status));
+	for (unsigned n = 1; n < acpi->napics; n++) {
+		uint32_t apic = (local_node->sci << 8) | acpi->apics[n];
+
+		if (boot_core(apic, VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
+			fatal("APIC 0x%05x has status 0x%x", apic, *REL32(status));
+	}
+
 	lib::critical_leave();
 	printf("\n");
 }
@@ -392,14 +395,13 @@ static void setup_cores(void)
 
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		local_node->numachip->apicatt.range(0, 0xff, (*node)->sci);
 		printf("APICs on %03x:", (*node)->sci);
 
 		const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
 		push_msr(MSR_MCFG, mcfg);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
-			(*node)->apics[n] = ((node - nodes) << Numachip2::APIC_NODE_SHIFT) + acpi->apics[n];
+			(*node)->apics[n] = ((*node)->sci << 8) | acpi->apics[n];
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
 				volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
@@ -407,23 +409,16 @@ static void setup_cores(void)
 				continue;
 			}
 
-			*REL8(apic_low) = (*node)->apics[n];
+			*REL8(apic_local) = (*node)->apics[n] & 0xff;
+#ifdef TEST
 			*REL8(apic_high) = (*node)->apics[n] >> 8;
-
+#endif
 			if (boot_core(acpi->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
-				fatal("APIC %u->%u has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
-			printf("->%u", (*node)->apics[n]);
+				fatal("APIC 0x%02x->0x%05x has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
+			printf("->0x%05x", (*node)->apics[n]);
 		}
 		(*node)->napics = acpi->napics;
 		printf("\n");
-	}
-
-	// map APICIDs to appropriate server
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
-			uint16_t start = (dnode - nodes) << Numachip2::APIC_NODE_SHIFT;
-			(*node)->numachip->apicatt.range(start, start + (1 << Numachip2::APIC_NODE_SHIFT) - 1, (*dnode)->sci);
-		}
 	}
 
 	lib::critical_leave();
@@ -480,14 +475,14 @@ static void test_cores(void)
 			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				if (options->tracing)
 					tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
+				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 
 			lib::udelay(100000);
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
+				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}
@@ -502,7 +497,7 @@ static void test_cores(void)
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
+				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}
@@ -519,7 +514,7 @@ static void test_cores(void)
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
 				tracing_stop();
-				fatal("APIC %u has status 0x%x", (*node)->apics[n], *REL32(status));
+				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 		}
 	}

@@ -15,11 +15,11 @@ all: bootloader.c32
 
 .PHONY: upload
 upload: bootloader.c32
-	rsync -z bootloader.c32 numascale:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
+	rsync -z bootloader.c32 ns:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
 
 .PHONY: reset
 reset:
-	ssh numascale /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi magny569-ipmi chassis power reset
+	ssh ns /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop333536-ipmi chassis power cycle
 
 .PHONY: check
 check:
