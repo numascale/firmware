@@ -231,7 +231,7 @@ E820::E820(void)
 	add((uint64_t)asm_relocated, relocate_size, RESERVED);
 
 	// install new int15h handler
-	uint32_t *int_vecs = 0x0;
+	volatile uint32_t *int_vecs = 0x0;
 	*REL32(old_int15_vec) = int_vecs[0x15];
 	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
 	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));
