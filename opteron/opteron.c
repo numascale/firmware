@@ -358,8 +358,15 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
 		write32(LINK_TRANS_CTRL, val | (1 << 25) | (1 << 18) | (1 << 17));
 
-	// enable 128MB-granularity on extended MMIO maps
-	if (Opteron::family < 0x15) {
+	if (family >= 0x15) {
+		// due to HT fabric asymmetry, impact of NB P1 transitions can have performance impact,
+		// particularly with suboptimal HT connectivity, so disable
+		set32(NB_PSTATE_CTRL, 1 << 14);
+
+		// prevent core idle system management messages
+		set32(C_STATE_CTRL, 1 << 31);
+	} else {
+		// enable 128MB-granularity on extended MMIO maps
 		val = read32(EXT_LINK_TRANS_CTRL);
 		write32(EXT_LINK_TRANS_CTRL, (val & ~0x300) | 0x200);
 	}
@@ -379,7 +386,7 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	// Numachip can't handle Coherent Prefetch Probes, required disabled for PF anyway
 	// FIXME: check if needed
 	val = read32(MCTL_EXT_CONF_LOW);
-	write32(MCTL_EXT_CONF_LOW, val & ~(7 <<8));
+	write32(MCTL_EXT_CONF_LOW, val & ~(7 << 8));
 
 	// disable traffic distribution for directed probes
 	// FIXME: check if needed

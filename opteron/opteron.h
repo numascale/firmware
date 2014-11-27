@@ -137,8 +137,10 @@ public:
 	static const reg_t DOWNCORE_CTRL       = 0x3190;
 	static const reg_t L3_CTRL             = 0x31b8;
 	static const reg_t PROBEFILTER_CTRL    = 0x31d4;
+	static const reg_t C_STATE_CTRL        = 0x4128;
 	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
+	static const reg_t NB_PSTATE_CTRL      = 0x5170;
 
 	static const uint64_t HT_BASE          = 0xfd00000000ULL;
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;
