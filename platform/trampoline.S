@@ -87,18 +87,6 @@ STATUS(0x90);
 	wrmsr
 
 	STATUS(0x84)
-#ifdef TEST
-	mov	$MSR_NODE_ID, %ecx
-	rdmsr
-
-	// BIOS scratch register, and seemingly unused bits above
-	and	$~0x3fffc0, %eax
-	xor	%ebx, %ebx
-	mov	%cs:SYM_OFFSET(apic_high), %bl
-	shl	$6, %ebx
-	or	%ebx, %eax
-	wrmsr
-#endif
 setup_observer:
 	mov	$SYM_OFFSET(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
@@ -211,10 +199,6 @@ EXPORT(status)
 	.long 0
 EXPORT(apic_local)
 	.byte 0
-#ifdef TEST
-EXPORT(apic_high)
-	.word 0
-#endif
 #ifdef DEBUG
 cpu_mtrr:
 	.asciz	"\r\nMTRR "

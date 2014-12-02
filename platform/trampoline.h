@@ -46,9 +46,6 @@ IMPORT_RELOCATED(vector);
 IMPORT_RELOCATED(msrs);
 IMPORT_RELOCATED(status);
 IMPORT_RELOCATED(apic_local);
-#ifdef TEST
-IMPORT_RELOCATED(apic_high);
-#endif
 IMPORT_RELOCATED(old_int15_vec);
 IMPORT_RELOCATED(new_e820_len);
 IMPORT_RELOCATED(new_e820_map);

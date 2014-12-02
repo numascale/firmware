@@ -244,7 +244,7 @@ static void setup_info(void)
 	infop->ver = 0;
 	infop->neigh_ht = local_node->neigh_ht;
 	infop->neigh_link = local_node->neigh_link;
-	infop->neigh_link = local_node->neigh_sublink;
+	infop->neigh_sublink = local_node->neigh_sublink;
 	infop->symmetric = 1;
 	infop->devices = config->local_node->devices;
 
@@ -353,7 +353,7 @@ static void setup_cores_observer(void)
 
 	lib::critical_enter();
 	for (unsigned n = 1; n < acpi->napics; n++) {
-		uint32_t apic = (local_node->sci << 8) | acpi->apics[n];
+		uint32_t apic = ((uint32_t)local_node->sci << 8) | acpi->apics[n];
 
 		if (boot_core(apic, VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
 			fatal("APIC 0x%05x has status 0x%x", apic, *REL32(status));
@@ -397,11 +397,8 @@ static void setup_cores(void)
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		printf("APICs on %03x:", (*node)->sci);
 
-		const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
-		push_msr(MSR_MCFG, mcfg);
-
 		for (unsigned n = 0; n < acpi->napics; n++) {
-			(*node)->apics[n] = ((*node)->sci << 8) | acpi->apics[n];
+			(*node)->apics[n] = ((uint32_t)(*node)->sci << 8) | acpi->apics[n];
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
 				volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
@@ -410,10 +407,7 @@ static void setup_cores(void)
 			}
 
 			*REL8(apic_local) = (*node)->apics[n] & 0xff;
-#ifdef TEST
-			*REL8(apic_high) = (*node)->apics[n] >> 8;
-#endif
-			if (boot_core(acpi->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
+			if (boot_core((*node)->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
 				fatal("APIC 0x%02x->0x%05x has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
 			printf("->0x%05x", (*node)->apics[n]);
 		}
@@ -426,6 +420,9 @@ static void setup_cores(void)
 
 static void tracing_arm(void)
 {
+	if (options->tracing != 2)
+		return;
+
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->tracing_arm();

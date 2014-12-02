@@ -78,7 +78,6 @@
 #define MSR_SMM_BASE          0xc0010111
 #define MSR_OSVW_ID_LEN       0xc0010140
 #define MSR_OSVW_STATUS       0xc0010141
-#define MSR_NODE_ID           0xc001100c
 #define MSR_LSCFG             0xc0011020
 #define MSR_CU_CFG2           0xc001102a
 #define MSR_CU_CFG3           0xc001102b

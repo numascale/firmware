@@ -74,11 +74,9 @@ void Numachip2::spi_master_disable(void)
 
 uint8_t Numachip2::spi_master_read_fifo(void)
 {
-	uint8_t val;
-
 	// wait for read-fifo non-empty
 	for (unsigned i = spi_timeout; i; i--) {
-		val = lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x49);
+		uint8_t val = lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x49);
 		if (!(val & SPI_MASTER_SR_RFEMPTY))
 			return lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x4a);
 
