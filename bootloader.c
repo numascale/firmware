@@ -397,6 +397,10 @@ static void setup_cores(void)
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		printf("APICs on %03x:", (*node)->sci);
 
+		// set correct MCFG base per node
+		const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
+		push_msr(MSR_MCFG, mcfg);
+
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			(*node)->apics[n] = ((uint32_t)(*node)->sci << 8) | acpi->apics[n];
 			// renumber BSP APICID

@@ -66,7 +66,6 @@ static inline void push_msr(const uint32_t num, const uint64_t val)
 	while (msrp[i].num) {
 		// update existing entry
 		if (msrp[i].num == num) {
-			warning("Updating MSR%08x twice", num);
 			msrp[i].val = val;
 			break;
 		}
