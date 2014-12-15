@@ -760,6 +760,8 @@ int main(const int argc, char *argv[])
 
 	if (options->init_only) {
 		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
+		if (options->boot_wait)
+			lib::wait_key("Press enter to boot");
 		os->exec(options->next_label);
 		return 0;
 	}
