@@ -159,7 +159,7 @@ public:
 	static const reg_t LC_LINKSTAT       = 0xc4;
 	static const reg_t LC_EVENTSTAT      = 0xc8;
 	static const reg_t LC_ERRORCNT       = 0xcc;
-	static const reg_t HSS_PLLCTL        = 0x2f00;
+	static const reg_t HSS_PLLCTL        = 0x20e0;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
