@@ -147,6 +147,8 @@ public:
 	static const reg_t TAG_MCTR_MASK     = 0x0c;
 	static const reg_t TAG_CPU_ADDR      = 0x10;
 	static const reg_t TAG_CPU_DATA      = 0x18;
+	static const reg_t HT_RECFG          = 0x20F0;
+	static const reg_t FABRIC_RECFG      = 0x20F8;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
 	static const reg_t SIU_XBAR          = 0x2200;
