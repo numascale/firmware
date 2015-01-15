@@ -29,8 +29,8 @@ void Numachip2::fabric_reset(void)
 	if (options->debug.fabric)
 		printf("<reset>");
 
-	write32(Numachip2::HSS_PLLCTL, 0x3f);
-	write32(Numachip2::HSS_PLLCTL, 0);
+	write32(HSS_PLLCTL, 0x3f);
+	write32(HSS_PLLCTL, 0);
 }
 
 void Numachip2::fabric_check(void)
@@ -64,6 +64,7 @@ void Numachip2::fabric_train(void)
 			// exit early if all up
 			if (allup)
 				break;
+			cpu_relax();
 		}
 
 		// not all links are up; restart training
