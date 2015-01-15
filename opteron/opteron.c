@@ -428,7 +428,8 @@ void Opteron::discover(void)
 
 		printf("HT%u.%u ", ht, l);
 
-		set32(LINK_GLO_CTRL_EXT, 1 << 8); // set GlblLinkTrain[ConnDly]
+		uint32_t value = read32(LINK_GLO_CTRL_EXT);
+		set32(LINK_GLO_CTRL_EXT, (value | (1 << 8))); // set GlblLinkTrain[ConnDly]
 		set32(LINK_EXT_CTRL + l * 4, 1); // set LinkTrain[Ganged]
 		clear32(LINK_RETRY + l * 4, 1);  // adjust Retry Control[Retry Enable]
 		const uint8_t freq = 0; // 200MHz freq
