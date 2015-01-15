@@ -59,6 +59,7 @@ class Numachip2 {
 	};
 
 	static const unsigned training_period = 20000;
+	static const unsigned dram_training_period = 500000;
 	static const unsigned stability_period = 500000;
 	static const unsigned i2c_timeout = 1000;
 	static const unsigned spi_timeout = 1000;
@@ -87,6 +88,7 @@ class Numachip2 {
 	void dram_test(void);
 	void dram_clear(void);
 	void dram_verify(void);
+	void dram_reset(void);
 	void dram_init(void);
 
 	uint8_t next(sci_t src, sci_t dst) const;

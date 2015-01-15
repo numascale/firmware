@@ -96,14 +96,30 @@ void Numachip2::dram_verify(void)
 	printf("\n");
 }
 
+void Numachip2::dram_reset(void)
+{
+	uint32_t mtag_ctrl = read32(MTAG_BASE + TAG_CTRL);
+	uint32_t ctag_ctrl = read32(CTAG_BASE + TAG_CTRL);
+	uint32_t ncache_ctrl = read32(NCACHE_CTRL);
+
+	// assert soft-reset from all three users of MCTR
+	write32(MTAG_BASE + TAG_CTRL, mtag_ctrl | (1<<31));
+	write32(CTAG_BASE + TAG_CTRL, ctag_ctrl | (1<<31));
+	write32(NCACHE_CTRL, ncache_ctrl | (1<<31));
+
+	// release soft-reset from all three users of MCTR
+	write32(MTAG_BASE + TAG_CTRL, mtag_ctrl & ~(1<<31));
+	write32(CTAG_BASE + TAG_CTRL, ctag_ctrl & ~(1<<31));
+	write32(NCACHE_CTRL, ncache_ctrl & ~(1<<31));
+	printf("<mctr PHY reset>");
+}
+
 void Numachip2::dram_init(void)
 {
-	// release soft-reset from all three users of MCTR
-	write32(MTAG_BASE + TAG_CTRL, 0);
-	write32(CTAG_BASE + TAG_CTRL, 0);
-	write32(NCACHE_CTRL, 0);
+	int i;
 
 	printf("DRAM init: ");
+
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
@@ -115,9 +131,31 @@ void Numachip2::dram_init(void)
 
 	printf("%uGB DIMM", 1 << (dram_total_shift - 30));
 
-	// wait for phy init done; shared among all ports
-	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 6)))
-		cpu_relax();
+	bool errors;
+
+	do {
+		dram_reset();
+
+		// wait for phy init done; shared among all ports
+		for (i = dram_training_period; i > 0; i--) {
+			bool allup = read32(MTAG_BASE + TAG_CTRL) & (1 << 6);
+			// exit early if all up
+			if (allup)
+				break;
+			cpu_relax();
+		}
+
+		// mctr PHY are not up; restart training
+		if (i == 0) {
+			printf("<mctr PHY not up>");
+			continue;
+		}
+
+		errors = 0;
+
+	} while (errors);
+
+	printf("<mctr PHY up>");
 
 	write32(MTAG_BASE + TAG_CTRL, 0);
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0);
@@ -125,10 +163,12 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 
 	// wait for memory init done
+	printf("<dram INIT ");
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
 		cpu_relax();
 
 	write32(MTAG_BASE + TAG_CTRL, 0);
+	printf("done>");
 
 	switch (total) {
 	case 4ULL << 30:
