@@ -249,8 +249,8 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 
 	// Fam10h extended MMIO 128MB granularity
 	xassert((base & 0x7ffffff) == 0);
-	xassert((limit & 0x7ffffff) ==  0x7ffffff);
-	xassert(poweroftwo(limit - base) + 1);
+	xassert((limit & 0x7ffffff) == 0x7ffffff);
+	xassert(poweroftwo(limit - base + 1));
 	range -= 8;
 
 	// reading an uninitialised extended MMIO ranges results in MCE, so can't assert
