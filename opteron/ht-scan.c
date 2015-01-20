@@ -95,7 +95,6 @@ static bool proc_lessthan_b0(const uint8_t ht)
 void Opteron::ht_optimize_link(int nc, int neigh, int link)
 {
 	bool reboot = 0;
-	bool ganged;
 	uint32_t val;
 
 	if ((neigh < 0) || (link < 0)) {
@@ -128,7 +127,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 			link ++;
 	}
 
-	ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
+	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
 	printf("Found %s link to NC on HT#%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
 	if (options->debug.ht)
@@ -136,25 +135,25 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 	printf("Checking HT width/freq.");
 
-	/* Gang link when appropriate, as the BIOS may not */
-	printf("*");
-	val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
-	printf(".");
-	if ((val & 1) == 0) {
-		printf("<ganging>");
-		lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 1);
-		ganged = reboot = 1;
-	}
-
 	/* Optimize width (16b) */
 	printf("+");
 	val = lib::cht_read32(nc, Numachip2::LINK_CTRL);
 	printf(".");
 
-	if (!options->ht_8bit_only && (ganged && ((val >> 16) == 0x11))) {
+	if (!options->ht_8bit_only && ((val >> 16) == 0x11)) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			lib::cht_write32(nc, Numachip2::LINK_CTRL, (val & 0x00ffffff) | 0x11000000);
+			reboot = 1;
+		}
+
+		/* Gang link when appropriate, as the BIOS may not */
+		printf("*");
+		val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
+		printf(".");
+		if ((val & 1) == 0) {
+			printf("<ganging>");
+			lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 1);
 			reboot = 1;
 		}
 
@@ -352,7 +351,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 
 		if (use) {
 			fatal("No unrouted coherent links found");
-			reset(Cold, nnodes);
+			reset(Warm, nnodes);
 			/* Does not return */
 		}
 
