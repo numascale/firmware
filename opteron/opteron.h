@@ -141,6 +141,7 @@ public:
 	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
 	static const reg_t NB_PSTATE_CTRL      = 0x5170;
+	static const reg_t LINK_PROD_INFO      = 0x5190;
 
 	static const uint64_t HT_BASE          = 0xfd00000000ULL;
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;

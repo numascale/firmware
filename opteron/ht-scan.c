@@ -79,6 +79,19 @@ void Opteron::cht_print(int neigh, int link)
 	printf("HT#%d L%d Link Phy Settings  : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
 
+static bool proc_lessthan_b0(const uint8_t ht)
+{
+	// AMD Fam15h BKDG p48: OR_B0 = {06h, 01h, 0h}
+	uint32_t val = lib::cht_read32(ht, Opteron::NB_CPUID);
+	uint8_t extFamily = (val >> 20) & 0xff;
+	uint8_t model = ((val >> 8) & 0xf) | ((val >> 12) & 0xf0);
+	// stepping is 0, so comparison will always be false
+
+	if (extFamily < 6 || model < 1)
+		return 1;
+	return 0;
+}
+
 void Opteron::ht_optimize_link(int nc, int neigh, int link)
 {
 	bool reboot = 0;
@@ -161,29 +174,33 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		uint8_t max_supported = 0;
 
 		printf("+");
-		val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV); // FIXME use LINK_FREQ_EXT
+		val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV);
 		printf(".");
 
-		/* Find maximum supported frequency */
+		// find maximum supported frequency
 		for (int i = 0; i < 16; i++)
-			if (val >> (16+i) & 1) max_supported = i;
+			if (val >> (16 + i) & 1)
+				max_supported = i;
 
 		if (((val >> 8) & 0xf) != max_supported) {
-			printf("<NC freq=%d>",max_supported);
-			// FIXME use LINK_FREQ_EXT
+			printf("<NC freq=%d>", max_supported);
 			lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
 		}
 
 		printf(".");
-		// FIXME use LINK_FREQ_EXT
 		val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
 		printf(".");
 
+		// update as per BKDG Fam15h p513
 		if (((val >> 8) & 0xf) != max_supported) {
-			printf("<CPU freq=%d>",max_supported);
-			// FIXME use LINK_FREQ_EXT
+			printf("<CPU freq=%d>", max_supported);
 			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | (max_supported << 8));
+			// also use LINK_FREQ_EXT for freq >2.6GHz
+
+			if (family >= 0x15 && (lib::cht_read32(neigh, LINK_PROD_INFO) || !proc_lessthan_b0(neigh)))
+				warning("DllProcessFreqCtlOverride and DllProcessFreqCtlIndex2 adjustments needed");
+
 			reboot = 1;
 		}
 
