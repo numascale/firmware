@@ -95,7 +95,7 @@ static bool proc_lessthan_b0(const uint8_t ht)
 void Opteron::ht_optimize_link(int nc, int neigh, int link)
 {
 	bool reboot = 0;
-	int ganged;
+	bool ganged;
 	uint32_t val;
 
 	if ((neigh < 0) || (link < 0)) {
@@ -143,7 +143,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	if ((val & 1) == 0) {
 		printf("<ganging>");
 		lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 1);
-		reboot = 1;
+		ganged = reboot = 1;
 	}
 
 	/* Optimize width (16b) */
