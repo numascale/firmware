@@ -84,6 +84,12 @@ class Numachip2 {
 	uint8_t spi_master_read_fifo(void);
 	void spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data);
 
+	/* htphy.c */
+	static void htphy_avalon_write(const int nc, const uint32_t addr, const uint32_t data);
+	static uint32_t htphy_avalon_read(const int nc, const uint32_t addr);
+	static void htphy_pma_write(const int nc, const uint32_t logical_channel, const uint32_t offset, const uint32_t data);
+	static uint32_t htphy_pma_read(const int nc, const uint32_t logical_channel, const uint32_t offset, const uint32_t data);
+
 	/* dram.c */
 	void dram_test(void);
 	void dram_clear(void);
@@ -147,8 +153,10 @@ public:
 	static const reg_t TAG_MCTR_MASK     = 0x0c;
 	static const reg_t TAG_CPU_ADDR      = 0x10;
 	static const reg_t TAG_CPU_DATA      = 0x18;
-	static const reg_t HT_RECFG          = 0x20F0;
-	static const reg_t FABRIC_RECFG      = 0x20F8;
+	static const reg_t HT_RECFG_DATA     = 0x20F0;
+	static const reg_t HT_RECFG_ADDR     = 0x20F4;
+	static const reg_t FABRIC_RECFG_DATA = 0x20F8;
+	static const reg_t FABRIC_RECFG_ADDR = 0x20FC;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
 	static const reg_t SIU_XBAR          = 0x2200;
@@ -202,6 +210,7 @@ public:
 	void fabric_check(void);
 	void fabric_reset(void);
 	void dram_check(void);
+	static void htphy_set_deemphasis(const int nc);
 };
 
 extern Numachip2 *numachip;
