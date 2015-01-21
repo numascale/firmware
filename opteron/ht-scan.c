@@ -202,12 +202,14 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 
 		printf(".");
 		val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
+		uint32_t val2 = lib::cht_read32(neigh, LINK_FREQ_EXT + link * 0x20);
+		uint8_t freq = ((val >> 8) & 0xf) | ((val2 & 1) << 4);
 		printf(".");
 
-		if (((val >> 8) & 0xf) != max_supported) {
+		if (freq != max_supported) {
 			printf("<CPU freq=%d>", max_supported);
-			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | (max_supported << 8));
-			// also use LINK_FREQ_EXT for freq >2.6GHz
+			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | ((max_supported & 0xf) << 8));
+			lib::cht_write32(neigh, LINK_FREQ_EXT + link * 0x20, (val & ~1) | (max_supported >> 4));
 
 			// update as per BKDG Fam15h p513 for HT3 frequencies
 			if (family >= 0x15 && max_supported >= 7) {
