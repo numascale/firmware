@@ -66,6 +66,8 @@ private:
 	uint32_t scrub;
 	bool local;
 
+	static uint32_t phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct);
+	static void phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val);
 	static void disable_atmmode(const unsigned nnodes);
 	static void reset(const enum reset mode, const int last);
 	void optimise_linkbuffers(void);
@@ -138,10 +140,17 @@ public:
 	static const reg_t L3_CTRL             = 0x31b8;
 	static const reg_t PROBEFILTER_CTRL    = 0x31d4;
 	static const reg_t C_STATE_CTRL        = 0x4128;
+	static const reg_t LINK_PHY_OFFSET     = 0x4180;
+	static const reg_t LINK_PHY_DATA       = 0x4184;
 	static const reg_t NB_CAP_2            = 0x5084;
 	static const reg_t NB_PSTATE_0         = 0x5160;
 	static const reg_t NB_PSTATE_CTRL      = 0x5170;
 	static const reg_t LINK_PROD_INFO      = 0x5190;
+
+	static const reg_t PHY_COMPCAL_CTRL1   = 0x00e0;
+	static const reg_t PHY_RX_PROC_CTRL_CADIN0 = 0x4011;
+	static const reg_t PHY_RX_DLL_CTRL5_CADIN0 = 0x400f;
+	static const reg_t PHY_RX_DLL_CTRL5_16 = 0x500f;
 
 	static const uint64_t HT_BASE          = 0xfd00000000ULL;
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;
@@ -185,7 +194,6 @@ public:
 	Opteron(const sci_t _sci, const ht_t _ht, const bool _local);
 	~Opteron(void);
 	static void cht_print(int neigh, int link);
-	static uint32_t get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct);
 	static void ht_optimize_link(int nc, int neigh, int link);
 	static ht_t ht_fabric_fixup(ht_t &neigh, link_t &ht, link_t &sublink, const uint32_t vendev);
 	void dram_clear_start(void);

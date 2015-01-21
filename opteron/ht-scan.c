@@ -50,33 +50,42 @@ void Opteron::reset(const enum reset mode, const int last)
 	outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 }
 
-uint32_t Opteron::get_phy_register(const ht_t ht, const link_t link, const int idx, const bool direct)
+static uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct)
 {
-	const int base = 0x180 + link * 8;
-	lib::cht_write32(ht, 0x4000 | base, idx | (direct << 29));
+	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (direct << 29));
 
-	for (int i = 0; i < 1000; i++) {
-		uint32_t reg = lib::cht_read32(ht, 0x4000 | base);
-		if (reg & 0x80000000)
-			return lib::cht_read32(ht, 0x4000 | (base + 4));
+	while (1) {
+		uint32_t stat = lib::cht_read32(ht, LINK_PHY_OFFSET + link * 8);
+		if (stat & (1 << 31))
+			return lib::cht_read32(ht, LINK_PHY_DATA + link * 8);
 		cpu_relax();
 	}
+}
 
-	printf("Read from phy register HT#%d F4x%x idx %x did not complete\n", ht, base, idx);
-	return 0;
+static void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val)
+{
+	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (1 << 30) | (direct << 29));
+	lib::cht_write32(ht, LINK_PHY_DATA + link * 8, val);
+
+	while (1) {
+		uint32_t stat = lib::cht_read32(ht, LINK_PHY_OFFSET + link * 8);
+		if (stat & (1 << 31))
+			return;
+		cpu_relax();
+	}
 }
 
 void Opteron::cht_print(int neigh, int link)
 {
 	uint32_t val;
-	printf("HT#%d L%d Link Control       : 0x%08x\n", neigh, link,
+	printf("HT#%d L%d Link Control      : 0x%08x\n", neigh, link,
 	      lib::cht_read32(neigh, LINK_CTRL + link * 0x20));
-	printf("HT#%d L%d Link Freq/Revision : 0x%08x\n", neigh, link,
+	printf("HT#%d L%d Link Freq/Revision: 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20));
-	printf("HT#%d L%d Link Ext. Control  : 0x%08x\n", neigh, link,
+	printf("HT#%d L%d Link Ext Control  : 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4));
-	val = get_phy_register(neigh, link, 0xe0, 0); /* Link phy compensation and calibration control 1 */
-	printf("HT#%d L%d Link Phy Settings  : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
+	val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
+	printf("HT#%d L%d Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
 
 static bool proc_lessthan_b0(const uint8_t ht)
@@ -195,14 +204,48 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 		val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
 		printf(".");
 
-		// update as per BKDG Fam15h p513
 		if (((val >> 8) & 0xf) != max_supported) {
 			printf("<CPU freq=%d>", max_supported);
 			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | (max_supported << 8));
 			// also use LINK_FREQ_EXT for freq >2.6GHz
 
-			if (family >= 0x15 && (lib::cht_read32(neigh, LINK_PROD_INFO) || !proc_lessthan_b0(neigh)))
-				warning("DllProcessFreqCtlOverride and DllProcessFreqCtlIndex2 adjustments needed");
+			// update as per BKDG Fam15h p513 for HT3 frequencies
+			if (family >= 0x15 && max_supported >= 7) {
+				const uint32_t link_prod_info = lib::cht_read32(neigh, LINK_PROD_INFO);
+				if (link_prod_info || !proc_lessthan_b0(neigh)) {
+					// start from 1.2GHz, ends at 3.2GHz
+					const uint8_t DllProcessFreqCtlIndex2a[] = {0xa, 0xa, 0x7, 0x7, 0x5, 0x5, 0x4, 0x3, 0xff, 0xff, 0x3, 0x2, 0x2};
+					const uint8_t DllProcessFreqCtlIndex2b[] = {0, 0, 4, 4, 8, 8, 12, 16, 0xff, 0xff, 20, 24, 28};
+
+					uint32_t temp = link_prod_info ? ((link_prod_info >> DllProcessFreqCtlIndex2b[max_supported - 7]) & 0xf)
+					  : DllProcessFreqCtlIndex2a[max_supported - 7];
+					xassert(temp != 0xff);
+
+					val = phy_read32(neigh, link, PHY_RX_PROC_CTRL_CADIN0, 1);
+					bool sign = (val >> 13) & 1; // FuseProcDllProcessComp[2]
+					uint8_t offset = (val >> 11) & 3; // FuseProcDllProcessComp[1:0]
+					uint32_t tempdata = phy_read32(neigh, link, PHY_RX_DLL_CTRL5_CADIN0, 1);
+					tempdata |= 1 << 12; // DllProcessFreqCtlOverride
+					uint32_t adjtemp;
+
+					if (sign) {
+						if (temp < offset)
+							adjtemp = 0;
+						else
+							adjtemp = temp - offset;
+					} else {
+						if ((temp + offset) > 0xf)
+							adjtemp = 0xf;
+						else
+							adjtemp = temp + offset;
+					}
+
+					tempdata &= ~ 0xf;
+					tempdata |= adjtemp; // DllProcessFreqCtlIndex2
+
+					phy_write32(neigh, link, PHY_RX_DLL_CTRL5_16, 1, tempdata); // Broadcast 16-bit
+				}
+			}
 
 			reboot = 1;
 		}
