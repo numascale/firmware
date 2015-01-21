@@ -50,7 +50,7 @@ void Opteron::reset(const enum reset mode, const int last)
 	outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 }
 
-static uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct)
+uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct)
 {
 	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (direct << 29));
 
@@ -62,7 +62,7 @@ static uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint
 	}
 }
 
-static void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val)
+void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val)
 {
 	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (1 << 30) | (direct << 29));
 	lib::cht_write32(ht, LINK_PHY_DATA + link * 8, val);
