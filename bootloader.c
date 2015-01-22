@@ -733,7 +733,7 @@ int main(const int argc, char *argv[])
 {
 	os = new OS(); // needed first for console access
 
-	printf(CLEAR BANNER "NumaConnect2 unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
+	printf(CLEAR BANNER "NumaConnect2 system unification " VER " at 20%02d-%02d-%02d %02d:%02d:%02d" COL_DEFAULT "\n",
 	  lib::rtc_read(RTC_YEAR), lib::rtc_read(RTC_MONTH), lib::rtc_read(RTC_DAY),
 	  lib::rtc_read(RTC_HOURS), lib::rtc_read(RTC_MINUTES), lib::rtc_read(RTC_SECONDS));
 
@@ -759,7 +759,7 @@ int main(const int argc, char *argv[])
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
 	if (options->init_only) {
-		printf("Initialization succeeded; executing syslinux label %s\n", options->next_label);
+		printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
 		if (options->boot_wait)
 			lib::wait_key("Press enter to boot");
 		os->exec(options->next_label);
