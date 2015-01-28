@@ -117,16 +117,35 @@ uint8_t Numachip2::next(sci_t src, sci_t dst) const
 		return 0;
 
 	uint8_t dim = 0;
+	sci_t src2 = src;
+	sci_t dst2 = dst;
 
-	while ((src ^ dst) & ~0xf) {
+	while ((src2 ^ dst2) & ~0xf) {
 		dim++;
-		src >>= 4;
-		dst >>= 4;
+		src2 >>= 4;
+		dst2 >>= 4;
 	}
+	src2 &= 0xf;
+	dst2 &= 0xf;
 
+	xassert(dim < 3);
 	int out = dim * 2 + 1;
-	out += ((dst & 0xf) + ((dst >> 4) & 0xf) + ((dst >> 8) & 0xf) +
-		(src & 0xf) + ((src >> 4) & 0xf) + ((src >> 8) & 0xf)) & 1; // load balance
+#if 0
+	// Simple load balance
+	out +=  ((dst & 0xf) + ((dst >> 4) & 0xf) + ((dst >> 8) & 0xf) +
+		 (src & 0xf) + ((src >> 4) & 0xf) + ((src >> 8) & 0xf)) & 1;
+#endif
+#if 0
+	// Shortest path routing
+	int len = config->size[dim];
+	int forward = ((len - src2) + dst2) % len;
+	int backward = ((src2 + (len - dst2)) + len) % len;
+
+	out += (forward == backward) ? (src2 & 1) :
+	       (backward < forward) ? 1 : 0;
+#endif
+	// 2QOS routing only on LC5 (otherwise we have credit loops)
+	out += (dst2 < src2) ? 1 : 0;
 	return out;
 }
 
@@ -192,67 +211,24 @@ void Numachip2::routing_write(void)
 	printf("\n");
 }
 
+
 void Numachip2::fabric_routing(void)
 {
 	// default route is to link 7 to trap unexpected behaviour
 	memset(routes, 0xff, sizeof(routes));
 
-	switch(sci) {
-	case 0x000:
-		route(0, 0x000, 0);
-		route(0, 0x002, 1);
-		route(0, 0x001, 2);
-
-		route(1, 0x000, 0);
-		route(1, 0x001, 2);
-		route(1, 0x002, 2);
-
-		route(2, 0x000, 0);
-		route(2, 0x001, 1);
-		route(2, 0x002, 1);
-		break;
-	case 0x001:
-		route(0, 0x001, 0);
-		route(0, 0x000, 1);
-		route(0, 0x002, 2);
-
-		route(1, 0x001, 0);
-		route(1, 0x000, 2);
-		route(1, 0x002, 2);
-
-		route(2, 0x001, 0);
-		route(2, 0x000, 1);
-		route(2, 0x002, 1);
-		break;
-	case 0x002:
-		route(0, 0x002, 0);
-		route(0, 0x001, 1);
-		route(0, 0x000, 2);
-
-		route(1, 0x002, 0);
-		route(1, 0x000, 2);
-		route(1, 0x001, 2);
-
-		route(2, 0x002, 0);
-		route(2, 0x000, 1);
-		route(2, 0x001, 1);
-		break;
-	default:
-		error("unexpected");
-	}
-
-#ifdef GENERATE
-	for (int node = 0; node < config->nnodes; node++) {
+	for (unsigned node = 0; node < config->nnodes; node++) {
 		uint8_t out = next(sci, config->nodes[node].sci);
-		printf("- to SCI%03x via LC%d\n", config->nodes[node].sci, out);
+		printf("- to SCI%03x via port%d\n", config->nodes[node].sci, out);
 
-		for (int lc = 0; lc <= 6; lc++)
-			if (!config->size[(lc - 1) / 2])
+		for (int xbarid = 0; xbarid <= 6; xbarid++) {
+			if (xbarid > 0 && !config->size[(xbarid - 1) / 2])
 				continue;
 
-			route(lc, config->nodes[node].sci, out);
+			route(xbarid, config->nodes[node].sci, out);
+		}
 	}
-#endif
+
 	routing_dump();
 	routing_write();
 }

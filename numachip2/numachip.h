@@ -98,7 +98,6 @@ class Numachip2 {
 	void dram_init(void);
 
 	uint8_t next(sci_t src, sci_t dst) const;
-	void update(const uint16_t dest, const uint8_t bxbarid, const uint8_t link);
 	void route(const uint8_t in, const sci_t sci, const uint8_t out);
 	void fabric_routing(void);
 	void routing_dump(void);
