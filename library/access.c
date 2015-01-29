@@ -101,6 +101,12 @@ namespace lib
 		outw(offset | val << 8, PMIO_PORT);
 	}
 
+	void pmio_write32(const uint16_t offset, const uint32_t val)
+	{
+		for (unsigned i = 0; i < sizeof(val); i++)
+			pmio_write8(offset + i, val >> (i * 8));
+	}
+
 	uint8_t mem_read8(const uint64_t addr)
 	{
 		if (options->debug.access & 2)

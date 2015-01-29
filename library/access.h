@@ -87,6 +87,7 @@ namespace lib
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	void     pmio_write8(const uint16_t offset, const uint8_t val);
+	void     pmio_write32(uint16_t offset, uint32_t val);
 	uint8_t  mem_read8(const uint64_t addr);
 	uint16_t mem_read16(const uint64_t addr);
 	uint32_t mem_read32(const uint64_t addr);
