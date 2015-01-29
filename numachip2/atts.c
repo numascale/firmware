@@ -57,7 +57,8 @@ void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const 
 	for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << SIU_ATT_SHIFT)
 		numachip.write32(SIU_ATT_ENTRY, dest);
 
-	printf("\n");
+	if (options->debug.maps)
+		printf("\n");
 }
 
 Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
@@ -81,5 +82,6 @@ void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const 
 	for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << MMIO32_ATT_SHIFT)
 		numachip.write32(PIU_ATT_ENTRY, dest);
 
-	printf("\n");
+	if (options->debug.maps)
+		printf("\n");
 }
