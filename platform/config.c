@@ -144,10 +144,8 @@ void Config::parse_json(json_t *root)
 	}
 
 	const json_t *list = json_find_first_label(fab->child, "nodes");
-	if (!(list && list->child && list->child->type == JSON_ARRAY)) {
-		error("Label <nodes> not found in fabric configuration file");
-		errors++;
-	}
+	if (!(list && list->child && list->child->type == JSON_ARRAY))
+		fatal("Label <nodes> not found in fabric configuration file");
 
 	const json_t *obj;
 	for (nnodes = 0, obj = list->child->child; obj; obj = obj->next)
