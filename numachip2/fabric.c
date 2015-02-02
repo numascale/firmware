@@ -197,7 +197,7 @@ void Numachip2::routing_write(void)
 		if (!config->size[(lc - 1) / 2])
 			continue;
 
-		const unsigned regbase = lc ? (LC_XBAR + (lc - 1) * LC_SIZE) : SIU_XBAR;
+		const unsigned regbase = lc ? (LC5_XBAR + (lc - 1) * LC5_SIZE) : SIU_XBAR;
 
 		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
 			write32(regbase + XBAR_CHUNK, chunk);
@@ -239,6 +239,6 @@ void Numachip2::fabric_init(void)
 		if (!config->size[lc/ 2])
 			continue;
 
-		lcs[nlcs++] = new LC5(*this, LC_XBAR + lc * LC_SIZE, lc + 1);
+		lcs[nlcs++] = new LC5(*this, LC5_XBAR + lc * LC5_SIZE, lc + 1);
 	}
 }

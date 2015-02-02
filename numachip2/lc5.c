@@ -24,8 +24,8 @@
 
 uint64_t LC5::status(void)
 {
-	uint64_t val = numachip.read32(addr + Numachip2::LC_LINKSTAT);
-	val |= (uint64_t)numachip.read32(addr + Numachip2::LC_EVENTSTAT) << 32;
+	uint64_t val = numachip.read32(addr + Numachip2::LC5_LINKSTAT);
+	val |= (uint64_t)numachip.read32(addr + Numachip2::LC5_EVENTSTAT) << 32;
 	return val;
 }
 
@@ -39,7 +39,7 @@ void LC5::check(void)
 void LC5::clear(void)
 {
 	// clear link error bits
-	numachip.write32(addr + Numachip2::LC_LINKSTAT, 7);
+	numachip.write32(addr + Numachip2::LC5_LINKSTAT, 7);
 }
 
 LC5::LC5(Numachip2& _numachip, const uint16_t _addr, const unsigned _num): numachip(_numachip), addr(_addr), num(_num)
