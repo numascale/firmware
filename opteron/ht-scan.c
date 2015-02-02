@@ -75,17 +75,17 @@ void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, 
 	}
 }
 
-void Opteron::cht_print(int neigh, int link)
+void Opteron::cht_print(const int neigh, const int link)
 {
 	uint32_t val;
-	printf("HT#%d L%d Link Control      : 0x%08x\n", neigh, link,
+	printf("HT%d L%d Link Control      : 0x%08x\n", neigh, link,
 	      lib::cht_read32(neigh, LINK_CTRL + link * 0x20));
-	printf("HT#%d L%d Link Freq/Revision: 0x%08x\n", neigh, link,
+	printf("HT%d L%d Link Freq/Revision: 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20));
-	printf("HT#%d L%d Link Ext Control  : 0x%08x\n", neigh, link,
+	printf("HT%d L%d Link Ext Control  : 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4));
 	val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
-	printf("HT#%d L%d Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
+	printf("HT%d L%d Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
 
 static bool proc_lessthan_b0(const uint8_t ht)
@@ -137,7 +137,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	}
 
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
-	printf("Found %s link to NC on HT#%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
+	printf("Found %s link to NC on HT%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
 	if (options->debug.ht)
 		cht_print(neigh, link);

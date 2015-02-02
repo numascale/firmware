@@ -193,7 +193,7 @@ public:
 	void init(void);
 	Opteron(const sci_t _sci, const ht_t _ht, const bool _local);
 	~Opteron(void);
-	static void cht_print(int neigh, int link);
+	static void cht_print(const int neigh, const int link);
 	static void ht_optimize_link(int nc, int neigh, int link);
 	static ht_t ht_fabric_fixup(ht_t &neigh, link_t &ht, link_t &sublink, const uint32_t vendev);
 	void dram_clear_start(void);
