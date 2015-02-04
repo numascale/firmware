@@ -20,7 +20,7 @@
 #include "spd.h"
 #include "../library/base.h"
 
-class LC5;
+class LC;
 
 class Numachip2 {
 	class MmioMap {
@@ -65,9 +65,9 @@ class Numachip2 {
 	static const unsigned spi_timeout = 1000;
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
-	LC5 *lcs[6];
+	LC *lcs[6];
 	uint16_t routes[7][256][3];
-	int nlcs;
+	uint8_t nlcs;
 	const bool local;
 	const sci_t master;
 	unsigned dram_total_shift;
@@ -166,45 +166,6 @@ public:
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_EVENTSTAT     = 0x2308;
-
-	static const reg_t LC4_SIZE          = 0x200;
-	static const reg_t LC4_STATE_CLEAR   = 0x2400;
-	static const reg_t LC4_STATE_SET     = 0x2404;
-	static const reg_t LC4_NODE_IDS      = 0x2408;
-	static const reg_t LC4_RESET_START   = 0x240c;
-	static const reg_t LC4_ERROR_COUNT   = 0x2010;
-	static const reg_t LC4_SYNC_INTERVAL = 0x2014;
-	static const reg_t LC4_SAVE_ID       = 0x2018;
-	static const reg_t LC4_ROUT_CTRL     = 0x2020;
-	static const reg_t LC4_ROUT_MASK     = 0x2024;
-	static const reg_t LC4_PHY_STAT      = 0x202c;
-	static const reg_t LC4_CONFIG1       = 0x2030;
-	static const reg_t LC4_CONFIG2       = 0x2034;
-	static const reg_t LC4_CONFIG3       = 0x2038;
-	static const reg_t LC4_CONFIG4       = 0x203c;
-	static const reg_t LC4_UID1          = 0x2040;
-	static const reg_t LC4_UID2          = 0x2044;
-	static const reg_t LC4_DIAG          = 0x2048;
-	static const reg_t LC4_INIT_STATE    = 0x204c;
-	static const reg_t LC4_PC_CMD        = 0x2050;
-	static const reg_t LC4_PC_EXT        = 0x2054;
-	static const reg_t LC4_SEL           = 0x2058;
-	static const reg_t LC4_PC_CNT        = 0x205c;
-	static const reg_t LC4_VID           = 0x2060;
-	static const reg_t LC4_SWST_CLEAR    = 0x2064;
-	static const reg_t LC4_SWST_SET      = 0x2068;
-	static const reg_t LC4_BLOCK         = 0x206c;
-	static const reg_t LC4_ELOG0         = 0x2070;
-	static const reg_t LC4_ELOG1         = 0x2074;
-	static const reg_t LC4_SWROUTE       = 0x2100;
-	static const reg_t LC4_SWROUTE_SIZE  = 0x40;
-	static const reg_t LC4_SCIROUTE      = 0x21c0;
-
-	static const reg_t LC5_XBAR          = 0x2800;
-	static const reg_t LC5_SIZE          = 0x100;
-	static const reg_t LC5_LINKSTAT      = 0xc4;
-	static const reg_t LC5_EVENTSTAT     = 0xc8;
-	static const reg_t LC5_ERRORCNT      = 0xcc;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;

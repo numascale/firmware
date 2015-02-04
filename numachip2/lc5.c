@@ -19,29 +19,29 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include "lc5.h"
+#include "lc.h"
 #include "../bootloader.h"
 
-uint64_t LC5::status(void)
+
+// returns 1 when link is up
+bool LC5::status(void)
 {
-	uint64_t val = numachip.read32(addr + Numachip2::LC5_LINKSTAT);
-	val |= (uint64_t)numachip.read32(addr + Numachip2::LC5_EVENTSTAT) << 32;
-	return val;
+	return numachip.read32(LINKSTAT + index * SIZE) >> 31;
 }
 
 void LC5::check(void)
 {
 	const uint64_t val = status();
-	if (val != 0x0000000080000000)
-		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, num, numachip.sci, val);
+	if (val != 1ULL << 31)
+		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
 }
 
 void LC5::clear(void)
 {
 	// clear link error bits
-	numachip.write32(addr + Numachip2::LC5_LINKSTAT, 7);
+	numachip.write32(LINKSTAT + index * SIZE, 7);
 }
 
-LC5::LC5(Numachip2& _numachip, const uint16_t _addr, const unsigned _num): numachip(_numachip), addr(_addr), num(_num)
+LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUTE_CHUNK, ROUTE_RAM + _index * SIZE)
 {
 }

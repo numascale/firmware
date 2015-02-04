@@ -20,7 +20,7 @@
 #include <inttypes.h>
 
 #include "numachip.h"
-#include "lc5.h"
+#include "lc.h"
 #include "../platform/config.h"
 #include "../bootloader.h"
 
@@ -58,8 +58,8 @@ void Numachip2::fabric_train(void)
 		for (i = training_period; i > 0; i--) {
 			bool allup = 1;
 
-			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-				allup &= (*lc)->status() && (1 << 31);
+			for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				allup &= (*lc)->status();
 
 			// exit early if all up
 			if (allup)
@@ -71,7 +71,7 @@ void Numachip2::fabric_train(void)
 		if (i == 0) {
 			if (options->debug.fabric) {
 				printf("<links not up:");
-				for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
 					printf(" %"PRIx64, (*lc)->status());
 				printf(">");
 			}
@@ -79,21 +79,21 @@ void Numachip2::fabric_train(void)
 		}
 
 		// clear link errors
-		for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+		for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
 			(*lc)->clear();
 
 		// check for errors over period
 		for (i = stability_period; i; i--) {
 			errors = 0;
 
-			for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+			for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
 				errors |= ((*lc)->status() & 7) > 0;
 
 			// exit early if all up
 			if (errors) {
 				if (options->debug.fabric) {
 					printf("<errors:");
-					for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+					for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
 						printf(" %016" PRIx64, (*lc)->status());
 					printf(">");
 				}
@@ -106,8 +106,8 @@ void Numachip2::fabric_train(void)
 			break;
 	} while (errors);
 
-	for (LC5 **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-		printf(" %u", (*lc)->num);
+	for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+		printf(" %u", (*lc)->index);
 	printf("\n");
 }
 
@@ -191,26 +191,25 @@ void Numachip2::routing_write(void)
 	const uint8_t chunk_lim = 7; // FIXME read32(SIU_XBAR + XBAR_CHUNK);
 	const uint8_t offset_lim = chunk_lim;
 
-	printf("Writing routes (%d chunks)", chunk_lim+1);
+	printf("Writing routes (%d chunks)", chunk_lim + 1);
 
-	for (unsigned lc = 0; lc <= 6; lc++) {
-		if (!config->size[(lc - 1) / 2])
+	for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
+		if (xbarid && !lcs[xbarid])
 			continue;
 
-		const unsigned regbase = lc ? (LC5_XBAR + (lc - 1) * LC5_SIZE) : SIU_XBAR;
+		const uint16_t tablebase = xbarid ? lcs[xbarid-1]->tableaddr : SIU_XBAR;
 
 		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
-			write32(regbase + XBAR_CHUNK, chunk);
+			write32(xbarid ? lcs[xbarid-1]->chunkaddr : XBAR_CHUNK, chunk);
 
 			for (unsigned offset = 0; offset <= offset_lim; offset++)
 				for (unsigned bit = 0; bit < 3; bit++)
-					write32(regbase + bit * XBAR_TABLE_SIZE + offset * 4, routes[lc][(chunk<<4)+offset][bit]);
+					write32(tablebase + bit * XBAR_TABLE_SIZE + offset * 4, routes[xbarid][(chunk<<4)+offset][bit]);
 		}
 	}
 
 	printf("\n");
 }
-
 
 void Numachip2::fabric_routing(void)
 {
@@ -221,8 +220,8 @@ void Numachip2::fabric_routing(void)
 		uint8_t out = next(sci, config->nodes[node].sci);
 		printf("- to SCI%03x via port%d\n", config->nodes[node].sci, out);
 
-		for (int xbarid = 0; xbarid <= 6; xbarid++) {
-			if (xbarid > 0 && !config->size[(xbarid - 1) / 2])
+		for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
+			if (xbarid && !lcs[xbarid - 1])
 				continue;
 
 			route(xbarid, config->nodes[node].sci, out);
@@ -235,10 +234,13 @@ void Numachip2::fabric_routing(void)
 
 void Numachip2::fabric_init(void)
 {
-	for (unsigned lc = 0; lc < 6; lc++) {
-		if (!config->size[lc/ 2])
-			continue;
-
-		lcs[nlcs++] = new LC5(*this, LC5_XBAR + lc * LC5_SIZE, lc + 1);
+	uint32_t val = read32(HSS_PLLCTL);
+	if (val == 0x0704) {
+		for (unsigned index = 0; index < 6; index++)
+			lcs[index] = new LC4(*this, index);
+	} else {
+		xassert(val == 0x0705);
+		for (unsigned index = 0; index < 6; index++)
+			lcs[index] = new LC5(*this, index);
 	}
 }
