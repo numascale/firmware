@@ -235,11 +235,11 @@ void Numachip2::fabric_routing(void)
 void Numachip2::fabric_init(void)
 {
 	uint32_t val = read32(HSS_PLLCTL);
-	if (val == 0x0704) {
+	if ((val >> 16) == 0x0704) {
 		for (unsigned index = 0; index < 6; index++)
 			lcs[index] = new LC4(*this, index);
 	} else {
-		xassert(val == 0x0705);
+		xassert((val >> 16) == 0x0705);
 		for (unsigned index = 0; index < 6; index++)
 			lcs[index] = new LC5(*this, index);
 	}
