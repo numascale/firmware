@@ -225,8 +225,10 @@ E820::E820(void)
 		add(base, length, type);
 	} while (last);
 
-	printf("BIOS-provided e820 map:\n");
-	dump();
+	if (options->debug.e820) {
+		printf("BIOS-provided e820 map:\n");
+		dump();
+	}
 
 	add((uint64_t)asm_relocated, relocate_size, RESERVED);
 
