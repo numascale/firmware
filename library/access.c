@@ -103,6 +103,7 @@ namespace lib
 
 	void pmio_write32(const uint16_t offset, const uint32_t val)
 	{
+		xassert(!(offset & 3));
 		for (unsigned i = 0; i < sizeof(val); i++)
 			pmio_write8(offset + i, val >> (i * 8));
 	}
@@ -125,6 +126,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" -> ", addr);
+		xassert(!(addr & 1));
 		uint16_t val;
 		cli();
 		setup_fs(addr);
@@ -139,6 +141,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" -> ", addr);
+		xassert(!(addr & 3));
 		uint32_t val;
 		cli();
 		setup_fs(addr);
@@ -153,6 +156,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" -> ", addr);
+		xassert(!(addr & 7));
 		uint64_t val;
 		cli();
 		setup_fs(addr);
@@ -179,6 +183,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" <- 0x%04x", addr, val);
+		xassert(!(addr & 1));
 		cli();
 		setup_fs(addr);
 		asm volatile("movw %0, %%fs:(0)" :: "a"(val) : "memory");
@@ -191,6 +196,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" <- 0x%08x", addr, val);
+		xassert(!(addr & 3));
 		cli();
 		setup_fs(addr);
 		asm volatile("mov %0, %%fs:(0)" :: "a"(val) : "memory");
@@ -203,6 +209,7 @@ namespace lib
 	{
 		if (options->debug.access & 2)
 			printf("MEM:0x%016"PRIx64" <- 0x%016"PRIx64, addr, val);
+		xassert(!(addr & 7));
 		cli();
 		setup_fs(addr);
 		asm volatile("movq (%0), %%mm0; movq %%mm0, %%fs:(0)" :: "r"(&val) : "memory");
@@ -235,7 +242,7 @@ namespace lib
 
 	uint16_t mcfg_read16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 1) && reg < 0xfff);
 
 		uint16_t ret;
 		if (options->debug.access & 1)
@@ -248,7 +255,7 @@ namespace lib
 
 	uint32_t mcfg_read32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 3) && reg < 0xfff);
 
 		uint32_t ret;
 		if (options->debug.access & 1)
@@ -262,7 +269,7 @@ namespace lib
 	// requires CU_CFG2[50] to be set
 	uint64_t mcfg_read64(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 7) && reg < 0xfff);
 
 		uint64_t ret;
 		if (options->debug.access & 1)
@@ -287,7 +294,7 @@ namespace lib
 
 	void mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 1) && reg < 0xfff);
 
 		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
@@ -298,7 +305,7 @@ namespace lib
 
 	void mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 3) && reg < 0xfff);
 
 		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
@@ -309,7 +316,7 @@ namespace lib
 
 	void mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
 	{
-		xassert(reg < 0xfff);
+		xassert(!(reg & 7) && reg < 0xfff);
 
 		if (options->debug.access & 1)
 			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016"PRIx64, sci, bus, dev, func, reg, val);
