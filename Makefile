@@ -8,7 +8,6 @@ mjson_dir        := json-$(mjson_version)
 
 COM32DEPS := $(syslinux_dir)/com32/libutil/libutil_com.a $(syslinux_dir)/com32/lib/libcom32.a
 DIRS := platform/ opteron/ numachip2/ library/ simulation/ ./
-MAKEFLAGS += -j $(shell getconf _NPROCESSORS_ONLN)
 
 .PHONY: all
 all: bootloader.c32
