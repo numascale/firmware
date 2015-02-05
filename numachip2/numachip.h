@@ -100,6 +100,11 @@ class Numachip2 {
 	void routing_write(void);
 	void fabric_init(void);
 public:
+	static const uint64_t MCFG_BASE        = 0x3f0000000000;
+	static const uint64_t MCFG_LIM         = 0x3fffffffffff;
+	static const uint64_t LOC_BASE         = 0xf0000000;
+	static const uint64_t LOC_LIM          = 0xf0ffffff;
+
 	/* Registers; function in bits 15:12 */
 	static const reg_t VENDEV            = 0x0000;
 	static const reg_t STAT_COMMAND      = 0x0004;

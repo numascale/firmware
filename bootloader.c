@@ -398,7 +398,7 @@ static void setup_cores(void)
 		printf("APICs on %03x:", (*node)->sci);
 
 		// set correct MCFG base per node
-		const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
+		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
 		push_msr(MSR_MCFG, mcfg);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
@@ -537,7 +537,7 @@ static void acpi_tables(void)
 	uint16_t segment = 0;
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		struct acpi_mcfg ent;
-		ent.address = NC_MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
+		ent.address = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
 		ent.pci_segment = segment++;
 		ent.start_bus_number = 0;
 		ent.end_bus_number = 255;
@@ -771,14 +771,24 @@ int main(const int argc, char *argv[])
 
 	// add global MCFG maps
 	for (unsigned i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap->add(8, NC_MCFG_BASE, NC_MCFG_LIM, local_node->numachip->ht, 0);
+		local_node->opterons[i]->mmiomap->add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
+
+	// adjust down MMIO range to prevent overlap
+	for (unsigned i = 0; i < local_node->nopterons; i++) {
+		xassert(local_node->opterons[i]->read32(0x1094) == 0x00f00f10);
+		local_node->opterons[i]->write32(0x1094, 0x00efff10);
+	}
+
+	// Numachip local registers
+	for (unsigned i = 0; i < local_node->nopterons; i++)
+		local_node->opterons[i]->mmiomap->add(9, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
 
 	// reserve HT decode and MCFG address range so Linux accepts it
 	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
-	e820->add(NC_MCFG_BASE, NC_MCFG_LIM - NC_MCFG_BASE + 1, E820::RESERVED);
+	e820->add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM - Numachip2::MCFG_BASE + 1, E820::RESERVED);
 
 	// setup local MCFG access
-	const uint64_t mcfg = NC_MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21;
+	const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21;
 	lib::wrmsr(MSR_MCFG, mcfg);
 	push_msr(MSR_MCFG, mcfg);
 
