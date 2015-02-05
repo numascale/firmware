@@ -24,6 +24,34 @@
 #include "../bootloader.h"
 #include "devices.h"
 
+uint64_t Devices::IOAPIC::vectors[Devices::IOAPIC::nvectors];
+
+uint64_t Devices::IOAPIC::read64(const uint8_t reg)
+{
+	lib::mem_write32(base, reg);
+	return lib::mem_read32(base + 0x10);
+}
+
+void Devices::IOAPIC::write64(const uint8_t reg, const uint64_t val)
+{
+	lib::mem_write32(base, reg);
+	return lib::mem_write64(base + 0x10, val);
+}
+
+void Devices::IOAPIC::inhibit(void)
+{
+	for (unsigned i = 0; i < nvectors; i++) {
+		vectors[i] = read64(i * 8 + 0x10);
+		write64(i * 8 + 0x10, vectors[i] | (1 << 16));
+	}
+}
+
+void Devices::IOAPIC::restore(void)
+{
+	for (unsigned i = 0; i < nvectors; i++)
+		write64(i * 8 + 0x10, vectors[i]);
+}
+
 void pci_search(const sci_t sci, const struct devspec *list, const int bus)
 {
 	const struct devspec *listp;

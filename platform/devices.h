@@ -95,6 +95,23 @@
 #define PCI_TYPE_BRIDGE                 0x1
 #define PCI_TYPE_ANY                    0xff
 
+class Devices
+{
+public:
+	class IOAPIC
+	{
+		static const unsigned nvectors = 24;
+		static const unsigned base = 0xfec00000;
+		static uint64_t vectors[nvectors];
+
+		static uint64_t read64(const uint8_t reg);
+		static void write64(const uint8_t reg, const uint64_t val);
+	public:
+		static void inhibit(void);
+		static void restore(void);
+	};
+};
+
 struct devspec {
 	const uint32_t classtype;
 	const uint8_t classlen;

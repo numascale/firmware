@@ -23,6 +23,7 @@
 #include <sys/io.h>
 
 #include "../platform/acpi.h"
+#include "../platform/devices.h"
 #include "../bootloader.h"
 #include "../platform/options.h"
 #include "../library/access.h"
@@ -440,6 +441,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 
 		printf("Adjusting HT fabric");
 		lib::critical_enter();
+		Devices::IOAPIC::inhibit();
 
 		for (i = nnodes; i >= 0; i--) {
 			uint32_t ltcr, val2;
@@ -458,6 +460,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr | (1 << 15));
 		}
 
+		Devices::IOAPIC::restore();
 		lib::critical_leave();
 		printf("\n");
 	}
