@@ -48,6 +48,7 @@ class Numachip2 {
 		unsigned depth;
 	public:
 		DramAtt(Numachip2 &_numachip);
+		void init(void);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
@@ -55,6 +56,7 @@ class Numachip2 {
 		const Numachip2 &numachip;
 	public:
 		MmioAtt(Numachip2 &_numachip);
+		void init(void);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 

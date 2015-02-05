@@ -33,7 +33,10 @@ Numachip2::DramAtt::DramAtt(Numachip2 &_numachip): numachip(_numachip)
 			break;
 
 	depth = i + 35;
+}
 
+void Numachip2::DramAtt::init(void)
+{
 	if (numachip.local) {
 		printf("SIU ATT limited to %dTB\n", 1 << (depth - 40));
 		range(0, (1ULL << depth) -1, 0xfff);
@@ -62,6 +65,10 @@ void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const 
 }
 
 Numachip2::MmioAtt::MmioAtt(Numachip2 &_numachip): numachip(_numachip)
+{
+}
+
+void Numachip2::MmioAtt::init(void)
 {
 	if (numachip.local)
 		range(0, (1ULL << 32) - 1, 0xfff);

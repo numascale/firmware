@@ -93,6 +93,9 @@ ht_t Numachip2::probe(const sci_t sci)
 
 void Numachip2::late_init(void)
 {
+	dramatt.init();
+	mmioatt.init();
+
 	dram_init();
 	fabric_init();
 
