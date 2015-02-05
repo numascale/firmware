@@ -397,9 +397,11 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)
 		write32(reg, 0);
 
-	printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
-	for (int range = 0; range < 8; range++)
-		drammap.print(range);
+	if (options->debug.maps) {
+		printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
+		for (int range = 0; range < 8; range++)
+			drammap.print(range);
+	}
 }
 
 void Opteron::dram_clear_start(void)
