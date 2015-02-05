@@ -139,8 +139,7 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
 	printf("Found %s link to NC on HT%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
-	if (options->debug.ht)
-		cht_print(neigh, link);
+	cht_print(neigh, link);
 
 	printf("Checking HT width/freq.");
 
