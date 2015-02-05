@@ -193,10 +193,6 @@ void Opteron::ht_optimize_link(int nc, int neigh, int link)
 			printf("<NC freq=%d>", max_supported);
 			lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
 			reboot = 1;
-			if (max_supported >= 7) {
-				printf(".<de-emphasis>");
-				Numachip2::htphy_set_deemphasis(nc);
-			}
 		}
 
 		printf(".");

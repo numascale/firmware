@@ -84,12 +84,6 @@ class Numachip2 {
 	uint8_t spi_master_read_fifo(void);
 	void spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data);
 
-	/* htphy.c */
-	static void htphy_avalon_write(const int nc, const uint32_t addr, const uint32_t data);
-	static uint32_t htphy_avalon_read(const int nc, const uint32_t addr);
-	static void htphy_pma_write(const int nc, const uint32_t logical_channel, const uint32_t offset, const uint32_t data);
-	static uint32_t htphy_pma_read(const int nc, const uint32_t logical_channel, const uint32_t offset, const uint32_t data);
-
 	/* dram.c */
 	void dram_test(void);
 	void dram_clear(void);
@@ -204,7 +198,6 @@ public:
 	void fabric_check(void);
 	void fabric_reset(void);
 	void dram_check(void);
-	static void htphy_set_deemphasis(const int nc);
 };
 
 extern Numachip2 *numachip;
