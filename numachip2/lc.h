@@ -31,7 +31,8 @@ public:
 	const uint16_t chunkaddr, tableaddr;
 
 	// can't use pure virtual (= 0) due to link-time dependency with libstdc++
-	virtual bool status(void) {return 0;};
+	virtual bool is_up(void) {return 0;};
+	virtual uint64_t status(void) {return 0;};
 	virtual void check(void) {};
 	virtual void clear(void) {};
 };
@@ -71,7 +72,8 @@ class LC4: public LC
 	static const reg_t SCIROUTE      = 0x25c0;
 
 public:
-	bool status(void);
+	bool is_up(void);
+	uint64_t status(void);
 	void check(void);
 	void clear(void);
 	LC4(Numachip2 &_numachip, const uint8_t _index);
@@ -87,7 +89,8 @@ class LC5: public LC
 	static const reg_t ERRORCNT      = 0x28cc;
 
 public:
-	bool status(void);
+	bool is_up(void);
+	uint64_t status(void);
 	void check(void);
 	void clear(void);
 	LC5(Numachip2 &_numachip, const uint8_t _index);

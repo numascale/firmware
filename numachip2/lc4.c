@@ -23,17 +23,23 @@
 #include "../bootloader.h"
 
 // returns 1 when link is up
-bool LC4::status(void)
+bool LC4::is_up(void)
 {
 	uint32_t val = numachip.read32(INIT_STATE + index * SIZE) & 0xf;
 	return (val == 2) || (val == 4);
 }
 
-void LC4::check(void)
+uint64_t LC4::status(void)
 {
 	uint32_t val = numachip.read32(ERROR_COUNT + index * SIZE);
+	return (uint64_t) val;
+}
+
+void LC4::check(void)
+{
+	uint64_t val = status();
 	if (val)
-		warning("Fabric link %u on %03x has issues 0x%08x", index, numachip.sci, val);
+		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
 }
 
 void LC4::clear(void)

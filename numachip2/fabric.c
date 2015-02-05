@@ -59,7 +59,7 @@ void Numachip2::fabric_train(void)
 			bool allup = 1;
 
 			for (LC **lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
-				allup &= (*lc)->status();
+				allup &= (*lc)->is_up();
 
 			// exit early if all up
 			if (allup)
@@ -186,26 +186,27 @@ void Numachip2::routing_dump(void)
 
 void Numachip2::routing_write(void)
 {
-	// calculate implemented depth
-	write32(SIU_XBAR + XBAR_CHUNK, 0xf);
-	const uint8_t chunk_lim = 7; // FIXME read32(SIU_XBAR + XBAR_CHUNK);
-	const uint8_t offset_lim = chunk_lim;
+	const uint8_t chunk_lim = 7;
+	const uint8_t offset_lim = 7;
+	const uint8_t bit_lim = 2;
+	unsigned lc = 0;
 
 	printf("Writing routes (%d chunks)", chunk_lim + 1);
 
 	for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
-		if (xbarid && !lcs[xbarid])
+		if (xbarid && !config->size[(xbarid - 1) / 2])
 			continue;
 
-		const uint16_t tablebase = xbarid ? lcs[xbarid-1]->tableaddr : SIU_XBAR;
+		const uint16_t tablebase = xbarid ? lcs[lc]->tableaddr : SIU_XBAR;
 
 		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
-			write32(xbarid ? lcs[xbarid-1]->chunkaddr : XBAR_CHUNK, chunk);
-
+			write32(xbarid ? lcs[lc]->chunkaddr : XBAR_CHUNK, chunk);
 			for (unsigned offset = 0; offset <= offset_lim; offset++)
-				for (unsigned bit = 0; bit < 3; bit++)
+				for (unsigned bit = 0; bit <= bit_lim; bit++)
 					write32(tablebase + bit * XBAR_TABLE_SIZE + offset * 4, routes[xbarid][(chunk<<4)+offset][bit]);
 		}
+
+		if (xbarid) lc++;
 	}
 
 	printf("\n");
@@ -221,7 +222,7 @@ void Numachip2::fabric_routing(void)
 		printf("- to SCI%03x via port%d\n", config->nodes[node].sci, out);
 
 		for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
-			if (xbarid && !lcs[xbarid - 1])
+			if (xbarid && !config->size[(xbarid - 1) / 2])
 				continue;
 
 			route(xbarid, config->nodes[node].sci, out);
@@ -235,12 +236,15 @@ void Numachip2::fabric_routing(void)
 void Numachip2::fabric_init(void)
 {
 	uint32_t val = read32(HSS_PLLCTL);
-	if ((val >> 16) == 0x0704) {
-		for (unsigned index = 0; index < 6; index++)
-			lcs[index] = new LC4(*this, index);
-	} else {
-		xassert((val >> 16) == 0x0705);
-		for (unsigned index = 0; index < 6; index++)
-			lcs[index] = new LC5(*this, index);
+	for (unsigned index = 0; index < 6; index++) {
+		if (!config->size[index / 2])
+			continue;
+
+		if ((val >> 16) == 0x0704) {
+			lcs[nlcs++] = new LC4(*this, index);
+		} else {
+			xassert((val >> 16) == 0x0705);
+			lcs[nlcs++] = new LC5(*this, index);
+		}
 	}
 }
