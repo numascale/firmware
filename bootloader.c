@@ -69,7 +69,7 @@ static void scan(void)
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		(*node)->dram_base = dram_top;
 
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			(*nb)->dram_base = dram_top;
 			dram_top += (*nb)->dram_size;
 		}
@@ -179,9 +179,9 @@ static void setup_gsm_early(void)
 			continue;
 
 		// setup read-only map on observer
-		for (unsigned i = 0; i < local_node->nopterons; i++) {
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
 			uint64_t base = 1ULL << Numachip2::GSM_SHIFT;
-			local_node->opterons[i]->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0, 1);
+			(*nb)->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0, 1);
 		}
 	}
 }
@@ -257,12 +257,12 @@ static void remap(void)
 {
 	// 1. setup local NumaChip DRAM ranges
 	unsigned range = 0;
-	for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 		local_node->numachip->drammap.add(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 
 	// 2. route higher access to NumaChip
 	if (nnodes > 1)
-		for (Opteron **nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
 
 	// 3. setup NumaChip DRAM registers
@@ -270,8 +270,8 @@ static void remap(void)
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (local_node->dram_end - 1) >> 24);
 
 	// 4. setup DRAM ATT routing
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++)
+	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
+		for (Node *const *dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++)
 			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
 
 	// 5. set top of memory
@@ -286,8 +286,8 @@ static void remap(void)
 		add(**node);
 
 	// update e820 map
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
+	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			// master always first in array
 			if (!(node == &nodes[0]))
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
@@ -307,7 +307,7 @@ static void remap(void)
 
 	// setup IOH limits
 #ifdef FIXME /* hangs on remote node */
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->iohub->limits(dram_top - 1);
 #else
 	local_node->iohub->limits(dram_top - 1);
@@ -758,6 +758,36 @@ int main(const int argc, char *argv[])
 
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
+	// adjust down MMIO range to prevent overlap
+	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+		uint64_t base, limit;
+		ht_t dest;
+		link_t link;
+		bool lock;
+		unsigned range;
+
+		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
+			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
+				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
+					printf("Found matching local MMIO range %u on SCI%03x#%d: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d%s\n",
+					       range, local_node->sci, (*nb)->ht, base, limit, dest, link, lock ? "locked" : "");
+					(*nb)->mmiomap->remove(range);
+					(*nb)->mmiomap->add(range, Numachip2::LOC_LIM+1, limit, dest, link);
+					break;
+				}
+			}
+		}
+
+		// Find highest available MMIO map entry
+		for (range = 7; range > 0; range--)
+			if (!(*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock))
+				break;
+
+		xassert(range > 0);
+		// Numachip local registers
+		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
+	}
+
 	if (options->init_only) {
 		printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
 		if (options->boot_wait)
@@ -770,18 +800,8 @@ int main(const int argc, char *argv[])
 	local_node->numachip->late_init();
 
 	// add global MCFG maps
-	for (unsigned i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap->add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
-
-	// adjust down MMIO range to prevent overlap
-	for (unsigned i = 0; i < local_node->nopterons; i++) {
-		xassert(local_node->opterons[i]->read32(0x1094) == 0x00f00f10);
-		local_node->opterons[i]->write32(0x1094, 0x00efff10);
-	}
-
-	// Numachip local registers
-	for (unsigned i = 0; i < local_node->nopterons; i++)
-		local_node->opterons[i]->mmiomap->add(9, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
+	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+		(*nb)->mmiomap->add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
 
 	// reserve HT decode and MCFG address range so Linux accepts it
 	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
@@ -817,8 +837,10 @@ int main(const int argc, char *argv[])
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
 		// wait for 'ready'
-		while (local_node->numachip->read32(Numachip2::INFO) != 3 << 29)
+		while (local_node->numachip->read32(Numachip2::INFO) != 3 << 29) {
+			local_node->check();
 			cpu_relax();
+		}
 
 		printf("\n");
 		os->cleanup();
