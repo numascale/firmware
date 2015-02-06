@@ -716,11 +716,11 @@ static void finalise(void)
 	setup_cores();
 	acpi_tables();
 	test_cores();
+	check();
 }
 
 static void finished(void)
 {
-	check();
 	asm volatile("mfence; wbinvd" ::: "memory");
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
@@ -788,13 +788,8 @@ int main(const int argc, char *argv[])
 		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
 	}
 
-	if (options->init_only) {
-		printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
-		if (options->boot_wait)
-			lib::wait_key("Press enter to boot");
-		os->exec(options->next_label);
-		return 0;
-	}
+	if (options->init_only)
+		finished();
 
 	// initialize SPI/SPD, DRAM, NODEID etc
 	local_node->numachip->late_init();
