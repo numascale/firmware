@@ -48,7 +48,6 @@ void Node::check(void)
 
 	numachip->fabric_check();
 	numachip->dram_check();
-	xassert(!numachip->read32(Numachip2::SIU_EVENTSTAT));
 }
 
 // instantiated for remote nodes

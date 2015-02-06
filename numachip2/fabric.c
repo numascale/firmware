@@ -35,6 +35,11 @@ void Numachip2::fabric_reset(void)
 
 void Numachip2::fabric_check(void)
 {
+	uint32_t val = read32(SIU_EVENTSTAT);
+
+	if (val != 0)
+		warning("SIU on %03x has issues 0x%08x", sci, val);
+
 	for (int lc = 0; lc < 6; lc++) {
 		if (!config->size[lc / 2])
 			continue;
@@ -236,11 +241,14 @@ void Numachip2::fabric_routing(void)
 void Numachip2::fabric_init(void)
 {
 	uint32_t val = read32(HSS_PLLCTL);
+	bool is_lc4 = (val >> 16) == 0x0704;
+
+	printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
 	for (unsigned index = 0; index < 6; index++) {
 		if (!config->size[index / 2])
 			continue;
 
-		if ((val >> 16) == 0x0704) {
+		if (is_lc4) {
 			lcs[nlcs++] = new LC4(*this, index);
 		} else {
 			xassert((val >> 16) == 0x0705);
