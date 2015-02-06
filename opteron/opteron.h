@@ -23,9 +23,9 @@ class Opteron {
 	class MmioMap {
 	protected:
 		const Opteron &opteron;
-		const unsigned ranges;
 		unsigned unused(void);
 	public:
+		const unsigned ranges;
 		void print(const unsigned range);
 		MmioMap(Opteron &_opteron, const unsigned _ranges): opteron(_opteron), ranges(_ranges) {};
 		virtual void remove(const unsigned range);

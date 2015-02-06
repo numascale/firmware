@@ -217,8 +217,10 @@ void Opteron::prepare(void)
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
 
 	// disable core WDT
-	lib::wrmsr(MSR_CPUWDT, 0);
-	push_msr(MSR_CPUWDT, 0);
+	if (options->debug.northbridge) {
+		lib::wrmsr(MSR_CPUWDT, 0);
+		push_msr(MSR_CPUWDT, 0);
+	}
 }
 
 void Opteron::dram_scrub_disable(void)
@@ -401,6 +403,9 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 		printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
 		for (int range = 0; range < 8; range++)
 			drammap.print(range);
+		printf("MMIO ranges on SCI%03x#%d:\n", sci, ht);
+		for (int range = 0; range < mmiomap->ranges; range++)
+			mmiomap->print(range);
 	}
 }
 
