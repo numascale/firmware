@@ -35,6 +35,9 @@ void Opteron::MmioMap10::remove(const unsigned range)
 
 void Opteron::MmioMap15::remove(const unsigned range)
 {
+	if (options->debug.maps)
+		printf("Deleting NB MMIO range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
+
 	xassert(range < ranges);
 
 	uint16_t loff = 0, hoff = 0;

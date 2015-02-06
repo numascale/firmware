@@ -401,10 +401,10 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 
 	if (options->debug.maps) {
 		printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
-		for (int range = 0; range < 8; range++)
+		for (unsigned range = 0; range < 8; range++)
 			drammap.print(range);
 		printf("MMIO ranges on SCI%03x#%d:\n", sci, ht);
-		for (int range = 0; range < mmiomap->ranges; range++)
+		for (unsigned range = 0; range < mmiomap->ranges; range++)
 			mmiomap->print(range);
 	}
 }
