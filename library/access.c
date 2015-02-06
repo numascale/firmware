@@ -23,6 +23,7 @@
 
 #include "../bootloader.h"
 #include "../opteron/msrs.h"
+#include "../platform/devices.h"
 #include "access.h"
 
 #define PMIO_PORT 0xcd6
@@ -57,6 +58,8 @@ namespace lib
 		outb(0xff, PIC_MASTER_IMR);
 		pic2_mask = inb(PIC_SLAVE_IMR);
 		outb(0xff, PIC_SLAVE_IMR);
+
+		Devices::IOAPIC::inhibit();
 	}
 
 	void critical_leave(void)
@@ -73,6 +76,8 @@ namespace lib
 		outb(pic1_mask, PIC_MASTER_IMR);
 		inb(PIC_SLAVE_IMR);
 		outb(pic2_mask, PIC_SLAVE_IMR);
+
+		Devices::IOAPIC::restore();
 	}
 
 	uint8_t rtc_read(const int addr)

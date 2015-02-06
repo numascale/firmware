@@ -23,7 +23,6 @@
 #include <sys/io.h>
 
 #include "../platform/acpi.h"
-#include "../platform/devices.h"
 #include "../bootloader.h"
 #include "../platform/options.h"
 #include "../library/access.h"
