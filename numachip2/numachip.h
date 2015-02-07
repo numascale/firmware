@@ -160,13 +160,13 @@ public:
 	static const reg_t FABRIC_RECFG_ADDR = 0x20FC;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
-	static const reg_t SIU_XBAR          = 0x2200;
-	static const reg_t XBAR_TABLE_SIZE   = 0x40;
-	static const reg_t XBAR_CHUNK        = 0xc0;
+	static const reg_t SIU_XBAR_TABLE    = 0x2200;
+	static const reg_t SIU_XBAR_CHUNK    = 0x22c0;
 	static const reg_t SIU_NODEID        = 0x22c4;
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_EVENTSTAT     = 0x2308;
+	static const reg_t XBAR_TABLE_SIZE   = 0x40;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;

@@ -172,7 +172,7 @@ void Numachip2::routing_dump(void)
 	printf("Routing tables:\n");
 
 	for (unsigned in = 0; in <= 6; in++) {
-		if (!config->size[(in - 1) / 2])
+		if (in && !config->size[(in - 1) / 2])
 			continue;
 
 		for (unsigned dest = 0; dest < 4096; dest++) {
@@ -184,7 +184,7 @@ void Numachip2::routing_dump(void)
 				out |= ((routes[in][regoffset][bit] >> bitoffset) & 1) << bit;
 
 			if (out != 7)
-				printf("- on LC%u, SCI%03x via LC%d\n", in, dest, out);
+				printf("- on LC%u, SCI%03x via port%d\n", in, dest, out);
 		}
 	}
 }
@@ -202,10 +202,10 @@ void Numachip2::routing_write(void)
 		if (xbarid && !config->size[(xbarid - 1) / 2])
 			continue;
 
-		const uint16_t tablebase = xbarid ? lcs[lc]->tableaddr : SIU_XBAR;
+		const uint16_t tablebase = xbarid ? lcs[lc]->tableaddr : SIU_XBAR_TABLE;
 
 		for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
-			write32(xbarid ? lcs[lc]->chunkaddr : XBAR_CHUNK, chunk);
+			write32(xbarid ? lcs[lc]->chunkaddr : SIU_XBAR_CHUNK, chunk);
 			for (unsigned offset = 0; offset <= offset_lim; offset++)
 				for (unsigned bit = 0; bit <= bit_lim; bit++)
 					write32(tablebase + bit * XBAR_TABLE_SIZE + offset * 4, routes[xbarid][(chunk<<4)+offset][bit]);
@@ -222,10 +222,53 @@ void Numachip2::fabric_routing(void)
 	// default route is to link 7 to trap unexpected behaviour
 	memset(routes, 0xff, sizeof(routes));
 
+#ifdef FIXED_ROUTING
+	switch(sci) {
+	case 0x000:
+		route(0, 0x000, 0);
+		route(0, 0x002, 2);
+		route(0, 0x001, 1);
+
+		route(1, 0x000, 0);
+		route(1, 0x001, 2);
+		route(1, 0x002, 2);
+
+		route(2, 0x000, 0);
+		route(2, 0x001, 1);
+		route(2, 0x002, 1);
+		break;
+	case 0x001:
+		route(0, 0x001, 0);
+		route(0, 0x000, 2);
+		route(0, 0x002, 1);
+
+		route(1, 0x001, 0);
+		route(1, 0x000, 2);
+		route(1, 0x002, 2);
+
+		route(2, 0x001, 0);
+		route(2, 0x000, 1);
+		route(2, 0x002, 1);
+		break;
+	case 0x002:
+		route(0, 0x002, 0);
+		route(0, 0x001, 2);
+		route(0, 0x000, 1);
+
+		route(1, 0x002, 0);
+		route(1, 0x000, 2);
+		route(1, 0x001, 2);
+
+		route(2, 0x002, 0);
+		route(2, 0x000, 1);
+		route(2, 0x001, 1);
+		break;
+	default:
+		error("unexpected");
+	}
+#else
 	for (unsigned node = 0; node < config->nnodes; node++) {
 		uint8_t out = next(sci, config->nodes[node].sci);
-		printf("- to SCI%03x via port%d\n", config->nodes[node].sci, out);
-
 		for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
 			if (xbarid && !config->size[(xbarid - 1) / 2])
 				continue;
@@ -233,7 +276,7 @@ void Numachip2::fabric_routing(void)
 			route(xbarid, config->nodes[node].sci, out);
 		}
 	}
-
+#endif
 	routing_dump();
 	routing_write();
 }

@@ -49,6 +49,6 @@ void LC5::clear(void)
 	numachip.write32(LINKSTAT + index * SIZE, 7);
 }
 
-LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUTE_CHUNK, ROUTE_RAM + _index * SIZE)
+LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUTE_CHUNK + _index * SIZE, ROUTE_RAM + _index * SIZE)
 {
 }

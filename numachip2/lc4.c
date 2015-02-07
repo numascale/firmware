@@ -46,6 +46,6 @@ void LC4::clear(void)
 {
 }
 
-LC4::LC4(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUT_CTRL, ROUTE_RAM + _index * SIZE)
+LC4::LC4(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUT_CTRL + _index * SIZE, ROUTE_RAM + _index * SIZE)
 {
 }
