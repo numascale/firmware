@@ -52,7 +52,7 @@ EXPORT(vector)
 	hlt
 	jmp	1b
 setup:
-STATUS(0x90);
+	STATUS(0x90);
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax

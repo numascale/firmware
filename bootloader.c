@@ -325,7 +325,7 @@ static void copy_inherit(void)
 		// FIXME
 		(*node)->neigh_ht = 2;
 		printf("%03x Numachip @ HT%u.%u.%u\n", (*node)->sci, (*node)->neigh_ht,
-		  (*node)->neigh_link, (*node)->neigh_sublink);
+		       (*node)->neigh_link, (*node)->neigh_sublink);
 	}
 }
 
@@ -336,13 +336,13 @@ static bool boot_core(const uint32_t apic, const uint32_t vector, const uint32_t
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) |
 	  (6 << 8) | ((uint32_t)REL32(vector) >> 12)); // startup
 
-    printf(" 0x%05x", apic);
+	printf(" 0x%05x", apic);
 
-    for (unsigned i = 0; i < 1000000; i++) {
-        if (*REL32(status) == status)
-            return 0;
-        cpu_relax();
-    }
+	for (unsigned i = 0; i < 1000000; i++) {
+		if (*REL32(status) == status)
+			return 0;
+		cpu_relax();
+	}
 
 	return 1;
 }
