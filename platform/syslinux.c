@@ -22,6 +22,7 @@
 extern "C" {
 	#include <syslinux/pxe.h>
 	#include <syslinux/loadfile.h>
+	#include <syslinux/boot.h>
 	#include <consoles.h>
 }
 
@@ -88,15 +89,8 @@ char *OS::read_file(const char *filename, size_t *const len)
 
 void OS::exec(const char *label)
 {
-	com32sys_t rm;
-	memset(&rm, 0, sizeof(rm));
-
-	strcpy((char *)__com32.cs_bounce, label);
-	rm.eax.w[0] = 0x0003;
-	rm.ebx.w[0] = OFFS(__com32.cs_bounce);
-	rm.es = SEG(__com32.cs_bounce);
-
-	__intcall(0x22, &rm, NULL);
+	int rv = syslinux_run_command(label);
+	xassert(!rv);
 }
 
 void OS::memmap_start(void)
