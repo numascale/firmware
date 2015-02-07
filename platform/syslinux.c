@@ -21,6 +21,7 @@
 
 extern "C" {
 	#include <syslinux/pxe.h>
+	#include <syslinux/loadfile.h>
 	#include <consoles.h>
 }
 
@@ -75,42 +76,12 @@ OS::OS(void): ent(0), hostname(NULL)
 	get_hostname();
 }
 
-char *OS::read_file(const char *filename, int *const len)
+char *OS::read_file(const char *filename, size_t *const len)
 {
-	com32sys_t inargs, outargs;
-	char *buf = (char *)lmalloc(strlen(filename) + 1);
-	strcpy(buf, filename);
-
+	char *buf;
 	printf("Config %s", filename);
-	memset(&inargs, 0, sizeof inargs);
-	inargs.eax.w[0] = 0x0006; /* Open file */
-	inargs.esi.w[0] = OFFS(buf);
-	inargs.es = SEG(buf);
-	__intcall(0x22, &inargs, &outargs);
-	lfree(buf);
-
-	int fd = outargs.esi.w[0];
-	*len = outargs.eax.l;
-	int bsize = outargs.ecx.w[0];
-
-	assertf(fd && *len > 0, "Failed to open file");
-
-	buf = (char *)lzalloc(roundup(*len, bsize));
-	xassert(buf);
-
-	memset(&inargs, 0, sizeof inargs);
-	inargs.eax.w[0] = 0x0007; /* Read file */
-	inargs.esi.w[0] = fd;
-	inargs.ecx.w[0] = (*len / bsize) + 1;
-	inargs.ebx.w[0] = OFFS(buf);
-	inargs.es = SEG(buf);
-	__intcall(0x22, &inargs, &outargs);
-	*len = outargs.ecx.l;
-
-	memset(&inargs, 0, sizeof inargs);
-	inargs.eax.w[0] = 0x0008; /* Close file */
-	inargs.esi.w[0] = fd;
-	__intcall(0x22, &inargs, NULL);
+	int rv = loadfile(filename, (void **)&buf, len);
+	assertf(!rv && *len > 0, "Failed to open file");
 
 	return buf;
 }

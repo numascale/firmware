@@ -37,7 +37,7 @@ public:
 	uint8_t mac[6];
 
 	OS(void);
-	char *read_file(const char *filename, int *const len);
+	char *read_file(const char *filename, size_t *const len);
 	void exec(const char *label);
 	void memmap_start(void);
 	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
