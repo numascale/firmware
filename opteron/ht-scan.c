@@ -370,6 +370,10 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			for (link = 0; link < 4; link++) {
 				val = lib::cht_read32(neigh, LINK_TYPE + link * 0x20);
 				uint32_t val2 = lib::cht_read32(neigh, LINK_CTRL + link * 0x20);
+				if (val2 & 0x300)
+					warning("HT%d.%d CRC error", neigh, link);
+				if (val2 & 0x10)
+					warning("HT%d.%d failure", neigh, link);
 				if (options->debug.ht)
 					printf("HT%d.%d LinkControl = 0x%08x\n", neigh, link, val2);
 				if ((val & 0x1f) != 0x3)
