@@ -29,7 +29,6 @@ public:
 	sci_t sci;
 	ht_t neigh_ht;
 	link_t neigh_link;
-	link_t neigh_sublink;
 	uint32_t apics[56];
 	uint8_t napics;
 	unsigned nopterons;

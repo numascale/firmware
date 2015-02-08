@@ -81,20 +81,20 @@ void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, 
 	}
 }
 
-void Opteron::cht_print(const int neigh, const int link)
+void Opteron::cht_print(const ht_t neigh, const link_t link)
 {
 	uint32_t val;
-	printf("HT%d L%d Link Control      : 0x%08x\n", neigh, link,
+	printf("HT%u L%u Link Control      : 0x%08x\n", neigh, link,
 	      lib::cht_read32(neigh, LINK_CTRL + link * 0x20));
-	printf("HT%d L%d Link Freq/Revision: 0x%08x\n", neigh, link,
+	printf("HT%u L%u Link Freq/Revision: 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20));
-	printf("HT%d L%d Link Ext Control  : 0x%08x\n", neigh, link,
+	printf("HT%u L%u Link Ext Control  : 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4));
 	val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
-	printf("HT%d L%d Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
+	printf("HT%u L%u Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
 }
 
-static bool proc_lessthan_b0(const uint8_t ht)
+static bool proc_lessthan_b0(const ht_t ht)
 {
 	// AMD Fam15h BKDG p48: OR_B0 = {06h, 01h, 0h}
 	uint32_t val = lib::cht_read32(ht, Opteron::NB_CPUID);
@@ -107,41 +107,10 @@ static bool proc_lessthan_b0(const uint8_t ht)
 	return 0;
 }
 
-void Opteron::ht_optimize_link(int nc, int neigh, int link)
+void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link)
 {
 	bool reboot = 0;
 	uint32_t val;
-
-	if ((neigh < 0) || (link < 0)) {
-		int i;
-		uint32_t rqrt;
-		/* Start looking from node 0 */
-		neigh = 0;
-
-		while (1) {
-			int next = 0;
-			rqrt = lib::cht_read32(neigh, ROUTING + 4 * nc) & 0x1f;
-
-			/* Look for other CPUs routed on same link as NC */
-			for (i = 0; i < nc; i++) {
-				if (rqrt == (lib::cht_read32(neigh, ROUTING + 4 * i) & 0x1f)) {
-					next = i;
-					break;
-				}
-			}
-
-			if (next > 0)
-				neigh = next;
-			else
-				break;
-		}
-
-		link = 0;
-
-		while ((2U << link) < rqrt)
-			link ++;
-	}
-
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
 	printf("Found %s link to NC on HT%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
 
@@ -345,7 +314,7 @@ void Opteron::disable_atmmode(const unsigned nnodes)
 	printf("\n");
 }
 
-ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const uint32_t vendev)
+ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 {
 	ht_t nc;
 	uint32_t val = lib::cht_read32(0, HT_NODE_ID);
@@ -357,8 +326,36 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 		nc = nnodes;
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d already at HT%d\n", rev, nc);
+
+		uint32_t rqrt;
+		/* Start looking from node 0 */
+		neigh = 0;
+
+		while (1) {
+			int next = 0;
+			rqrt = lib::cht_read32(neigh, ROUTING + 4 * nc) & 0x1f;
+
+			/* Look for other CPUs routed on same link as NC */
+			for (int i = 0; i < nc; i++) {
+				if (rqrt == (lib::cht_read32(neigh, ROUTING + 4 * i) & 0x1f)) {
+					next = i;
+					break;
+				}
+			}
+
+			if (next > 0)
+				neigh = next;
+			else
+				break;
+		}
+
+		link = 0;
+
+		while ((2U << link) < rqrt)
+			link ++;
+
 		/* Chip already found; make sure the desired width/frequency is set */
-		ht_optimize_link(nc, -1, -1);
+		ht_optimize_link(nc, neigh, link);
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
 		int rt, i;
@@ -405,9 +402,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 			/* Does not return */
 		}
 
-		// FIXME detect sublink
-		sublink = 0;
-		printf("HT%u.%u.%u is coherent and unrouted\n", neigh, link, sublink);
+		printf("HT%u.%u is coherent and unrouted\n", neigh, link);
 
 		nc = nnodes + 1;
 		/* "neigh" request/response routing, copy bcast values from self */
@@ -440,7 +435,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, link_t &sublink, const 
 		}
 
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
-		printf("NumaChip2 rev %d found on HT%d.%d\n", rev, neigh, link);
+		printf("NumaChip2 rev %d found on HT%u.%u\n", rev, neigh, link);
 
 		// ramp up link speed and width before adding to coherent fabric
 		ht_optimize_link(nc, neigh, link);

@@ -244,7 +244,7 @@ static void setup_info(void)
 	infop->ver = 0;
 	infop->neigh_ht = local_node->neigh_ht;
 	infop->neigh_link = local_node->neigh_link;
-	infop->neigh_sublink = local_node->neigh_sublink;
+	infop->neigh_sublink = 0;
 	infop->symmetric = 1;
 	infop->devices = config->local_node->devices;
 
@@ -324,8 +324,8 @@ static void copy_inherit(void)
 
 		// FIXME
 		(*node)->neigh_ht = 2;
-		printf("%03x Numachip @ HT%u.%u.%u\n", (*node)->sci, (*node)->neigh_ht,
-		       (*node)->neigh_link, (*node)->neigh_sublink);
+		printf("%03x Numachip @ HT%u.%u\n", (*node)->sci, (*node)->neigh_ht,
+		       (*node)->neigh_link);
 	}
 }
 
