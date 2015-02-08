@@ -769,8 +769,9 @@ int main(const int argc, char *argv[])
 		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
 			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
 				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
-					printf("Found matching local MMIO range %u on SCI%03x#%d: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d%s\n",
-					       range, local_node->sci, (*nb)->ht, base, limit, dest, link, lock ? "locked" : "");
+					if (options->debug.maps)
+						printf("Found matching local MMIO range %u on SCI%03x#%d: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d%s\n",
+						       range, local_node->sci, (*nb)->ht, base, limit, dest, link, lock ? "locked" : "");
 					(*nb)->mmiomap->remove(range);
 					(*nb)->mmiomap->add(range, Numachip2::LOC_LIM+1, limit, dest, link);
 					break;
