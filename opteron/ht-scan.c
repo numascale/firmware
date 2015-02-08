@@ -46,6 +46,11 @@ void Opteron::reset(const enum reset mode, const int last)
 		outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 	}
 
+	if (mode == Init) {
+		outb((0 << 3) | (0 << 2) | (0 << 1), 0xcf9);
+		outb((0 << 3) | (1 << 2) | (0 << 1), 0xcf9);
+	}
+
 	/* Cold reset */
 	outb((1 << 3) | (0 << 2) | (1 << 1), 0xcf9);
 	outb((1 << 3) | (1 << 2) | (1 << 1), 0xcf9);

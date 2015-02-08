@@ -62,7 +62,7 @@ private:
 		void add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest);
 	};
 
-	enum reset {Warm, Cold};
+	enum reset {Warm, Cold, Init};
 	uint32_t scrub;
 	bool local;
 
