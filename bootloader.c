@@ -789,8 +789,11 @@ int main(const int argc, char *argv[])
 		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
 	}
 
-	if (options->init_only)
+	if (options->init_only) {
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+			(*nb)->check();
 		finished();
+	}
 
 	// initialize SPI/SPD, DRAM, NODEID etc
 	local_node->numachip->late_init();
