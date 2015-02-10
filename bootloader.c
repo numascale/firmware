@@ -758,6 +758,10 @@ int main(const int argc, char *argv[])
 
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
+	uint16_t reason = lib::pmio_read16(0x44);
+	if (reason & ~((1 << 2) | (1 << 6))) /* Mask out CF9 and keyboard reset */
+		warning("Last reboot reason (PM44h) was 0x%x", reason);
+
 	// adjust down MMIO range to prevent overlap
 	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
 		uint64_t base, limit;
