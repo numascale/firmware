@@ -95,10 +95,37 @@ namespace lib
 		return inb(PMIO_PORT + 1 /* PMIO data */);
 	}
 
+	uint16_t pmio_read16(const uint16_t offset)
+	{
+		xassert(!(offset & 1));
+		uint16_t val = 0;
+
+		for (unsigned i = 0; i < sizeof(val); i++)
+			val |= pmio_read8(offset + i) << (i * 8);
+		return val;
+	}
+
+	uint32_t pmio_read32(const uint16_t offset)
+	{
+		xassert(!(offset & 3));
+		uint32_t val = 0;
+
+		for (unsigned i = 0; i < sizeof(val); i++)
+			val |= pmio_read8(offset + i) << (i * 8);
+		return val;
+	}
+
 	void pmio_write8(const uint16_t offset, const uint8_t val)
 	{
 		/* Write offset and value in single 16-bit write */
 		outw(offset | val << 8, PMIO_PORT);
+	}
+
+	void pmio_write16(const uint16_t offset, const uint16_t val)
+	{
+		xassert(!(offset & 1));
+		for (unsigned i = 0; i < sizeof(val); i++)
+			pmio_write8(offset + i, val >> (i * 8));
 	}
 
 	void pmio_write32(const uint16_t offset, const uint32_t val)
