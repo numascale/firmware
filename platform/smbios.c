@@ -87,6 +87,9 @@ SMBIOS::SMBIOS(void)
 	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
 
 	// constraints
-	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL"))
-		assertf(!strcmp(biosver, "DS3.5a    "), "\nPlease flash BIOS DS3.5a for correct behaviour");
+	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL") &&
+	    strcmp(biosver, "DS3.5a    ") && strcmp(biosver, "3.5b      ")) {
+		printf("\n");
+		fatal("Please flash BIOS DS3.5a or 3.5b for correct behaviour");
+	}
 }
