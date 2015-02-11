@@ -17,6 +17,7 @@
 
 #include "node.h"
 #include "library/access.h"
+#include "library/utils.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -49,6 +50,24 @@ void Node::check(void)
 
 	numachip->fabric_check();
 	numachip->dram_check();
+}
+
+void Node::tracing_arm(void)
+{
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n]->tracing_arm();
+}
+
+void Node::tracing_start(void)
+{
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n]->tracing_start();
+}
+
+void Node::tracing_stop(void)
+{
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n]->tracing_stop();
 }
 
 // instantiated for remote nodes

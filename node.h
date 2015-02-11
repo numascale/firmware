@@ -42,6 +42,10 @@ public:
 
 	void init(void);
 	void check(void);
+	void tracing_arm(void);
+	void tracing_start(void);
+	void tracing_stop(void);
+
 	Node(const sci_t _sci, const ht_t ht);
 	Node(const sci_t _sci, const sci_t master);
 };

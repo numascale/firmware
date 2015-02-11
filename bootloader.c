@@ -299,7 +299,6 @@ static void remap(void)
 				// disable DRAM stutter scrub
 				uint32_t val = (*nb)->read32(Opteron::CLK_CTRL_0);
 				(*nb)->write32(Opteron::CLK_CTRL_0, val & ~(1 << 15));
-				(*nb)->tracing_arm();
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 			}
 		}
@@ -428,8 +427,7 @@ static void tracing_arm(void)
 		return;
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->tracing_arm();
+		(*node)->tracing_arm();
 }
 
 static void tracing_start(void)
@@ -443,8 +441,7 @@ static void tracing_start(void)
 			printf(" %03x#%u", (*nb)->sci, (*nb)->ht);
 	printf("\n");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->tracing_start();
+		(*node)->tracing_start();
 }
 
 static void tracing_stop(void)
@@ -453,8 +450,7 @@ static void tracing_stop(void)
 		return;
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->tracing_stop();
+		(*node)->tracing_stop();
 	printf("Tracing stopped on:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
@@ -710,6 +706,10 @@ static void finalise(void)
 				(*nb)->dram_scrub_enable();
 
 		printf("\n");
+	} else {
+		// Arm the tracer
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+			(*node)->tracing_arm();
 	}
 
 	e820->test();
