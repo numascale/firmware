@@ -106,21 +106,20 @@ void Opteron::check(void)
 	}
 }
 
-void Opteron::disable_syncflood(const ht_t nb)
+void Opteron::disable_syncflood(void)
 {
 	warning_once("Disabling sync-flood");
 
-	uint32_t val = lib::cht_read32(nb, MC_NB_CONF);
+	uint32_t val = read32(MC_NB_CONF);
 	val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
 	val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
 	val |= 1 << 4;     // SyncPktPropDis: sync packet propagation disable
 	val &= ~(1 << 20); // SyncOnWDTEn: sync flood on watchdog timer error enable
 	val &= ~(1 << 21); // SyncOnAnyErrEn: sync flood on any error enable
 	val &= ~(1 << 30); // SyncOnDramAdrParErrEn: sync flood on DRAM address parity error enable
-	val |= 1 << 8;     // disable WDT
-	lib::cht_write32(nb, MC_NB_CONF, val);
+	write32(MC_NB_CONF, val);
 
-	val = lib::cht_read32(nb, MC_NB_CONF_EXT);
+	val = read32(MC_NB_CONF_EXT);
 	val &= ~(1 << 1);  // SyncFloodOnUsPwDataErr: sync flood on upstream posted write data error
 	val &= ~(1 << 6);  // SyncFloodOnDatErr
 	val &= ~(1 << 7);  // SyncFloodOnTgtAbtErr
@@ -129,13 +128,22 @@ void Opteron::disable_syncflood(const ht_t nb)
 	val &= ~(1 << 20); // SyncFloodOnL3LeakErr: sync flood on L3 cache leak error enable
 	val &= ~(1 << 21); // SyncFloodOnCpuLeakErr: sync flood on CPU leak error enable
 	val &= ~(1 << 22); // SyncFloodOnTblWalkErr: sync flood on table walk error enable
-	lib::cht_write32(nb, MC_NB_CONF_EXT, val);
+	write32(MC_NB_CONF_EXT, val);
 
 	for (unsigned l = 0; l < 4; l++) {
 		// CrcFloodEn: Enable sync flood propagation upon link failure
-		val = read32(0x0084 + l * 0x20);
-		write32(0x0084 + l * 0x20, val & ~2);
+		val = read32(LINK_CTRL + l * 0x20);
+		write32(LINK_CTRL + l * 0x20, val & ~2);
 	}
+}
+
+void Opteron::disable_nbwdt(void)
+{
+	warning_once("Disabling NorthBridge Watch Dog Timer");
+
+	uint32_t val = read32(MC_NB_CONF);
+	val |= 1 << 8;
+	write32(MC_NB_CONF, val);
 }
 
 uint64_t Opteron::read64(const reg_t reg) const
@@ -307,8 +315,12 @@ void Opteron::init(void)
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
 
+	// Enable reporting of WatchDog error through MCA
+	val = read32(MC_NB_CTRL);
+	write32(MC_NB_CTRL, val | (1 << 12));
+
 	if (options->debug.northbridge)
-		disable_syncflood(ht);
+		disable_syncflood();
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
@@ -385,15 +397,18 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
 
+#if NOT_NEEDED
 	// Numachip can't handle Coherent Prefetch Probes, required disabled for PF anyway
 	// FIXME: check if needed
 	val = read32(MCTL_EXT_CONF_LOW);
 	write32(MCTL_EXT_CONF_LOW, val & ~(7 << 8));
 
 	// disable traffic distribution for directed probes
+	// Only valid on some 2-socket platforms
 	// FIXME: check if needed
 	val = read32(COH_LINK_TRAF_DIST);
 	write32(COH_LINK_TRAF_DIST, val & ~1);
+#endif
 
 	// disable legacy GARTs
 	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)
