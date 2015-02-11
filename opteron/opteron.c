@@ -250,7 +250,8 @@ void Opteron::dram_scrub_disable(void)
 void Opteron::dram_scrub_enable(void)
 {
 	uint32_t redir = read32(SCRUB_ADDR_LOW) & 1;
-	write64_split(SCRUB_ADDR_LOW, dram_base | redir);
+	write32(SCRUB_ADDR_LOW, dram_base | redir);
+	write32(SCRUB_ADDR_HIGH, dram_base >> 32);
 
 	/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 	   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
