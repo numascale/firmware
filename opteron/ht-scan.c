@@ -358,7 +358,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		ht_optimize_link(nc, neigh, link);
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
-		int rt, i;
+		int rt;
 		bool use = 1;
 
 		for (neigh = 0; neigh <= nnodes; neigh++) {
@@ -410,7 +410,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		lib::cht_write32(neigh, ROUTING + nc * 4,
 			   (val & 0x07fc0000) | (0x402 << link));
 
-		for (i = 0; i <= nnodes; i++) {
+		for (int i = 0; i <= nnodes; i++) {
 			val = lib::cht_read32(i, LINK_TRANS_CTRL);
 			lib::cht_write32(i, LINK_TRANS_CTRL, val & ~(1 << 15)); /* LimitCldtCfg */
 
@@ -427,7 +427,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		if (options->ht_selftest) {
 			printf("HT selftest");
-			for (i = 0; i < 500000; i++) {
+			for (int i = 0; i < 500000; i++) {
 				val = lib::cht_read32(nc, Numachip2::VENDEV);
 				assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 			}
@@ -442,29 +442,33 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		if (family >= 0x15)
 			disable_atmmode(nnodes);
-
 		printf("Adjusting HT fabric");
 		lib::critical_enter();
-		Devices::IOAPIC::inhibit();
 
-		for (i = nnodes; i >= 0; i--) {
-			uint32_t ltcr, val2;
+		uint32_t ltcr[8];
+		uint32_t nodeid[8];
+		uint32_t route[8];
+		for (int i = nnodes; i >= 0; i--) {
+			nodeid[i] = lib::cht_read32(i, HT_NODE_ID);
 			/* Disable probes while adjusting */
-			ltcr = lib::cht_read32(i, LINK_TRANS_CTRL);
+			ltcr[i] = lib::cht_read32(i, LINK_TRANS_CTRL);
 			lib::cht_write32(i, LINK_TRANS_CTRL,
-				   ltcr | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
-			/* Update "neigh" bcast values for node about to increment fabric size */
-			val = lib::cht_read32(neigh, ROUTING + i * 4);
-			val2 = lib::cht_read32(i, HT_NODE_ID);
-			lib::cht_write32(neigh, ROUTING + i * 4, val | (0x80000 << link));
-			/* FIXME: Race condition observered to cause lockups at this point */
-			/* Increase fabric size */
-			lib::cht_write32(i, HT_NODE_ID, val2 + (1 << 4));
-			/* Reassert LimitCldtCfg */
-			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr | (1 << 15));
+				   ltcr[i] | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
+			route[i] = val = lib::cht_read32(neigh, ROUTING + i * 4);
 		}
 
-		Devices::IOAPIC::restore();
+		/* FIXME: Race condition observered to cause lockups at this point */
+		for (int i = nnodes; i >= 0; i--) {
+			/* Update "neigh" bcast values for node about to increment fabric size */
+			lib::cht_write32(neigh, ROUTING + i * 4, route[i] | (0x80000 << link));
+			/* Increase fabric size */
+			lib::cht_write32(i, HT_NODE_ID, nodeid[i] + (1 << 4));
+		}
+
+		/* Reassert LimitCldtCfg */
+		for (int i = nnodes; i >= 0; i--)
+			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr[i] | (1 << 15));
+
 		lib::critical_leave();
 		printf("\n");
 	}
