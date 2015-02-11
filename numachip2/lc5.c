@@ -26,7 +26,8 @@
 // returns 1 when link is up
 bool LC5::is_up(void)
 {
-	return numachip.read32(LINKSTAT + index * SIZE) >> 31;
+	link_up = numachip.read32(LINKSTAT + index * SIZE) >> 31;
+	return link_up;
 }
 
 uint64_t LC5::status(void)
@@ -39,8 +40,23 @@ uint64_t LC5::status(void)
 void LC5::check(void)
 {
 	uint64_t val = status();
-	if (val != 0x0000000080000000)
+
+	if (val & ~(1ULL<<31))
 		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+
+	/* Clear errors W1TC */
+	numachip.write32(LINKSTAT + index * SIZE, val);
+	numachip.write32(EVENTSTAT + index * SIZE, val >> 32);
+
+	/* Simple link up/down reporting */
+	if ( link_up && ((val & (1ULL<<31)) == 0)) {
+		warning("Fabric link %u is down!", index);
+		link_up = false;
+	}
+	if (!link_up && ((val & (1ULL<<31)) != 0)) {
+		warning("Fabric link %u is up!", index);
+		link_up = true;
+	}
 }
 
 void LC5::clear(void)

@@ -29,7 +29,7 @@ protected:
 public:
 	const uint8_t index;
 	const uint16_t chunkaddr, tableaddr;
-
+	bool link_up;
 	// can't use pure virtual (= 0) due to link-time dependency with libstdc++
 	virtual bool is_up(void) {return 0;};
 	virtual uint64_t status(void) {return 0;};
