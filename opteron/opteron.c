@@ -139,7 +139,7 @@ void Opteron::disable_syncflood(void)
 
 void Opteron::disable_nbwdt(void)
 {
-	warning_once("Disabling NorthBridge Watch Dog Timer");
+	warning_once("Disabling NorthBridge WatchDog Timer");
 
 	uint32_t val = read32(MC_NB_CONF);
 	val |= 1 << 8;
@@ -316,12 +316,20 @@ void Opteron::init(void)
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
 
+	// Set up buffer for HT tracing
+	if (options->tracing) {
+		trace_base = dram_base + dram_size - options->tracing;
+		trace_limit = trace_base + options->tracing - 1;
+	}
+
 	// Enable reporting of WatchDog error through MCA
 	val = read32(MC_NB_CTRL);
 	write32(MC_NB_CTRL, val | (1 << 12));
 
-	if (options->debug.northbridge)
+	if (options->debug.northbridge) {
 		disable_syncflood();
+		disable_nbwdt();
+	}
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
