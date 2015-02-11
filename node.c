@@ -16,6 +16,7 @@
  */
 
 #include "node.h"
+#include "library/access.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -66,6 +67,18 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sc
 // instantiated for local nodes
 Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
 {
+	uint32_t val = lib::cht_read32(0, Opteron::HT_NODE_ID);
+	nopterons = ((val >> 4) & 7) + 1;
+
+	// Check if last node is NC2 or not
+	val = lib::cht_read32(nopterons-1, Opteron::VENDEV);
+	if (val == Numachip2::VENDEV_NC2)
+		nopterons--;
+
+	// Opterons are on all HT IDs before Numachip
+	for (ht_t nb = 0; nb < nopterons; nb++)
+		opterons[nb] = new Opteron(sci, nb, local);
+
 #ifndef SIM
 	const ht_t nc = Opteron::ht_fabric_fixup(neigh_ht, neigh_link, Numachip2::VENDEV_NC2);
 #else
@@ -75,10 +88,6 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 
 	numachip = new Numachip2(sci, nc, local, master);
 	nopterons = nc;
-
-	// Opterons are on all HT IDs before Numachip
-	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(sci, nb, local);
 
 	init();
 }
