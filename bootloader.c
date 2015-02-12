@@ -857,7 +857,7 @@ int main(const int argc, char *argv[])
 		handover_legacy(local_node->sci);
 
 		local_node->iohub->smi_disable();
-		disable_dma_all(local_node->sci);
+		pci_disable_all(local_node->sci);
 
 		// clear BSP flag
 		uint64_t val = lib::rdmsr(MSR_APIC_BAR);

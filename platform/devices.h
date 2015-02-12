@@ -122,7 +122,9 @@ struct devspec {
 void pci_search(const sci_t sci, const struct devspec *list, const int bus);
 void stop_acpi(const sci_t sci);
 void disable_kvm_ports(const sci_t sci, const int port);
-void disable_dma_all(const sci_t sci);
 void handover_legacy(const sci_t sci);
 void pci_setup(const sci_t sci);
-void disable_device(const uint16_t sci, const int bus, const int dev, const int fn);
+void pci_dma_disable_all(const sci_t sci);
+void pci_dma_enable_all(const sci_t sci);
+void pci_disable_device(const uint16_t sci, const int bus, const int dev, const int fn);
+void pci_disable_all(const sci_t sci);

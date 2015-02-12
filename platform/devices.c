@@ -89,19 +89,11 @@ static void pci_search_start(const sci_t sci, const struct devspec *list)
 	pci_search(sci, list, 0);
 }
 
-void disable_kvm_ports(const sci_t sci, const unsigned port) {
+void disable_kvm_ports(const sci_t sci, const unsigned port)
+{
 	/* Disable AMI Virtual Keyboard and Mouse ports, since they generate a lot of interrupts */
 	uint32_t val = lib::mcfg_read32(sci, 0, 19, 0, 0x40);
 	lib::mcfg_write32(sci, 0, 19, 0, 0x40, val | (1 << (port + 16)));
-}
-
-void disable_dma_all(const sci_t sci)
-{
-	const struct devspec devices[] = {
-		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, disable_device},
-		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
-	};
-	pci_search_start(sci, devices);
 }
 
 static uint16_t capability(const sci_t sci, const int bus, const int dev, const int fn, const uint8_t cap)
@@ -149,7 +141,37 @@ static uint16_t extcapability(const sci_t sci, const int bus, const int dev, con
 	return PCI_CAP_NONE;
 }
 
-void disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
+static void pci_dma_disable(const uint16_t sci, const int bus, const int dev, const int fn)
+{
+	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val & ~(1 << 2)); /* Bus Master */
+}
+
+static void pci_dma_enable(const uint16_t sci, const int bus, const int dev, const int fn)
+{
+	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val | (1 << 2)); /* Bus Master */
+}
+
+void pci_dma_disable_all(const sci_t sci)
+{
+	const struct devspec devices[] = {
+		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_dma_disable},
+		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
+	};
+	pci_search_start(sci, devices);
+}
+
+void pci_dma_enable_all(const sci_t sci)
+{
+	const struct devspec devices[] = {
+		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_dma_enable},
+		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
+	};
+	pci_search_start(sci, devices);
+}
+
+void pci_disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
 {
 	// put device into D3 if possible
 	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_POWER);
@@ -171,6 +193,15 @@ void disable_device(const uint16_t sci, const int bus, const int dev, const int 
 	lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
 	/* Set Interrupt Line register to 0 (unallocated) */
 	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
+}
+
+void pci_disable_all(const sci_t sci)
+{
+	const struct devspec devices[] = {
+		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_disable_device},
+		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
+	};
+	pci_search_start(sci, devices);
 }
 
 static void completion_timeout(const sci_t sci, const int bus, const int dev, const int fn)
