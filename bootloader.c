@@ -794,8 +794,13 @@ int main(const int argc, char *argv[])
 	}
 
 	if (options->init_only) {
-		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+			if (options->tracing) {
+				(*nb)->tracing_arm();
+				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
+			}
 			(*nb)->check();
+		}
 		finished();
 	}
 
