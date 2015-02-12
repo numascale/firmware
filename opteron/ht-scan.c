@@ -91,7 +91,14 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 	printf("HT%u L%u Link Ext Control  : 0x%08x\n", neigh, link,
 	       lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4));
 	val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
-	printf("HT%u L%u Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, (val >> 23) & 0x1f, (val >> 18) & 0x1f);
+	uint8_t rtt = (val >> 23) & 0x1f;
+	uint8_t ron = (val >> 18) & 0x1f;
+	printf("HT%u L%u Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, rtt, ron);
+	if (rtt != 12)
+		warning("Rtt %u is different than expected value of 12\n", rtt);
+
+	if (ron != 11)
+		warning("Ron %u is different than expected value of 11\n", ron);
 }
 
 static bool proc_lessthan_b0(const ht_t ht)
