@@ -36,7 +36,7 @@ public:
 	bool fast;
 	uint64_t tracing;
 	struct debug_flags {
-		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge;
+		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge, cores;
 	} debug;
 
 	Options(const int argc, char *const argv[]);

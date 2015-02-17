@@ -19,6 +19,7 @@
 
 #ifndef __ASSEMBLER__
 #include "../library/base.h"
+#include "../platform/options.h"
 #endif
 
 #define VECTOR_SETUP 1
@@ -58,7 +59,8 @@ struct msr_ent {
 
 static inline void push_msr(const uint32_t num, const uint64_t val)
 {
-	printf("Global MSR%08x -> %016llx\n", num, val);
+	if (options->debug.cores)
+		printf("Global MSR%08x -> %016llx\n", num, val);
 	xassert(asm_relocated);
 	struct msr_ent *msrp = (struct msr_ent *)REL32(msrs);
 	unsigned i = 0;
