@@ -94,7 +94,7 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 	uint8_t rtt = (val >> 23) & 0x1f;
 	uint8_t ron = (val >> 18) & 0x1f;
 	printf("HT%u L%u Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, rtt, ron);
-	if (rtt != 12)
+	if (rtt < 12 || rtt > 13)
 		warning("Rtt %u is different than expected value of 12\n", rtt);
 
 	if (ron != 11)
