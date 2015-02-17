@@ -762,7 +762,7 @@ int main(const int argc, char *argv[])
 	if (reason & ~((1 << 2) | (1 << 6))) /* Mask out CF9 and keyboard reset */
 		warning("Last reboot reason (PM44h) was 0x%x", reason);
 
-	if (lib::mcfg_read32(0x000, 0, 0x20, 0, 0x4c) & (1 << 30))
+	if (lib::mcfg_read32(0x000, 0, 0x14, 0, 0x4c) & (1 << 30))
 		warning("Last reboot reason by BootFail timer");
 
 	// adjust down MMIO range to prevent overlap
