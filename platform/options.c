@@ -188,8 +188,8 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 	printf("\n");
 	assertf(!errors, "Invalid arguments specified");
 
-	if (tracing == 1 || tracing == 2) {
-		printf("Defaulting to 512MB trace buffers\n");
-		tracing = 512ULL << 20;
+	if (tracing < (16ULL << 20)) {
+		warning("Too small trace buffers specified (%"PRIu64" MB), must be 16MB or more. Disabled.", tracing >> 20);
+		tracing = 0;
 	}
 }

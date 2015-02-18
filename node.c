@@ -60,6 +60,10 @@ void Node::tracing_arm(void)
 
 void Node::tracing_start(void)
 {
+	printf("Tracing started on:");
+	for (ht_t n = 0; n < nopterons; n++)
+		printf(" %03x#%u", opterons[n]->sci, opterons[n]->ht);
+	printf("\n");
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n]->tracing_start();
 }
@@ -68,6 +72,10 @@ void Node::tracing_stop(void)
 {
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n]->tracing_stop();
+	printf("Tracing stopped on:");
+	for (ht_t n = 0; n < nopterons; n++)
+		printf(" %03x#%u", opterons[n]->sci, opterons[n]->ht);
+	printf("\n");
 }
 
 // instantiated for remote nodes

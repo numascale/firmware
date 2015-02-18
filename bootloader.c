@@ -423,7 +423,7 @@ static void setup_cores(void)
 
 static void tracing_arm(void)
 {
-	if (options->tracing != 2)
+	if (!options->tracing)
 		return;
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
@@ -432,30 +432,20 @@ static void tracing_arm(void)
 
 static void tracing_start(void)
 {
-	if (options->tracing != 2)
+	if (!options->tracing)
 		return;
 
-	printf("Tracing started on:");
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			printf(" %03x#%u", (*nb)->sci, (*nb)->ht);
-	printf("\n");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->tracing_start();
 }
 
 static void tracing_stop(void)
 {
-	if (options->tracing != 2)
+	if (!options->tracing)
 		return;
 
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->tracing_stop();
-	printf("Tracing stopped on:");
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			printf(" %03x#%u", (*nb)->sci, (*nb)->ht);
-	printf("\n");
 }
 
 static void test_cores(void)
@@ -706,13 +696,10 @@ static void finalise(void)
 				(*nb)->dram_scrub_enable();
 
 		printf("\n");
-	} else {
-		// Arm the tracer
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-			(*node)->tracing_arm();
 	}
 
 	e820->test();
+	tracing_arm();
 	setup_cores();
 	acpi_tables();
 	test_cores();
@@ -830,6 +817,13 @@ int main(const int argc, char *argv[])
 		local_node->numachip->fabric_train();
 
 	if (!config->local_node->partition) {
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+			if (options->tracing) {
+				(*nb)->tracing_arm();
+				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
+			}
+			(*nb)->check();
+		}
 		setup_cores_observer();
 		setup_info();
 		finished();
