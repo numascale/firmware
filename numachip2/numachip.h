@@ -154,10 +154,16 @@ public:
 	static const reg_t TAG_MCTR_MASK     = 0x0c;
 	static const reg_t TAG_CPU_ADDR      = 0x10;
 	static const reg_t TAG_CPU_DATA      = 0x18;
-	static const reg_t HT_RECFG_DATA     = 0x20F0;
-	static const reg_t HT_RECFG_ADDR     = 0x20F4;
-	static const reg_t FABRIC_RECFG_DATA = 0x20F8;
-	static const reg_t FABRIC_RECFG_ADDR = 0x20FC;
+	static const reg_t IMG_PROP_ADDR     = 0x2064;
+	static const reg_t IMG_PROP_DATA     = 0x2068;
+	static const reg_t IMG_PROP_TEMP     = 0x206c;
+	static const reg_t IMG_PROP_FLAGS    = 0x00;
+	static const reg_t IMG_PROP_HASH     = 0x01;
+	static const reg_t IMG_PROP_STRING   = 0x06;
+	static const reg_t HT_RECFG_DATA     = 0x20f0;
+	static const reg_t HT_RECFG_ADDR     = 0x20f4;
+	static const reg_t FABRIC_RECFG_DATA = 0x20f8;
+	static const reg_t FABRIC_RECFG_ADDR = 0x20fc;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t LMPE_CTRL         = 0x2180;
 	static const reg_t SIU_XBAR_TABLE    = 0x2200;
@@ -200,6 +206,7 @@ public:
 	void write8(const reg_t reg, const uint8_t val) const;
 	static ht_t probe(const sci_t sci);
 	void late_init(void);
+	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
 	void fabric_train(void);
 	void fabric_check(void);

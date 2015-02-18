@@ -525,19 +525,15 @@ void ACPI::check(void)
 
 void ACPI::handover(void)
 {
-	printf("ACPI handover: ");
+	printf("ACPI handover");
 	acpi_sdt *fadt = find_sdt("FACP");
-
-	if (!fadt) {
-		printf("ACPI FACP table not found\n");
-		return;
-	}
+	xassert(fadt);
 
 	uint32_t smi_cmd = *(uint32_t *)&fadt->data[48 - 36];
 	uint8_t acpi_enable = fadt->data[52 - 36];
 
 	if (!smi_cmd || !acpi_enable) {
-		printf("legacy support not enabled\n");
+		printf(": legacy support not enabled\n");
 		return;
 	}
 
@@ -551,12 +547,12 @@ void ACPI::handover(void)
 		sci_en = inb(acpipm1cntblk);
 
 		if ((sci_en & 1) == 1) {
-			printf("legacy handover succeeded\n");
+			printf("\n"); // success
 			return;
 		}
 	} while (--limit);
 
-	printf("ACPI handover timed out\n");
+	fatal("ACPI handover timed out");
 }
 
 void ACPI::get_cores(void)

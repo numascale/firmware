@@ -83,17 +83,16 @@ void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, 
 
 void Opteron::cht_print(const ht_t neigh, const link_t link)
 {
-	uint32_t val;
-	printf("HT%u L%u Link Control      : 0x%08x\n", neigh, link,
-	      lib::cht_read32(neigh, LINK_CTRL + link * 0x20));
-	printf("HT%u L%u Link Freq/Revision: 0x%08x\n", neigh, link,
-	       lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20));
-	printf("HT%u L%u Link Ext Control  : 0x%08x\n", neigh, link,
-	       lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4));
-	val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
+	uint32_t val = phy_read32(neigh, link, PHY_COMPCAL_CTRL1, 0);
 	uint8_t rtt = (val >> 23) & 0x1f;
 	uint8_t ron = (val >> 18) & 0x1f;
-	printf("HT%u L%u Link Phy Settings : Rtt=%d Ron=%d\n", neigh, link, rtt, ron);
+
+	printf("Link Ctrl 0x%08x, Freq/Rev 0x%08x, Ext Ctrl 0x%08x, Rtt %u, Ron %u\n",
+	  lib::cht_read32(neigh, LINK_CTRL + link * 0x20),
+	  lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20),
+	  lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4),
+	  rtt, ron);
+
 	if (rtt < 12 || rtt > 13)
 		warning("Rtt %u is different than expected value of 12\n", rtt);
 
@@ -119,7 +118,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	bool reboot = 0;
 	uint32_t val;
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
-	printf("Found %s link to NC on HT%d L%d\n", ganged ? "ganged" : "unganged", neigh, link);
+	printf("Found %s link to NC on HT%u.%u\n", ganged ? "ganged" : "unganged", neigh, link);
 
 	cht_print(neigh, link);
 
