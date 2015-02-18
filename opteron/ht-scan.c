@@ -373,6 +373,8 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 			for (link = 0; link < 4; link++) {
 				val = lib::cht_read32(neigh, LINK_TYPE + link * 0x20);
+				if ((val & 0x1f) != 0x3)
+					continue; /* Not coherent */
 				uint32_t val2 = lib::cht_read32(neigh, LINK_CTRL + link * 0x20);
 				if (val2 & 0x300)
 					warning("HT%d.%d CRC error", neigh, link);
@@ -380,8 +382,10 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 					warning("HT%d.%d failure", neigh, link);
 				if (options->debug.ht)
 					printf("HT%d.%d LinkControl = 0x%08x\n", neigh, link, val2);
-				if ((val & 0x1f) != 0x3)
-					continue; /* Not coherent */
+				if (options->debug.ht)
+					printf("HT%d.%d LinkBaseBufCnt = 0x%08x\n", neigh, link, lib::cht_read32(neigh, LINK_BASE_BUF_CNT + link * 0x20));
+				if (options->debug.ht)
+					printf("HT%d.%d LinkIsocBufCnt = 0x%08x\n", neigh, link, lib::cht_read32(neigh, LINK_ISOC_BUF_CNT + link * 0x20));
 
 				use = 0;
 
@@ -402,6 +406,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 			if (!use)
 				break;
 		}
+
 
 		if (use) {
 			fatal("No unrouted coherent links found");
@@ -449,6 +454,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		if (family >= 0x15)
 			disable_atmmode(nnodes);
+
 		printf("Adjusting HT fabric");
 		pci_dma_disable_all(0x000);
 		lib::critical_enter();
@@ -461,8 +467,8 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 			/* Disable probes while adjusting */
 			ltcr[i] = lib::cht_read32(i, LINK_TRANS_CTRL);
 			lib::cht_write32(i, LINK_TRANS_CTRL,
-				   ltcr[i] | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
-			route[i] = val = lib::cht_read32(neigh, ROUTING + i * 4);
+					 ltcr[i] | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
+			route[i] = lib::cht_read32(neigh, ROUTING + i * 4);
 		}
 
 		/* FIXME: Race condition observered to cause lockups at this point */
