@@ -260,7 +260,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 void Opteron::disable_atmmode(const unsigned nnodes)
 {
-	// skip is ATMMode not enabled
+	// skip if ATMMode not enabled
 	uint32_t val = lib::cht_read32(0, LINK_TRANS_CTRL);
 	if (!(val & (1 << 12)))
 		return;

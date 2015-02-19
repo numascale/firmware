@@ -266,7 +266,7 @@ EXPORT(new_e820_handler)
 	.global asm_relocate_end
 asm_relocate_end:
 
-// replacement code for brute-force SMM disable
+	// replacement code for brute-force SMM disable
 	.code16
 	.text
 	.align 4096
@@ -276,7 +276,3 @@ smm_handler_start:
 	rsm
 	.global smm_handler_end
 smm_handler_end:
-
-	.align 4096
-	.global apic_base
-apic_base:

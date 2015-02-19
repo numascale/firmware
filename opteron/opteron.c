@@ -186,10 +186,14 @@ void Opteron::clearset32(const reg_t reg, const uint32_t clearmask, const uint32
 
 void Opteron::prepare(void)
 {
+	// ensure MCEs aren't redirected into SMIs
+	xassert(!lib::rdmsr(MSR_MCE_REDIR));
+
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code
-	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 17);
+	// also set McStatusWrEn in HWCR to allow adjustments later
+	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 17) | (1ULL << 18);
 	lib::wrmsr(MSR_HWCR, msr);
-	push_msr(MSR_HWCR, msr);
+	push_msr(MSR_HWCR, msr & ~(1ULL << 17)); // don't enable Wrap32Dis on other cores
 
 	// enable 64-bit config access
 	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
@@ -376,10 +380,10 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 
 	// FIXME set DisOrderRdRsp
 
-	// set CHtExtAddrEn, ApicExtId, ApicExtBrdCst
 	uint32_t val = read32(LINK_TRANS_CTRL);
-	if ((val & ((1 << 25) | (1 << 18) | (1 << 17))) != ((1 << 25) | (1 << 18) | (1 << 17)))
-		write32(LINK_TRANS_CTRL, val | (1 << 25) | (1 << 18) | (1 << 17));
+	val |= (1 << 25) | (1 << 18) | (1 << 17); // set CHtExtAddrEn, ApicExtId, ApicExtBrdCst
+	val &= ~(3 << 21); // disable downstream NP request limit "to avoid DMA Deadlock" (SR5690 Programming Requirements p5-5)
+	write32(LINK_TRANS_CTRL, val);
 
 	if (family >= 0x15) {
 		// due to HT fabric asymmetry, impact of NB P1 transitions can have performance impact,
@@ -406,18 +410,11 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 			write32(LINK_CTRL + i * 0x20, val | (1 << 15));
 	}
 
-#if NOT_NEEDED
 	// Numachip can't handle Coherent Prefetch Probes, required disabled for PF anyway
-	// FIXME: check if needed
-	val = read32(MCTL_EXT_CONF_LOW);
-	write32(MCTL_EXT_CONF_LOW, val & ~(7 << 8));
+	xassert(!(read32(MCTL_EXT_CONF_LOW) & (7 << 8)));
 
-	// disable traffic distribution for directed probes
-	// Only valid on some 2-socket platforms
-	// FIXME: check if needed
-	val = read32(COH_LINK_TRAF_DIST);
-	write32(COH_LINK_TRAF_DIST, val & ~1);
-#endif
+	// traffic distribution for directed probes is incompatible
+	xassert(!(read32(COH_LINK_TRAF_DIST) & 1));
 
 	// disable legacy GARTs
 	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)

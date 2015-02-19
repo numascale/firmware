@@ -144,6 +144,7 @@ public:
 	static const reg_t LINK_PHY_OFFSET     = 0x4180;
 	static const reg_t LINK_PHY_DATA       = 0x4184;
 	static const reg_t NB_CAP_2            = 0x5084;
+	static const reg_t NB_CONF_4           = 0x5088;
 	static const reg_t NB_PSTATE_0         = 0x5160;
 	static const reg_t NB_PSTATE_CTRL      = 0x5170;
 	static const reg_t LINK_PROD_INFO      = 0x5190;
