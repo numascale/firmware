@@ -37,8 +37,9 @@ void Opteron::tracing_start(void)
 	uint32_t val = read32(TRACE_BUF_CTRL);
 	write32(TRACE_BUF_CTRL, val & ~1);
 	write32(TRACE_BUF_CTRL, 1 | (0 << 1) | (0 << 4) | (1 << 13) | (1 << 20) | (0 << 21) | (0 << 23) | (1 << 25));
-	write32(TRACE_STOP, 1 | (1 << 4) | (1 << 8) | (1 << 12) | (1 << 16));
-	write32(TRACE_CAPTURE, (1 << 31) | (1 << 30) | (0x3f << 24) | (0x3f << 16));
+//	write32(TRACE_STOP, 1 | (1 << 4) | (1 << 8) | (1 << 12) | (1 << 16));
+	write32(TRACE_STOP, 1 | (1 << 29)/* | (1 << 4) | (1 << 8) | (1 << 12) | (1 << 16)*/);
+	write32(TRACE_CAPTURE, (1 << 31) | (1 << 14) | (0x3f << 24) | (0x3f << 16));
 
 	write32(TRACE_START, 1 << 31);
 }
