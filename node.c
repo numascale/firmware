@@ -114,7 +114,7 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 	assertf(nc, "NumaChip2 not found");
 
 	numachip = new Numachip2(sci, nc, local, master);
-	nopterons = nc;
+	xassert(nopterons == nc);
 
 	init();
 }
