@@ -253,7 +253,12 @@ namespace lib
 	uint64_t mcfg_base(const sci_t sci)
 	{
 		uint64_t base = (rdmsr(MSR_MCFG) & ~0xfffff);
-		if (base < (1ULL << 32) || sci == SCI_LOCAL)
+		if (base < (1ULL << 32)) {
+			xassert(sci == SCI_LOCAL || sci == 0x000);
+			return base;
+		}
+
+		if (sci == SCI_LOCAL)
 			return base;
 
 		return (base & ~(0xfffULL << 28)) | ((uint64_t)sci << 28);
