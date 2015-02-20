@@ -43,7 +43,7 @@
 #define COL_DEFAULT   "\033[0m"
 #define COL_RED       "\033[31m"
 #define COL_YELLOW    "\033[33m"
-#define CLEAR         "\033\143"
+#define CLEAR         "\033e\033%%@\033)0\033(B\3#007\033[?25h\033[2J\033[H"
 #define BANNER        "\033[1m"
 
 #define SCI_NONE 0xfff
