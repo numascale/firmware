@@ -455,7 +455,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 			disable_atmmode(nnodes);
 
 		printf("Adjusting HT fabric");
-		pci_dma_disable_all(0x000);
+		pci_dma_disable_all(SCI_LOCAL);
 		lib::critical_enter();
 
 		uint32_t ltcr[8];
@@ -483,7 +483,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr[i] | (1 << 15));
 
 		lib::critical_leave();
-		pci_dma_enable_all(0x000);
+		pci_dma_enable_all(SCI_LOCAL);
 		printf("\n");
 	}
 

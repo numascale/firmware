@@ -153,7 +153,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
-		{"fastboot",            &Options::parse_bool,   &fastboot},        /* Skip slow phases */
+		{"fastboot",        &Options::parse_bool,   &fastboot},        /* Skip slow phases */
 		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
 	};
 

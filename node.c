@@ -79,14 +79,14 @@ void Node::tracing_stop(void)
 }
 
 // instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_NONE), sci(_sci), nopterons(ht)
+Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_LOCAL), sci(_sci), nopterons(ht)
 {
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n] = new Opteron(sci, n, local);
 
 	// FIXME set neigh_ht/link/sublink
 
-	numachip = new Numachip2(sci, ht, local, SCI_NONE);
+	numachip = new Numachip2(sci, ht, local, SCI_LOCAL);
 
 	init();
 }
