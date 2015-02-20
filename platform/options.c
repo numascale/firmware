@@ -137,7 +137,7 @@ void Options::parse_flags(const char *val, void *data)
 }
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
-  ht_200mhz_only(0), ht_8bit_only(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0), fast(0), tracing(0)
+  ht_200mhz_only(0), ht_8bit_only(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0), fastboot(0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
@@ -153,7 +153,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
-		{"fast",            &Options::parse_bool,   &fast},            /* Skip slow phases */
+		{"fastboot",            &Options::parse_bool,   &fastboot},        /* Skip slow phases */
 		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
 	};
 

@@ -33,7 +33,7 @@ public:
 	bool handover_acpi;
 	bool reentrant;
 	bool singleton;
-	bool fast;
+	bool fastboot;
 	uint64_t tracing;
 	struct debug_flags {
 		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge, cores;
