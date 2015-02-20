@@ -29,7 +29,7 @@ class Opteron {
 		void print(const unsigned range);
 		MmioMap(Opteron &_opteron, const unsigned _ranges): opteron(_opteron), ranges(_ranges) {};
 		virtual void remove(const unsigned range);
-		virtual bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		virtual bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
 		virtual void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 	};
@@ -38,14 +38,14 @@ public:
 	public:
 		MmioMap15(Opteron &_opteron): MmioMap(_opteron, 12) {};
 		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
-		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
 		void remove(const unsigned range);
 	};
 
 	class MmioMap10: public MmioMap {
 	public:
 		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
-		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
 		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
 		void remove(const unsigned range);
 	};
@@ -57,7 +57,7 @@ private:
 	public:
 		explicit DramMap(Opteron &_opteron);
 		void remove(const unsigned range);
-		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest) nonnull;
 		void print(const unsigned range);
 		void add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest);
 	};

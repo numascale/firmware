@@ -28,7 +28,7 @@ class SMBIOS {
 		uint8_t *data;
 	};
 
-	const char *string(const char *table, uint8_t index);
+	const char *string(const char *table, uint8_t index) nonnull;
 public:
 	const char *biosver, *biosdate;
 	const char *sysmanuf, *sysproduct;

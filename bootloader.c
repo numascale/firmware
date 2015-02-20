@@ -716,7 +716,7 @@ static void finished(void)
 	os->exec(options->next_label);
 }
 
-int main(const int argc, char *argv[])
+int main(const int argc, char *const argv[])
 {
 	os = new OS(); // needed first for console access
 

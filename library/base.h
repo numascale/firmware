@@ -37,6 +37,7 @@
 #define PRInode "node 0x%03x (%s)"
 
 #define checked __attribute__ ((warn_unused_result))
+#define nonnull __attribute__ ((nonnull))
 
 /* ASCII-Art */
 #define COL_DEFAULT   "\033[0m"

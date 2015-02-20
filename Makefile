@@ -1,4 +1,5 @@
-COPT      := -g -Wall -Wextra -Wno-unused-parameter -Wshadow -O3
+COPT_BASE := -fno-rtti -fno-threadsafe-statics -Wall -Wextra -Wunused -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wlogical-op -Wredundant-decls
+COPT      := -g -O3 $(COPT_BASE) -fpermissive
 
 syslinux_version := 4.07
 syslinux_dir     := syslinux-$(syslinux_version)
@@ -62,7 +63,7 @@ $(mjson_dir)/src/json.c: mjson-$(mjson_version).tar.gz
 	sed -i 's/SIZE_MAX/10485760/' $(mjson_dir)/src/json.h
 
 %.o: %.c $(syslinux_dir)/com32/samples/Makefile
-	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make CC="g++ -Wextra -Wshadow -fno-rtti -fpermissive -fno-threadsafe-statics" $(CURDIR)/$@ NOGPL=1)
+	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make CC="g++ $(COPT_BASE)" $(CURDIR)/$@ NOGPL=1)
 
 %.o: %.S $(syslinux_dir)/com32/samples/Makefile
 	(rm -f $@ && cd $(syslinux_dir)/com32/samples && make $(CURDIR)/$@ NOGPL=1)

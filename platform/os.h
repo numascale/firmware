@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "../library/base.h"
+
 #ifndef SIM
 extern "C" {
 	#include <syslinux/pxe.h>
@@ -37,10 +39,10 @@ public:
 	uint8_t mac[6];
 
 	OS(void);
-	char *read_file(const char *filename, size_t *const len);
-	void exec(const char *label);
+	char *read_file(const char *filename, size_t *const len) nonnull;
+	void exec(const char *label) nonnull;
 	void memmap_start(void);
-	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type);
+	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type) nonnull;
 	void cleanup(void);
 };
 

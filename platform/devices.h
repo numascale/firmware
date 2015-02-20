@@ -119,7 +119,7 @@ struct devspec {
 	void (*handler)(const uint16_t, const int, const int, const int);
 };
 
-void pci_search(const sci_t sci, const struct devspec *list, const int bus);
+void pci_search(const sci_t sci, const struct devspec *list, const int bus) nonnull;
 void stop_acpi(const sci_t sci);
 void disable_kvm_ports(const sci_t sci, const int port);
 void handover_legacy(const sci_t sci);

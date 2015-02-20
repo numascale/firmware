@@ -19,11 +19,11 @@
 
 class Options {
 	/* Static needed so we can pass the function address */
-	static void parse_string(const char *val, void *stringp);
-	static void parse_bool(const char *val, void *voidp);
-	static void parse_int(const char *val, void *intp);
-	static void parse_int64(const char *val, void *intp);
-	static void parse_flags(const char *val, void *flags);
+	static void parse_string(const char *val, void *stringp) nonnull;
+	static void parse_bool(const char *val, void *voidp) nonnull;
+	static void parse_int(const char *val, void *intp) nonnull;
+	static void parse_int64(const char *val, void *intp) nonnull;
+	static void parse_flags(const char *val, void *flags) nonnull;
 public:
 	const char *next_label;
 	const char *config_filename;
@@ -39,7 +39,7 @@ public:
 		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge, cores;
 	} debug;
 
-	Options(const int argc, char *const argv[]);
+	Options(const int argc, char *const argv[]) nonnull;
 };
 
 extern Options *options;

@@ -99,8 +99,8 @@ public:
 	char *payload;
 	unsigned allocated, used;
 
-	AcpiTable(const char *name, const unsigned rev);
-	void append(const char *data, const unsigned len);
+	AcpiTable(const char *name, const unsigned rev) nonnull;
+	void append(const char *data, const unsigned len) nonnull;
 	char *reserve(const unsigned len);
 };
 
@@ -114,7 +114,7 @@ class ACPI {
 
 	void shadow_bios(void);
 	acpi_rsdp *find_rsdp(const char *start, int len);
-	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const int ptrsize);
+	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const int ptrsize) nonnull;
 	uint32_t slack(acpi_sdt *parent);
 	void get_cores(void);
 public:

@@ -32,11 +32,11 @@ class Config {
 		bool devices;
 	};
 
-	struct node *find(const sci_t sci);
-	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt);
-	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt);
-	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt);
-	void parse_json(json_t *root);
+	struct node *find(const sci_t sci) nonnull;
+	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt) nonnull;
+	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt) nonnull;
+	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt) nonnull;
+	void parse_json(json_t *root) nonnull;
 public:
 	uint32_t size[3];
 
@@ -44,7 +44,7 @@ public:
 	struct node *local_node, *master, *nodes;
 
 	Config(void);
-	Config(const char *filename);
+	Config(const char *filename) nonnull;
 };
 
 extern Config *config;

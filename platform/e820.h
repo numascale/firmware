@@ -18,6 +18,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "../library/base.h"
 
 #define E820_MAX_LEN 4096
 
@@ -36,8 +37,8 @@ private:
 	static const uint64_t PATTERN = 0xa0a1a2a3a4a5a6a7ULL;
 
 	struct e820entry *position(const uint64_t base);
-	void insert(struct e820entry *pos);
-	void remove(struct e820entry *start, struct e820entry *end);
+	void insert(struct e820entry *pos) nonnull;
+	void remove(struct e820entry *start, struct e820entry *end) nonnull;
 	bool overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const;
 	void test_address(const uint64_t addr, const uint64_t val);
 	void test_location(const uint64_t addr);
