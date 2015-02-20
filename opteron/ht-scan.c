@@ -258,61 +258,68 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	}
 }
 
-void Opteron::disable_atmmode(const unsigned nnodes)
+void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes)
 {
-	// skip if ATMMode not enabled
-	uint32_t val = lib::cht_read32(0, LINK_TRANS_CTRL);
-	if (!(val & (1 << 12)))
-		return;
-
-	printf("Disabling ATM mode");
-	/* 1. Disable the L3 and DRAM scrubbers on all nodes in the system:
-	   - F3x58[L3Scrub]=00h
-	   - F3x58[DramScrub]=00h
-	   - F3x5C[ScrubRedirEn]=0 */
-
 	uint32_t scrub[7];
+	uint32_t val;
 
+	printf("Adjusting HT fabric");
+
+	/* Disable the L3 and DRAM scrubbers on all nodes in the system */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
 		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
 		   See erratum 505 */
-		lib::cht_write32(ht, DCT_CONF_SEL, 0);
+		if (family >= 0x15)
+			lib::cht_write32(ht, DCT_CONF_SEL, 0);
 		scrub[ht] = lib::cht_read32(ht, SCRUB_RATE_CTRL);
 		lib::cht_write32(ht, SCRUB_RATE_CTRL, scrub[ht] & ~0x1f00001f);
 		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val & ~1);
 	}
 
-	// 2.  Wait 40us for outstanding scrub requests to complete
+	/* Wait 40us for outstanding scrub requests to complete */
 	lib::udelay(40);
-	/* 3.  Disable all cache activity in the system by setting
-	   CR0.CD for all active cores in the system */
-	// 4.  Issue WBINVD on all active cores in the system
+	lib::critical_enter();
+
+	/* Issue WBINVD on all active cores in the system */
 	disable_cache();
 
-	// 5.  Set F3x1C4[L3TagInit]=1
-	// 6.  Wait for F3x1C4[L3TagInit]=0
-
-	// 7.  Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0
-	for (ht_t ht = 0; ht <= nnodes; ht++) {
-		val = lib::cht_read32(ht, LINK_TRANS_CTRL);
-		lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 12));
-
-		val = lib::cht_read32(ht, L3_CTRL);
-		lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
+	/* Disable ATMMode on fam15h */
+	if (family >= 0x15) {
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
+			lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 12));
+			val = lib::cht_read32(ht, L3_CTRL);
+			lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
+		}
 	}
 
-	/* 8.  Enable all cache activity in the system by clearing
-	   CR0.CD for all active cores in the system */
-	enable_cache();
+	for (int i = nnodes; i >= 0; i--) {
+		/* Update "neigh" bcast values for node about to increment fabric size */
+		val = lib::cht_read32(neigh, ROUTING + i * 4);
+		lib::cht_write32(neigh, ROUTING + i * 4, val | (0x80000 << link));
+		/* Increase fabric size */
+		val = lib::cht_read32(i, HT_NODE_ID);
+		lib::cht_write32(i, HT_NODE_ID, val + (1 << 4));
+	}
 
-	// 9. Restore L3 and DRAM scrubber register values
+	enable_cache();
+	lib::critical_leave();
+
+	/* Reassert LimitCldtCfg */
+	for (ht_t ht = 0; ht <= nnodes; ht++) {
+		val = lib::cht_read32(ht, LINK_TRANS_CTRL);
+		lib::cht_write32(ht, LINK_TRANS_CTRL, val | (1 << 15));
+	}
+
+	/* Restore L3 and DRAM scrubber register values */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
 		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
 		   See erratum 505 */
-		lib::cht_write32(ht, DCT_CONF_SEL, 0);
+		if (family >= 0x15)
+			lib::cht_write32(ht, DCT_CONF_SEL, 0);
 		lib::cht_write32(ht, SCRUB_RATE_CTRL, scrub[ht]);
 		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val | 1);
@@ -421,16 +428,17 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		lib::cht_write32(neigh, ROUTING + nc * 4,
 			   (val & 0x07fc0000) | (0x402 << link));
 
-		for (int i = 0; i <= nnodes; i++) {
-			val = lib::cht_read32(i, LINK_TRANS_CTRL);
-			lib::cht_write32(i, LINK_TRANS_CTRL, val & ~(1 << 15)); /* LimitCldtCfg */
+		/* Deassert LimitCldtCfg so we can talk to nodes > NodeCnt */
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
+			lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 15));
 
-			if (i == neigh)
+			if (ht == neigh)
 				continue;
 
 			/* Route "nc" same as "neigh" for all other nodes */
-			val = lib::cht_read32(i, ROUTING + neigh * 4);
-			lib::cht_write32(i, ROUTING + nc * 4, val);
+			val = lib::cht_read32(ht, ROUTING + neigh * 4);
+			lib::cht_write32(ht, ROUTING + nc * 4, val);
 		}
 
 		val = lib::cht_read32(nc, Numachip2::VENDEV);
@@ -448,43 +456,11 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d found on HT%u.%u\n", rev, neigh, link);
 
-		// ramp up link speed and width before adding to coherent fabric
+		/* Ramp up link speed and width before adding to coherent fabric */
 		ht_optimize_link(nc, neigh, link);
 
-		if (family >= 0x15)
-			disable_atmmode(nnodes);
-
-		printf("Adjusting HT fabric");
-		pci_dma_disable_all(SCI_LOCAL);
-		lib::critical_enter();
-
-		uint32_t ltcr[8];
-		uint32_t nodeid[8];
-		uint32_t route[8];
-		for (int i = nnodes; i >= 0; i--) {
-			nodeid[i] = lib::cht_read32(i, HT_NODE_ID);
-			/* Disable probes while adjusting */
-			ltcr[i] = lib::cht_read32(i, LINK_TRANS_CTRL);
-			lib::cht_write32(i, LINK_TRANS_CTRL,
-					 ltcr[i] | (1 << 10) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
-			route[i] = lib::cht_read32(neigh, ROUTING + i * 4);
-		}
-
-		/* FIXME: Race condition observered to cause lockups at this point */
-		for (int i = nnodes; i >= 0; i--) {
-			/* Update "neigh" bcast values for node about to increment fabric size */
-			lib::cht_write32(neigh, ROUTING + i * 4, route[i] | (0x80000 << link));
-			/* Increase fabric size */
-			lib::cht_write32(i, HT_NODE_ID, nodeid[i] + (1 << 4));
-		}
-
-		/* Reassert LimitCldtCfg */
-		for (int i = nnodes; i >= 0; i--)
-			lib::cht_write32(i, LINK_TRANS_CTRL, ltcr[i] | (1 << 15));
-
-		lib::critical_leave();
-		pci_dma_enable_all(SCI_LOCAL);
-		printf("\n");
+		/* Add NC to coherent fabric */
+		ht_reconfig(neigh, link, nnodes);
 	}
 
 	val = lib::cht_read32(0, HT_NODE_ID);
