@@ -251,7 +251,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	printf("\n");
 
-	if (!options->fast && reboot) {
+	if (!options->fastboot && reboot) {
 		printf("Rebooting to make new link settings effective...\n");
 		reset(Warm, nc - 1);
 		/* Does not return */
