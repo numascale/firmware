@@ -667,27 +667,27 @@ static void acpi_tables(void)
 
 static void finalise(void)
 {
-	printf("Clearing DRAM");
-	lib::critical_enter();
-
-	// start clearing DRAM
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		unsigned start = node == nodes ? 1 : 0;
-		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->dram_clear_start();
-	}
-
-	// wait for clear to complete
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		unsigned start = node == nodes ? 1 : 0;
-		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-			(*nb)->dram_clear_wait();
-	}
-
-	lib::critical_leave();
-	printf("\n");
-
 	if (!options->tracing) {
+		printf("Clearing DRAM");
+		lib::critical_enter();
+
+		// start clearing DRAM
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			unsigned start = node == nodes ? 1 : 0;
+			for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+				(*nb)->dram_clear_start();
+		}
+
+		// wait for clear to complete
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			unsigned start = node == nodes ? 1 : 0;
+			for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+				(*nb)->dram_clear_wait();
+		}
+
+		lib::critical_leave();
+		printf("\n");
+
 		printf("Enabling scrubbers");
 
 		// enable DRAM scrubbers
@@ -708,7 +708,6 @@ static void finalise(void)
 
 static void finished(void)
 {
-	asm volatile("mfence; wbinvd" ::: "memory");
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
@@ -789,10 +788,8 @@ int main(const int argc, char *const argv[])
 
 	if (options->init_only) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
-			if (options->tracing) {
-				(*nb)->tracing_arm();
+			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-			}
 			(*nb)->check();
 		}
 		finished();
@@ -822,10 +819,8 @@ int main(const int argc, char *const argv[])
 
 	if (!config->local_node->partition) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
-			if (options->tracing) {
-				(*nb)->tracing_arm();
+			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-			}
 			(*nb)->check();
 		}
 		setup_cores_observer();
