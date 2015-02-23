@@ -322,7 +322,8 @@ static void copy_inherit(void)
 		lib::memcpy64((uint64_t)&(*node)->neigh_ht, rnode + xoffsetof(local_node->neigh_ht, local_node), sizeof((*node)->neigh_ht));
 
 		// FIXME
-		(*node)->neigh_ht = 2;
+		(*node)->neigh_ht = local_node->neigh_ht;
+		(*node)->neigh_link = local_node->neigh_link;
 		printf("%03x Numachip @ HT%u.%u\n", (*node)->sci, (*node)->neigh_ht,
 		       (*node)->neigh_link);
 	}
