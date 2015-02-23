@@ -1,5 +1,5 @@
-COPT_BASE := -fno-rtti -fno-threadsafe-statics -Wall -Wextra -Wunused -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wlogical-op -Wredundant-decls
-COPT      := -g -O3 $(COPT_BASE) -fpermissive
+COPT_BASE := -fno-rtti -fno-threadsafe-statics -Wall -Wextra -Wunused -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wlogical-op -Wredundant-decls -fpermissive
+COPT      := -g -O3 $(COPT_BASE)
 
 syslinux_version := 4.07
 syslinux_dir     := syslinux-$(syslinux_version)
