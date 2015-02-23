@@ -712,6 +712,10 @@ static void finished(void)
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
+	// reenable wrap32
+	uint64_t msr = lib::rdmsr(MSR_HWCR);
+	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
+
 	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
 	os->exec(options->next_label);
 }
