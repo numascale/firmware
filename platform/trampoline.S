@@ -197,28 +197,14 @@ EXPORT(msrs)
 	.skip MSR_MAX * 12, 0
 EXPORT(status)
 	.long 0
-EXPORT(apic_local)
-	.byte 0
-#ifdef DEBUG
-cpu_mtrr:
-	.asciz	"\r\nMTRR "
-cpu_cr:
-	.asciz	"\r\nCRx "
-cpu_done1:
-	.asciz	"\r\nCPU "
-cpu_done2:
-	.asciz  " done setting MTRRs\r\n"
-hex32_buf:
-	.asciz	"[--------] "
-#endif
 EXPORT(old_int15_vec)
-	.word 0,0
-
-	.align 64
-EXPORT(new_e820_len)
-	.word 0
+	.long 0
 EXPORT(new_e820_map)
 	.skip E820_MAP_MAX, 0
+EXPORT(new_e820_len)
+	.word 0
+EXPORT(apic_local)
+	.byte 0
 
 	.align 64
 stack_start:  .skip 1024, 0

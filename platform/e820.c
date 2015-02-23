@@ -213,7 +213,9 @@ E820::E820(void)
 	// copy trampoline data
 	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
 	map = (e820entry *)REL32(new_e820_map);
+	xassert(!((unsigned long)map & 3));
 	used = REL16(new_e820_len);
+	xassert(!((unsigned long)used & 1)); // check alignment
 
 	// read existing E820 entries
 	uint64_t base, length, type;
@@ -234,6 +236,7 @@ E820::E820(void)
 
 	// install new int15h handler
 	volatile uint32_t *int_vecs = 0x0;
+	xassert(!((unsigned long)REL32(old_int15_vec) & 3)); // ensure alignment
 	*REL32(old_int15_vec) = int_vecs[0x15];
 	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
 	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));

@@ -63,6 +63,7 @@ static inline void push_msr(const uint32_t num, const uint64_t val)
 		printf("Global MSR%08x -> %016llx\n", num, val);
 	xassert(asm_relocated);
 	struct msr_ent *msrp = (struct msr_ent *)REL32(msrs);
+	xassert(!((unsigned long)msrp & 3)); // ensure alignment
 	unsigned i = 0;
 
 	while (msrp[i].num) {

@@ -378,6 +378,13 @@ static void setup_cores(void)
 	// read variable MSRs
 	uint64_t *mtrr_var_base = REL64(mtrr_var_base);
 	uint64_t *mtrr_var_mask = REL64(mtrr_var_mask);
+
+	// ensure alignment
+	xassert(!(mtrr_fixed & 7));
+	xassert(!(fixed_mtrr_regs & 3));
+	xassert(!(mtrr_var_base & 7));
+	xassert(!(mtrr_var_mask & 7));
+
 	printf("Variable MTRRs:\n");
 
 	for (int i = 0; i < 8; i++) {
@@ -391,6 +398,9 @@ static void setup_cores(void)
 #endif
 
 	lib::critical_enter();
+
+	xassert(!((unsigned long)REL32(status) & 3));
+	xassert(!((unsigned long)REL32(vector) & 3));
 
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
