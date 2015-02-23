@@ -254,7 +254,7 @@ namespace lib
 	{
 		uint64_t base = (rdmsr(MSR_MCFG) & ~0xfffff);
 		if (base < (1ULL << 32)) {
-			xassert(sci == SCI_LOCAL || sci == 0x000);
+			xassert(sci == SCI_LOCAL || sci == config->local_node->sci);
 			return base;
 		}
 
