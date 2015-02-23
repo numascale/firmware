@@ -53,36 +53,25 @@ EXPORT(vector)
 	jmp	1b
 setup:
 	STATUS(0x90);
+
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax
-	call	print_hex32
 
 	mov	$0x70800, %eax
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
-	mov	$MSR_APIC_BAR, %ecx
-	rdmsr
-	call	print_hex32
+
 	mov	$0x7000, %ax
 	mov	%ax, %es
-	mov	%es:0x20, %eax
-	call	print_hex32
-	mov	%es:0x30, %eax
-	call	print_hex32
-
-	STATUS(0x82)
 
 	mov	%cs:SYM_OFFSET(apic_local), %al
 	shl	$24, %eax
 	mov	%eax, %es:0x20
-	mov	%es:0x20, %eax
-	call print_hex32
 
-	STATUS(0x83)
-
+	// clear BSP flag to let core accept INIT and STARTUP IPIs
 	pop	%eax
-	and	$~0x100, %eax	// clear BSP flag to let core accept INIT and STARTUP IPIs
+	and	$~0x100, %eax
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
 
@@ -141,57 +130,6 @@ test_stop:
 	hlt
 	jmp 1b
 
-// print asciiz string at by cs:si
-print_strz:
-#ifdef DEBUG
-	xor	%bx, %bx
-	xor	%dx, %dx
-1:	mov	%cs:(%si), %al
-	inc	%si
-	or	%al, %al
-	jz	2f
-	mov	$0x0e, %ah
-	int	$0x10
-	mov	$0x01, %ah
-	int	$0x14
-	jmp	1b
-2:
-#endif
-	ret
-
-print_hex32:
-#ifdef DEBUG
-	push	%eax
-	push	%ebx
-	push	%ecx
-	push	%edx
-	push	%esi
-	mov	%eax, %ebx
-	mov	$8, %ecx
-	mov	$SYM_OFFSET(hex32_buf) + 8, %si
-
-1:	mov	%bl, %al
-	and	$0x0f, %al
-	add	$0x30, %al
-	cmp	$0x3a, %al
-	jb	2f
-	add	$0x27, %al
-
-2:	mov	%al, %cs:(%si)
-	dec	%si
-	shr	$4, %ebx
-	loop	1b
-
-	mov	$SYM_OFFSET(hex32_buf), %si
-	call	print_strz
-	pop	%esi
-	pop	%edx
-	pop	%ecx
-	pop	%ebx
-	pop	%eax
-#endif
-	ret
-
 	.align 64
 EXPORT(msrs)
 	.skip MSR_MAX * 12, 0
@@ -210,6 +148,7 @@ EXPORT(apic_local)
 stack_start:  .skip 1024, 0
 stack_end:
 
+	.align 64
 EXPORT(new_e820_handler)
 	cmp	$0xe820, %eax
 	jne	1f
@@ -240,12 +179,12 @@ EXPORT(new_e820_handler)
 	shr	$2, %ebx
 	inc	%ebx
 	mov	$20, %ecx
-	and	$~1, 4(%esp)	# Clear carry flag
+	and	$~1, 4(%esp)	// clear carry flag
 	cmp	%cs:SYM_OFFSET(new_e820_len), %bx
 	jge	2f
 	iret
 
-1:	or	$1, 4(%esp)	# Set carry flag to signify error
+1:	or	$1, 4(%esp)	// set carry flag to signify error
 2:	xor	%ebx, %ebx
 	iret
 

@@ -30,7 +30,7 @@
 #define VECTOR_TEST_STOP 4
 #define VECTOR_TEST_STOPPED 0x90
 
-#define E820_MAP_MAX 2560
+#define E820_MAP_MAX 4096
 #define MSR_MAX 32
 
 #ifndef __ASSEMBLER__
