@@ -369,7 +369,7 @@ void Opteron::init(void)
 		}
 	}
 
-       dram_scrub_disable();
+	dram_scrub_disable();
 }
 
 Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
