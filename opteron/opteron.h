@@ -129,6 +129,8 @@ public:
 	static const reg_t SCRUB_ADDR_LOW      = 0x305c;
 	static const reg_t SCRUB_ADDR_HIGH     = 0x3060;
 	static const reg_t NB_CONF_1H          = 0x308c;
+	static const reg_t GART_APER_BASE      = 0x3090;
+	static const reg_t GART_CACHE_CTRL     = 0x309c;
 	static const reg_t ARRAY_ADDR          = 0x30b8;
 	static const reg_t ARRAY_DATA          = 0x30bc;
 	static const reg_t CLK_CTRL_0          = 0x30d4;

@@ -417,7 +417,7 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	xassert(!(read32(COH_LINK_TRAF_DIST) & 1));
 
 	// disable legacy GARTs
-	for (uint16_t reg = 0x3090; reg <= 0x309c; reg += 4)
+	for (uint16_t reg = GART_APER_BASE; reg <= GART_CACHE_CTRL; reg += 4)
 		write32(reg, 0);
 
 	if (options->debug.maps) {
