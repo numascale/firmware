@@ -330,10 +330,12 @@ void Opteron::init(void)
 	val = read32(MC_NB_CTRL);
 	write32(MC_NB_CTRL, val | (1 << 12));
 
-	if (options->debug.northbridge) {
+	// Mace sure WDT MCA address reporting is enabled
+	val = read32(MC_NB_CONF_EXT);
+	write32(MC_NB_CONF_EXT, val | (1 << 24));
+
+	if (options->debug.northbridge)
 		disable_syncflood();
-		disable_nbwdt();
-	}
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {
@@ -367,7 +369,7 @@ void Opteron::init(void)
 		}
 	}
 
-	dram_scrub_disable();
+       dram_scrub_disable();
 }
 
 Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
