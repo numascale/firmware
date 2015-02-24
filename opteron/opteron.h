@@ -142,6 +142,7 @@ public:
 	static const reg_t MC_NB_CONF_EXT      = 0x3180;
 	static const reg_t DOWNCORE_CTRL       = 0x3190;
 	static const reg_t L3_CTRL             = 0x31b8;
+	static const reg_t L3_CACHE_PARAM      = 0x31c4;
 	static const reg_t PROBEFILTER_CTRL    = 0x31d4;
 	static const reg_t C_STATE_CTRL        = 0x4128;
 	static const reg_t LINK_PHY_OFFSET     = 0x4180;
