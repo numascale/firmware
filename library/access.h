@@ -104,25 +104,17 @@ namespace lib
 	void     mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val);
 	void     mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void     mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val);
+	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg);
+	void     cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val);
 	void memcpy64(uint64_t dest, uint64_t src, size_t n);
 
 	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
 	{
-		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
-	}
-
-	static inline uint64_t cht_read64(const ht_t ht, const reg_t reg)
-	{
-		return mcfg_read64(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
+		return cf8_read32(0, 24+ht, reg >> 12, reg & 0xfff);
 	}
 
 	static inline void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
 	{
-		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
-	}
-
-	static inline void cht_write64(const ht_t ht, const reg_t reg, const uint64_t val)
-	{
-		mcfg_write64_split(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+		cf8_write32(0, 24+ht, reg >> 12, reg & 0xfff, val);
 	}
 }

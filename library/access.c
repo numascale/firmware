@@ -28,11 +28,15 @@
 
 #define PMIO_PORT 0xcd6
 
-#define PCI_EXT_CONF(bus, devfn, reg) \
-  (0x80000000 | (((reg) & 0xF00) << 16) | \
-  ((bus) << 16) | ((devfn) << 8) | ((reg) & 0xFC))
+#define PCI_CONF_SEL 0xcf8
+#define PCI_CONF_DATA 0xcfc
+
+#define PCI_EXT_CONF(bus, device, func, reg) \
+	(0x80000000 | (((reg) & 0xF00) << 16) |	\
+	 ((bus) << 16) | ((device) << 11) | ((func) << 8) | ((reg) & 0xFC))
 #define PCI_MMIO_CONF(bus, device, func, reg) \
-  (((bus) << 20) | ((device) << 15) | ((func) << 12) | (reg))
+	(((bus) << 20) | ((device) << 15) | ((func) << 12) | (reg))
+
 /* Since we use FS to access these areas, the address needs to be in canonical form (sign extended from bit47) */
 #define canonicalize(a) (((a) & (1ULL << 47)) ? ((a) | (0xffffULL << 48)) : (a))
 #define setup_fs(addr) do { \
@@ -360,6 +364,36 @@ namespace lib
 		const uint64_t addr = mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg);
 		mem_write32(addr, val);
 		mem_write32(addr + 4, val >> 32);
+		if (options->debug.access & 1)
+			printf("\n");
+	}
+
+	uint32_t cf8_read32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg)
+	{
+		xassert(!(reg & 3) && reg < 0xfff);
+
+		uint32_t ret;
+		if (options->debug.access & 1)
+			printf("CF8:%02x:%02x.%x %03x -> ", bus, dev, func, reg);
+		cli();
+		outl(PCI_EXT_CONF(bus, dev, func, reg), PCI_CONF_SEL);
+		ret = inl(PCI_CONF_DATA);
+		sti();
+		if (options->debug.access & 1)
+			printf("%08x\n", ret);
+		return ret;
+	}
+
+	void cf8_write32(const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
+	{
+		xassert(!(reg & 3) && reg < 0xfff);
+
+		if (options->debug.access & 1)
+			printf("CF8:%02x:%02x.%x %03x <- %08x", bus, dev, func, reg, val);
+		cli();
+		outl(PCI_EXT_CONF(bus, dev, func, reg), PCI_CONF_SEL);
+		outl(val, PCI_CONF_DATA);
+		sti();
 		if (options->debug.access & 1)
 			printf("\n");
 	}
