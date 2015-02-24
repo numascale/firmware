@@ -870,10 +870,7 @@ int main(const int argc, char *const argv[])
 		lib::wrmsr(MSR_APIC_BAR, val & ~(1ULL << 8));
 
 		// disable XT-PIC
-		inb(PIC_MASTER_IMR);
-		outb(0xff, PIC_MASTER_IMR);
-		inb(PIC_SLAVE_IMR);
-		outb(0xff, PIC_SLAVE_IMR);
+		lib::disable_xtpic();
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
 		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,

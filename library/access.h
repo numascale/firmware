@@ -75,6 +75,8 @@ namespace lib
 
 	void critical_enter(void);
 	void critical_leave(void);
+	void disable_xtpic(void);
+	void enable_xtpic(void);
 	checked uint8_t rtc_read(const int addr);
 	uint8_t  pmio_read8(const uint16_t offset);
 	uint16_t pmio_read16(const uint16_t offset);
@@ -104,11 +106,13 @@ namespace lib
 
 	static inline uint32_t cht_read32(const ht_t ht, const reg_t reg)
 	{
-		return cf8_read32(0, 24+ht, reg >> 12, reg & 0xfff);
+//		return cf8_read32(0, 24+ht, reg >> 12, reg & 0xfff);
+		return mcfg_read32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff);
 	}
 
 	static inline void cht_write32(const ht_t ht, const reg_t reg, const uint32_t val)
 	{
-		cf8_write32(0, 24+ht, reg >> 12, reg & 0xfff, val);
+//		cf8_write32(0, 24+ht, reg >> 12, reg & 0xfff, val);
+		mcfg_write32(SCI_LOCAL, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 	}
 }
