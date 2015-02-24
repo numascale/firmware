@@ -195,32 +195,52 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 	push_msr(MSR_HWCR, msr);
 
+	// enable CF8 extended configuration cycles
+	msr = lib::rdmsr(MSR_NB_CFG) | (1ULL << 46);
+	lib::wrmsr(MSR_NB_CFG, msr);
+	push_msr(MSR_NB_CFG, msr);
+
+	// detect processor family
+	uint32_t val = lib::cht_read32(0, NB_CPUID);
+	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
+
+	// ensure CombineCr0Cd is set on fam15h
+	if (family >= 0x15) {
+		msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
+		lib::wrmsr(MSR_CU_CFG3, msr);
+		push_msr(MSR_CU_CFG3, msr);
+	}
+
+	if (family == 0x10) {
+		// ERRATA #N28: Disable HT Lock mechanism on Fam10h
+		// AMD Email dated 31.05.2011 :
+		// There is a switch that can help with these high contention issues,
+		// but it isn't "productized" due to a very rare potential for live lock if turned on.
+		// Given that HUGE caveat, here is the information that I got from a good source:
+		// LSCFG[44] =1 will disable it. MSR number is C001_1020
+		msr = lib::rdmsr(MSR_LSCFG) | (1ULL << 44);
+		lib::wrmsr(MSR_LSCFG, msr);
+		push_msr(MSR_LSCFG, msr);
+	}
+
 	// enable 64-bit config access
 	msr = lib::rdmsr(MSR_CU_CFG2) | (1ULL << 50);
 
-	// workaround F15h Errata 572: Access to PCI Extended Configuration Space in SMM is blocked
+	// AMD Fam 15h Errata #572: Access to PCI Extended Configuration Space in SMM is Blocked
+	// Suggested Workaround: BIOS should set MSRC001_102A[27] = 1b
 	if (family >= 0x15)
 		msr |= 1ULL << 27;
 	lib::wrmsr(MSR_CU_CFG2, msr);
 	push_msr(MSR_CU_CFG2, msr);
 
-	// detect processor family
-	uint32_t val = lib::cht_read32(0, NB_CPUID);
-	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
+	// detect NB TSC frequency
 	if (family >= 0x15) {
 		val = lib::cht_read32(0, NB_PSTATE_0);
 		tsc_mhz = 200 * (((val >> 1) & 0x1f) + 4) / (1 + ((val >> 7) & 1));
 	} else {
 		val = lib::cht_read32(0, CLK_CTRL_0);
-		uint64_t val6 = lib::rdmsr(MSR_COFVID_STAT);
-		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val6 >> 22) & 1));
-	}
-
-	if (family == 0x10) {
-		// disable HT lock mechanism as unsupported by Numachip
-		msr = lib::rdmsr(MSR_LSCFG) | (1ULL << 44);
-		lib::wrmsr(MSR_LSCFG, msr);
-		push_msr(MSR_LSCFG, msr);
+		uint64_t val2 = lib::rdmsr(MSR_COFVID_STAT);
+		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val2 >> 22) & 1));
 	}
 
 	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
