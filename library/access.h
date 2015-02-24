@@ -61,12 +61,6 @@ static inline void enable_cache(void)
 
 namespace lib
 {
-	static inline uint32_t uint32_tbswap(uint32_t val)
-	{
-		asm volatile("bswap %0" : "+r"(val));
-		return val;
-	}
-
 	static inline uint64_t rdmsr(const msr_t msr)
 	{
 		uint64_t val;
