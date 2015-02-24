@@ -94,10 +94,10 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 	  rtt, ron);
 
 	if (rtt < 12 || rtt > 13)
-		warning("Rtt %u is different than expected value of 12\n", rtt);
+		warning("Rtt %u is different than expected value of 12", rtt);
 
 	if (ron != 11)
-		warning("Ron %u is different than expected value of 11\n", ron);
+		warning("Ron %u is different than expected value of 11", ron);
 }
 
 static bool proc_lessthan_b0(const ht_t ht)
