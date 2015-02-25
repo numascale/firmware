@@ -262,8 +262,11 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 {
 	uint32_t scrub[7];
 	uint32_t val;
+	int pf_enabled = lib::cht_read32(0, PROBEFILTER_CTRL) & 3;
 
-	printf("Adjusting HT fabric");
+	printf("Adjusting HT fabric (PF %s)",
+	       (pf_enabled == 2) ? "enabled, 4-way" :
+	       (pf_enabled == 3) ? "enabled, 8-way" : "disabled");
 
 	/* Disable the L3 and DRAM scrubbers on all nodes in the system */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
@@ -278,6 +281,8 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val & ~1);
 	}
 
+	printf(".");
+
 	/* Wait 40us for outstanding scrub requests to complete */
 	lib::udelay(40);
 	lib::critical_enter();
@@ -285,7 +290,29 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	/* Issue WBINVD on all active cores in the system */
 	disable_cache();
 
-	/* Disable ATMMode on fam15h */
+	uint32_t pfctrl[7];
+	if (pf_enabled > 0) {
+		/* Set F3x1C4[L3TagInit]=1 */
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			val = lib::cht_read32(ht, L3_CACHE_PARAM);
+			lib::cht_write32(ht, L3_CACHE_PARAM, val | (1 << 31));
+		}
+
+		/* Wait for F3x1C4[L3TagInit]=0 */
+		for (ht_t ht = 0; ht <= nnodes; ht++)
+			while (lib::cht_read32(ht, L3_CACHE_PARAM) & (1 << 31))
+				cpu_relax();
+
+		/* Set F3x1D4[PFMode]=00b */
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			pfctrl[ht] = lib::cht_read32(ht, PROBEFILTER_CTRL);
+			lib::cht_write32(ht, PROBEFILTER_CTRL, pfctrl[ht] & ~3);
+		}
+	}
+
+	printf(".");
+
+	/* Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0 on fam15h */
 	if (family >= 0x15) {
 		for (ht_t ht = 0; ht <= nnodes; ht++) {
 			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
@@ -295,6 +322,8 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		}
 	}
 
+	printf("+");
+
 	for (int i = nnodes; i >= 0; i--) {
 		/* Update "neigh" bcast values for node about to increment fabric size */
 		val = lib::cht_read32(neigh, ROUTING + i * 4);
@@ -302,10 +331,35 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		/* Increase fabric size */
 		val = lib::cht_read32(i, HT_NODE_ID);
 		lib::cht_write32(i, HT_NODE_ID, val + (1 << 4));
+		printf("%d", i);
 	}
 
-	enable_cache();
-	lib::critical_leave();
+	printf("*");
+
+	if (pf_enabled > 0) {
+		/* Set F3x1C4[L3TagInit]=1 */
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			val = lib::cht_read32(ht, L3_CACHE_PARAM);
+			lib::cht_write32(ht, L3_CACHE_PARAM, val | (1 << 31));
+		}
+
+		/* Wait for F3x1C4[L3TagInit]=0 */
+		for (ht_t ht = 0; ht <= nnodes; ht++)
+			while (lib::cht_read32(ht, L3_CACHE_PARAM) & (1 << 31))
+				cpu_relax();
+
+		/* Re-enable Probe Filter */
+		for (ht_t ht = 0; ht <= nnodes; ht++) {
+			lib::cht_write32(ht, PROBEFILTER_CTRL, pfctrl[ht]);
+		}
+
+		/* Wait for F3x1D4[PFInitDone]=1 */
+		for (ht_t ht = 0; ht <= nnodes; ht++)
+			while ((lib::cht_read32(ht, PROBEFILTER_CTRL) & (1 << 19)) == 0)
+				cpu_relax();
+	}
+
+	printf(".");
 
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
@@ -324,6 +378,11 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val | 1);
 	}
+
+	printf(".");
+
+	enable_cache();
+	lib::critical_leave();
 	printf("\n");
 }
 
