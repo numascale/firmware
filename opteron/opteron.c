@@ -437,6 +437,8 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 
 	// traffic distribution for directed probes is incompatible
 	xassert(!(read32(COH_LINK_TRAF_DIST) & 1));
+	// make sure coherent link pair traffic distribution is disabled
+	xassert(!read32(COH_LINK_PAIR_DIST));
 
 	// disable legacy GARTs
 	for (uint16_t reg = GART_APER_BASE; reg <= GART_CACHE_CTRL; reg += 4)

@@ -95,6 +95,7 @@ public:
 	static const reg_t LINK_GLO_CTRL_EXT   = 0x016c;
 	static const reg_t LINK_EXT_CTRL       = 0x0170;
 	static const reg_t LINK_INIT_STATUS    = 0x01a0;
+	static const reg_t COH_LINK_PAIR_DIST  = 0x01e0;
 	static const reg_t DRAM_MAP_BASE       = 0x1040;
 	static const reg_t DRAM_MAP_LIMIT      = 0x1044;
 	static const reg_t MMIO_MAP_BASE       = 0x1080;
