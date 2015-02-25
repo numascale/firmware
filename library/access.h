@@ -44,7 +44,7 @@ static inline void disable_cache(void)
 {
 #ifndef SIM
 	asm volatile("mov %%cr0, %%eax\n"
-	  "or $0x40000000, %%eax\n"
+	  "or $(1 << 30), %%eax\n"
 	  "mov %%eax, %%cr0\n"
 	  "wbinvd\n" ::: "eax", "memory");
 #endif
@@ -54,7 +54,7 @@ static inline void enable_cache(void)
 {
 #ifndef SIM
 	asm volatile("mov %%cr0, %%eax\n"
-	  "and $~0x40000000, %%eax\n"
+	  "and $~(1 << 30), %%eax\n"
 	  "mov %%eax, %%cr0\n" ::: "eax", "memory");
 #endif
 }

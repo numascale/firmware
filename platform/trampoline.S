@@ -28,7 +28,7 @@
 
 	.global asm_relocate_start
 asm_relocate_start:
-EXPORT(vector)
+EXPORT(entry)
 	cli
 
 	mov	%cs, %ax
@@ -37,23 +37,42 @@ EXPORT(vector)
 	mov	$(stack_end - stack_start), %sp
 
 	movl %cs:SYM_OFFSET(status), %edx
-	STATUS(0x80);
+
+	cmpl $VECTOR_CACHE_DISABLE, %edx
+	je cache_disable
+	cmpl $VECTOR_CACHE_ENABLE, %edx
+	je cache_enable
 	cmpl $VECTOR_SETUP, %edx
 	je setup
 	cmpl $VECTOR_SETUP_OBSERVER, %edx
 	je setup_observer
-	cmpl $VECTOR_TEST_START, %edx
-	je test_start
-	cmpl $VECTOR_TEST_STOP, %edx
-	je test_stop
-
-	STATUS(0x81);
+	cmpl $VECTOR_TEST, %edx
+	je test
 1:	cli
 	hlt
 	jmp	1b
-setup:
-	STATUS(0x90);
 
+cache_disable:
+	mov	%cr0, %eax
+	or	$(1 << 30), %eax
+	mov	%eax, %cr0
+	wbinvd
+	STATUS(VECTOR_SUCCESS)
+1:  cli
+	hlt
+	jmp 1b
+
+cache_enable:
+	mov	%cr0, %eax
+	and $~(1 << 30), %eax
+	mov	%eax, %cr0
+	wbinvd
+	STATUS(VECTOR_SUCCESS)
+1:  cli
+	hlt
+	jmp 1b
+
+setup:
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax
@@ -75,7 +94,6 @@ setup:
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
 
-	STATUS(0x84)
 setup_observer:
 	mov	$SYM_OFFSET(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
@@ -91,7 +109,7 @@ setup_observer:
 
 	wrmsr
 	jmp	1b
-2:	STATUS(VECTOR_SETUP_DONE)
+2:	STATUS(VECTOR_SUCCESS)
 3:	cli
 	hlt
 	jmp	3b
@@ -114,20 +132,14 @@ read32:
 	mov %fs:(0), %ecx
 	ret
 
-test_start:
-	STATUS(VECTOR_TEST_STARTED)
+test:
 	mov $1, %ebx
+	STATUS(VECTOR_SUCCESS)
 1:	call prng
 	and $~63, %eax // align access
 	mov $0x1, %edx // 4GB base
 	call read32
 	inc %ebx
-	jmp 1b
-
-test_stop:
-	STATUS(VECTOR_TEST_STOPPED)
-1:	cli
-	hlt
 	jmp 1b
 
 	.align 64

@@ -22,13 +22,12 @@
 #include "../platform/options.h"
 #endif
 
-#define VECTOR_SETUP 1
-#define VECTOR_SETUP_OBSERVER 2
-#define VECTOR_SETUP_DONE 0x70
-#define VECTOR_TEST_START 3
-#define VECTOR_TEST_STARTED 0x80
-#define VECTOR_TEST_STOP 4
-#define VECTOR_TEST_STOPPED 0x90
+#define VECTOR_CACHE_DISABLE  1
+#define VECTOR_CACHE_ENABLE   2
+#define VECTOR_SETUP          3
+#define VECTOR_SETUP_OBSERVER 4
+#define VECTOR_TEST           5
+#define VECTOR_SUCCESS        255
 
 #define E820_MAP_MAX 4096
 #define MSR_MAX 32
@@ -43,7 +42,7 @@
 extern unsigned char asm_relocate_start, asm_relocate_end;
 extern char *asm_relocated;
 
-IMPORT_RELOCATED(vector);
+IMPORT_RELOCATED(entry);
 IMPORT_RELOCATED(msrs);
 IMPORT_RELOCATED(status);
 IMPORT_RELOCATED(apic_local);

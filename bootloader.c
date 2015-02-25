@@ -329,17 +329,18 @@ static void copy_inherit(void)
 	}
 }
 
-static bool boot_core(const uint32_t apic, const uint32_t vector, const uint32_t status)
+static bool boot_core(const uint32_t apic, const uint32_t vector)
 {
 	*REL32(status) = vector;
+	xassert(!((uint32_t)REL32(entry) & ~0xff000));
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) | (5 << 8)); // init
 	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) |
-	  (6 << 8) | ((uint32_t)REL32(vector) >> 12)); // startup
+	  (6 << 8) | ((uint32_t)REL32(entry) >> 12)); // startup
 
 	printf(" 0x%05x", apic);
 
 	for (unsigned i = 0; i < 1000000; i++) {
-		if (*REL32(status) == status)
+		if (*REL32(status) == VECTOR_SUCCESS)
 			return 0;
 		cpu_relax();
 	}
@@ -355,7 +356,7 @@ static void setup_cores_observer(void)
 	for (unsigned n = 1; n < acpi->napics; n++) {
 		uint32_t apic = ((uint32_t)local_node->sci << 8) | acpi->apics[n];
 
-		if (boot_core(apic, VECTOR_SETUP_OBSERVER, VECTOR_SETUP_DONE))
+		if (boot_core(apic, VECTOR_SETUP_OBSERVER))
 			fatal("APIC 0x%05x has status 0x%x", apic, *REL32(status));
 	}
 
@@ -401,7 +402,7 @@ static void setup_cores(void)
 	lib::critical_enter();
 
 	xassert(!((unsigned long)REL32(status) & 3));
-	xassert(!((unsigned long)REL32(vector) & 3));
+	xassert(!((unsigned long)REL32(entry) & 3));
 
 	// boot cores
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -421,7 +422,7 @@ static void setup_cores(void)
 			}
 
 			*REL8(apic_local) = (*node)->apics[n] & 0xff;
-			if (boot_core((*node)->apics[n], VECTOR_SETUP, VECTOR_SETUP_DONE))
+			if (boot_core((*node)->apics[n], VECTOR_SETUP))
 				fatal("APIC 0x%02x->0x%05x has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
 			printf("->0x%05x", (*node)->apics[n]);
 		}
@@ -470,7 +471,7 @@ static void test_cores(void)
 			if (node == &nodes[0] && n == 0)
 				continue; // skip BSC
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
+			if (boot_core((*node)->apics[n], VECTOR_TEST)) {
 				if (options->tracing)
 					tracing_stop();
 				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
@@ -478,7 +479,7 @@ static void test_cores(void)
 
 			lib::udelay(100000);
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
+			if (boot_core((*node)->apics[n], VECTOR_CACHE_ENABLE)) {
 				tracing_stop();
 				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
@@ -493,7 +494,7 @@ static void test_cores(void)
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST_START, VECTOR_TEST_STARTED)) {
+			if (boot_core((*node)->apics[n], VECTOR_TEST)) {
 				tracing_stop();
 				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
@@ -510,7 +511,7 @@ static void test_cores(void)
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST_STOP, VECTOR_TEST_STOPPED)) {
+			if (boot_core((*node)->apics[n], VECTOR_CACHE_ENABLE)) {
 				tracing_stop();
 				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
