@@ -885,10 +885,7 @@ int main(const int argc, char *const argv[])
 		val = lib::rdmsr(MSR_HWCR);
 		lib::wrmsr(MSR_HWCR, val & ~(1ULL << 17));
 
-		while (1) {
-			cli();
-			asm volatile("hlt" ::: "memory");
-		}
+		halt();
 	}
 
 	config->local_node->added = 1;
