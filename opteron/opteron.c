@@ -433,7 +433,8 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	}
 
 	// Numachip can't handle Coherent Prefetch Probes, required disabled for PF anyway
-	xassert(!(read32(MCTL_EXT_CONF_LOW) & (7 << 8)));
+	val = read32(MCTL_EXT_CONF_LOW);
+	write32(MCTL_EXT_CONF_LOW, val & ~(7 << 8)); /* CohPrefPrbLimit=000b */
 
 	// traffic distribution for directed probes is incompatible
 	xassert(!(read32(COH_LINK_TRAF_DIST) & 1));
@@ -452,6 +453,9 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 		for (unsigned range = 0; range < mmiomap->ranges; range++)
 			mmiomap->print(range);
 	}
+
+	if (options->debug.northbridge)
+		check();
 }
 
 void Opteron::dram_clear_start(void)
