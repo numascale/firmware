@@ -749,6 +749,13 @@ int main(const int argc, char *const argv[])
 	Opteron::prepare();
 	acpi = new ACPI();
 
+	uint16_t reason = lib::pmio_read16(0x44);
+	if (reason & ~((1 << 2) | (1 << 6))) /* Mask out CF9 and keyboard reset */
+		warning("Last reboot reason (PM44h) was 0x%x", reason);
+
+	if (lib::mcfg_read32(SCI_LOCAL, 0, 0x14, 0, 0x4c) & (1 << 30))
+		warning("Last reboot reason by BootFail timer");
+
 	// SMI often assumes HT nodes are Northbridges, so handover early
 	if (options->handover_acpi)
 		acpi->handover();
@@ -759,43 +766,6 @@ int main(const int argc, char *const argv[])
 		config = new Config(options->config_filename);
 
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
-
-	uint16_t reason = lib::pmio_read16(0x44);
-	if (reason & ~((1 << 2) | (1 << 6))) /* Mask out CF9 and keyboard reset */
-		warning("Last reboot reason (PM44h) was 0x%x", reason);
-
-	if (lib::mcfg_read32(SCI_LOCAL, 0, 0x14, 0, 0x4c) & (1 << 30))
-		warning("Last reboot reason by BootFail timer");
-
-	// adjust down MMIO range to prevent overlap
-	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
-		uint64_t base, limit;
-		ht_t dest;
-		link_t link;
-		bool lock;
-		unsigned range;
-
-		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
-			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
-				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
-					if (options->debug.maps)
-						printf("Found matching local MMIO range %u on SCI%03x#%d: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d%s\n",
-						       range, local_node->sci, (*nb)->ht, base, limit, dest, link, lock ? "locked" : "");
-					(*nb)->mmiomap->add(range, Numachip2::LOC_LIM + 1, limit, dest, link);
-					break;
-				}
-			}
-		}
-
-		// Find highest available MMIO map entry
-		for (range = 7; range > 0; range--)
-			if (!(*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock))
-				break;
-
-		xassert(range > 0);
-		// Numachip local registers
-		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, local_node->numachip->ht, 0);
-	}
 
 	if (options->init_only) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {

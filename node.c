@@ -116,5 +116,34 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 	numachip = new Numachip2(sci, nc, local, master);
 	xassert(nopterons == nc);
 
+	// Add MMIO range for local CSR space
+	for (Opteron *const *nb = &opterons[0]; nb < &opterons[nopterons]; nb++) {
+		uint64_t base, limit;
+		ht_t dest;
+		link_t link;
+		bool lock;
+		unsigned range;
+
+		// Modify overlapping entries
+		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
+			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
+				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
+					(*nb)->mmiomap->add(range, Numachip2::LOC_LIM + 1, limit, dest, link);
+					break;
+				}
+			}
+		}
+
+		// Find highest available MMIO map entry
+		for (range = 7; range > 0; range--)
+			if (!(*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock))
+				break;
+
+		xassert(range > 0);
+
+		// Add local mapping
+		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, numachip->ht, 0);
+	}
+
 	init();
 }
