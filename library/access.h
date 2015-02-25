@@ -31,6 +31,7 @@ extern "C" {
 #define cli() if (atomic_exchange_and_add(&lirq_nest, 1) == 0) { asm volatile("cli"); }
 #define sti() if (atomic_decrement_and_test(&lirq_nest))       { asm volatile("sti"); }
 
+// RTC constants
 #define RTC_SECONDS     0
 #define RTC_MINUTES     2
 #define RTC_HOURS       4
@@ -39,6 +40,35 @@ extern "C" {
 #define RTC_MONTH       8
 #define RTC_YEAR        9
 #define RTC_SETTINGS    11
+
+// APIC constants
+#define	APIC_ESR	0x280
+#define	APIC_ICR	0x300
+#define		APIC_DEST_SELF		0x40000
+#define		APIC_DEST_ALLINC	0x80000
+#define		APIC_DEST_ALLBUT	0xC0000
+#define		APIC_ICR_RR_MASK	0x30000
+#define		APIC_ICR_RR_INVALID	0x00000
+#define		APIC_ICR_RR_INPROG	0x10000
+#define		APIC_ICR_RR_VALID	0x20000
+#define		APIC_INT_LEVELTRIG	0x08000
+#define		APIC_INT_ASSERT		0x04000
+#define		APIC_ICR_BUSY		0x01000
+#define		APIC_DEST_LOGICAL	0x00800
+#define		APIC_DEST_PHYSICAL	0x00000
+#define		APIC_DM_FIXED		0x00000
+#define		APIC_DM_FIXED_MASK	0x00700
+#define		APIC_DM_LOWEST		0x00100
+#define		APIC_DM_SMI		0x00200
+#define		APIC_DM_REMRD		0x00300
+#define		APIC_DM_NMI		0x00400
+#define		APIC_DM_INIT		0x00500
+#define		APIC_DM_STARTUP		0x00600
+#define		APIC_DM_EXTINT		0x00700
+#define		APIC_VECTOR_MASK	0x000FF
+#define	APIC_ICR2	0x310
+#define		GET_APIC_DEST_FIELD(x)	(((x) >> 24) & 0xFF)
+#define		SET_APIC_DEST_FIELD(x)	((x) << 24)
 
 static inline void disable_cache(void)
 {
@@ -73,6 +103,7 @@ namespace lib
 		asm volatile("wrmsr" :: "c" (msr), "A" (val));
 	}
 
+	void native_apic_icr_write(const uint32_t low, const uint32_t apicid);
 	void critical_enter(void);
 	void critical_leave(void);
 	void disable_xtpic(void);

@@ -56,6 +56,28 @@ namespace lib
 	static uint8_t pic1_mask, pic2_mask;
 	static bool xtpic_disabled = 0;
 
+	static inline void native_apic_mem_write(const uint32_t apic_base, const uint32_t reg, const uint32_t v)
+	{
+		*((volatile uint32_t *)(apic_base + reg)) = v;
+	}
+
+	static inline uint32_t native_apic_mem_read(const uint32_t apic_base, const uint32_t reg)
+	{
+		return *((volatile uint32_t *)(apic_base + reg));
+	}
+
+	void native_apic_icr_write(const uint32_t low, const uint32_t apicid)
+	{
+		uint32_t apic_base = ((uint32_t)rdmsr(MSR_APIC_BAR) & ~0xfff);
+		cli();
+		native_apic_mem_write(apic_base, APIC_ICR2, SET_APIC_DEST_FIELD(apicid));
+		native_apic_mem_write(apic_base, APIC_ICR, low);
+		sti();
+		while (native_apic_mem_read(apic_base, APIC_ICR) & APIC_ICR_BUSY)
+			cpu_relax();
+		xassert(!native_apic_mem_read(apic_base, APIC_ESR));
+	}
+
 	void critical_enter(void)
 	{
 		cli();

@@ -329,15 +329,42 @@ static void copy_inherit(void)
 	}
 }
 
-static bool boot_core(const uint32_t apic, const uint32_t vector)
+#ifdef UNUSED
+static bool native_boot_core(const uint32_t apicid, const uint32_t vector)
 {
 	*REL32(status) = vector;
-	xassert(!((uint32_t)REL32(entry) & ~0xff000));
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) | (5 << 8)); // init
-	local_node->numachip->write32(Numachip2::PIU_APIC, (apic << 12) |
-	  (6 << 8) | ((uint32_t)REL32(entry) >> 12)); // startup
+	uint32_t start_eip = (uint32_t)REL32(entry);
+	xassert(!(start_eip & ~0xff000));
 
-	printf(" 0x%05x", apic);
+	// init IPI
+	lib::native_apic_icr_write(APIC_INT_ASSERT | APIC_DM_INIT, apicid);
+	// startup IPI
+	lib::native_apic_icr_write(APIC_INT_ASSERT | APIC_DM_STARTUP | (start_eip >> 12), apicid);
+
+	printf(" 0x%05x", apicid);
+
+	for (unsigned i = 0; i < 1000000; i++) {
+		if (*REL32(status) == VECTOR_SUCCESS)
+			return 0;
+		lib::udelay(10000);
+	}
+
+	return 1;
+}
+#endif
+
+static bool boot_core(const uint32_t apicid, const uint32_t vector)
+{
+	*REL32(status) = vector;
+	uint32_t start_eip = (uint32_t)REL32(entry);
+	xassert(!(start_eip & ~0xff000));
+
+	// init	IPI
+	local_node->numachip->apic_icr_write(APIC_DM_INIT, apicid);
+	// startup IPI
+	local_node->numachip->apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12), apicid);
+
+	printf(" 0x%05x", apicid);
 
 	for (unsigned i = 0; i < 1000000; i++) {
 		if (*REL32(status) == VECTOR_SUCCESS)

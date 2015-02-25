@@ -204,6 +204,7 @@ public:
 	void write32(const reg_t reg, const uint32_t val) const;
 	uint8_t read8(const reg_t reg) const;
 	void write8(const reg_t reg, const uint8_t val) const;
+	void apic_icr_write(const uint32_t low, const uint32_t apicid);
 	static ht_t probe(const sci_t sci);
 	void late_init(void);
 	uint32_t rom_read(const uint8_t reg);

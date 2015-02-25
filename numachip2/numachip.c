@@ -60,6 +60,11 @@ void Numachip2::write8(const reg_t reg, const uint8_t val) const
 	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
+void Numachip2::apic_icr_write(const uint32_t low, const uint32_t apicid)
+{
+	write32(PIU_APIC, (apicid << 12) | (low & 0xfff));
+}
+
 // check NC2 position in remote system and readiness
 ht_t Numachip2::probe(const sci_t sci)
 {
