@@ -64,7 +64,7 @@ cache_disable:
 
 cache_enable:
 	mov	%cr0, %eax
-	and	$~(1 << 30), %eax
+	and	$~((1 << 30) | (1 << 29)), %eax
 	mov	%eax, %cr0
 	STATUS(VECTOR_SUCCESS)
 1:	cli

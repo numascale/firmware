@@ -70,22 +70,24 @@ extern "C" {
 #define		GET_APIC_DEST_FIELD(x)	(((x) >> 24) & 0xFF)
 #define		SET_APIC_DEST_FIELD(x)	((x) << 24)
 
-static inline void disable_cache(void)
+static inline __attribute__((always_inline)) void disable_cache(void)
 {
 #ifndef SIM
-	asm volatile("mov %%cr0, %%eax\n"
-	  "or $(1 << 30), %%eax\n"
-	  "mov %%eax, %%cr0\n"
-	  "wbinvd\n" ::: "eax", "memory");
+	uint32_t value;
+	asm volatile("mov %%cr0, %0\n"
+		     "or $(1 << 30), %0\n"
+		     "mov %0, %%cr0\n"
+		     "wbinvd\n" : "=r" (value) :: "memory");
 #endif
 }
 
-static inline void enable_cache(void)
+static inline  __attribute__((always_inline)) void enable_cache(void)
 {
 #ifndef SIM
-	asm volatile("mov %%cr0, %%eax\n"
-	  "and $~(1 << 30), %%eax\n"
-	  "mov %%eax, %%cr0\n" ::: "eax", "memory");
+	uint32_t value;
+	asm volatile("mov %%cr0, %0\n"
+		     "and $~((1 << 30) | (1 << 29)), %0\n"
+		     "mov %0, %%cr0\n" : "=r" (value) :: "memory");
 #endif
 }
 
