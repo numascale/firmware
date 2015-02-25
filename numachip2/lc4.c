@@ -26,7 +26,8 @@
 bool LC4::is_up(void)
 {
 	uint32_t val = numachip.read32(INIT_STATE + index * SIZE) & 0xf;
-	return (val == 2) || (val == 4);
+	link_up = ((val == 2) || (val == 4));
+	return link_up;
 }
 
 uint64_t LC4::status(void)

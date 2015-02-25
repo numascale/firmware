@@ -25,7 +25,7 @@ class LC
 protected:
 	const Numachip2& numachip;
 	LC(Numachip2 &_numachip, const uint8_t _index, const uint16_t _chunkaddr, const uint16_t _tableaddr):
-	  numachip(_numachip), index(_index), chunkaddr(_chunkaddr), tableaddr(_tableaddr), link_up(0) {};
+	  numachip(_numachip), index(_index), chunkaddr(_chunkaddr), tableaddr(_tableaddr), link_up(1) {};
 public:
 	const uint8_t index;
 	const uint16_t chunkaddr, tableaddr;
