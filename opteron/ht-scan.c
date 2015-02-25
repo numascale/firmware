@@ -290,6 +290,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	/* Issue WBINVD on all active cores in the system */
 	disable_cache();
 
+#ifdef BROKEN
 	uint32_t pfctrl[7];
 	if (pf_enabled > 0) {
 		/* Set F3x1C4[L3TagInit]=1 */
@@ -321,6 +322,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 			lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
 		}
 	}
+#endif
 
 	printf("+");
 
@@ -336,6 +338,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	printf("*");
 
+#ifdef BROKEN
 	if (pf_enabled > 0) {
 		/* Set F3x1C4[L3TagInit]=1 */
 		for (ht_t ht = 0; ht <= nnodes; ht++) {
@@ -360,6 +363,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	}
 
 	printf(".");
+#endif
 
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
