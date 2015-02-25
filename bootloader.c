@@ -460,15 +460,6 @@ static void setup_cores(void)
 	lib::critical_leave();
 }
 
-static void tracing_arm(void)
-{
-	if (!options->tracing)
-		return;
-
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->tracing_arm();
-}
-
 static void tracing_start(void)
 {
 	if (!options->tracing)
@@ -547,7 +538,6 @@ static void test_cores(void)
 	printf("\n");
 
 	tracing_stop();
-	tracing_arm();
 	lib::critical_leave();
 }
 
@@ -738,7 +728,6 @@ static void finalise(void)
 	}
 
 	e820->test();
-	tracing_arm();
 	setup_cores();
 	acpi_tables();
 	test_cores();
