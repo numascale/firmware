@@ -44,6 +44,10 @@
   asm volatile("wrmsr" :: "A"(canonicalize(addr)), "c"(MSR_FS_BASE)); \
   } while(0)
 
+extern "C" {
+	int lirq_nest = 0;
+}
+
 namespace lib
 {
 	static uint8_t pic1_mask, pic2_mask;

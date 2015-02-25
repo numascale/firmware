@@ -22,11 +22,14 @@
 #include <sys/io.h>
 
 #include "base.h"
+#include "atomic.h"
 
-#define cli() { asm volatile("cli"); }
-#define sti() { asm volatile("sti"); }
+extern "C" {
+	extern int lirq_nest;
+}
 
-#define cpu_relax() asm volatile("pause" ::: "memory")
+#define cli() if (atomic_exchange_and_add(&lirq_nest, 1) == 0) { asm volatile("cli"); }
+#define sti() if (atomic_decrement_and_test(&lirq_nest))       { asm volatile("sti"); }
 
 #define RTC_SECONDS     0
 #define RTC_MINUTES     2
