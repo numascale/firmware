@@ -36,18 +36,18 @@ EXPORT(entry)
 	mov	%ax, %ss
 	mov	$(stack_end - stack_start), %sp
 
-	movl %cs:SYM_OFFSET(status), %edx
+	movl	%cs:SYM_OFFSET(status), %edx
 
-	cmpl $VECTOR_CACHE_DISABLE, %edx
-	je cache_disable
-	cmpl $VECTOR_CACHE_ENABLE, %edx
-	je cache_enable
-	cmpl $VECTOR_SETUP, %edx
-	je setup
-	cmpl $VECTOR_SETUP_OBSERVER, %edx
-	je setup_observer
-	cmpl $VECTOR_TEST, %edx
-	je test
+	cmpl	$VECTOR_CACHE_DISABLE, %edx
+	je	cache_disable
+	cmpl	$VECTOR_CACHE_ENABLE, %edx
+	je	cache_enable
+	cmpl	$VECTOR_SETUP, %edx
+	je	setup
+	cmpl	$VECTOR_SETUP_OBSERVER, %edx
+	je	setup_observer
+	cmpl	$VECTOR_TEST, %edx
+	je	test
 1:	cli
 	hlt
 	jmp	1b
@@ -58,19 +58,18 @@ cache_disable:
 	mov	%eax, %cr0
 	wbinvd
 	STATUS(VECTOR_SUCCESS)
-1:  cli
+1:	cli
 	hlt
-	jmp 1b
+	jmp	1b
 
 cache_enable:
 	mov	%cr0, %eax
-	and $~(1 << 30), %eax
+	and	$~(1 << 30), %eax
 	mov	%eax, %cr0
-	wbinvd
 	STATUS(VECTOR_SUCCESS)
-1:  cli
+1:	cli
 	hlt
-	jmp 1b
+	jmp	1b
 
 setup:
 	mov	$MSR_APIC_BAR, %ecx
@@ -99,8 +98,8 @@ setup_observer:
 1:	mov	%cs:(%edi), %ecx // MSR number
 	add	$4, %edi
 
-	cmp $0, %ecx
-	je 2f
+	cmp	$0, %ecx
+	je	2f
 
 	mov	%cs:(%edi), %eax // value[0]
 	add	$4, %edi
@@ -109,6 +108,7 @@ setup_observer:
 
 	wrmsr
 	jmp	1b
+
 2:	STATUS(VECTOR_SUCCESS)
 3:	cli
 	hlt
@@ -117,30 +117,30 @@ setup_observer:
 // seed passed in EBX
 // random number returned in EAX
 prng:
-	push %edx
-	mov $1103515245, %eax
-	mul %ebx
-	add $12345, %eax
-	pop %edx
+	push	%edx
+	mov	$1103515245, %eax
+	mul	%ebx
+	add	$12345, %eax
+	pop	%edx
 	ret
 
 // address passed in EDX:EAX
 // data returned in ECX
 read32:
-	mov $MSR_FS_BASE, %ecx
+	mov	$MSR_FS_BASE, %ecx
 	wrmsr
-	mov %fs:(0), %ecx
+	mov	%fs:(0), %ecx
 	ret
 
 test:
-	mov $1, %ebx
+	mov	$1, %ebx
 	STATUS(VECTOR_SUCCESS)
-1:	call prng
-	and $~63, %eax // align access
-	mov $0x1, %edx // 4GB base
-	call read32
-	inc %ebx
-	jmp 1b
+1:	call	prng
+	and	$~63, %eax // align access
+	mov	$0x1, %edx // 4GB base
+	call	read32
+	inc	%ebx
+	jmp	1b
 
 	.align 64
 EXPORT(msrs)
