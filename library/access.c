@@ -31,6 +31,9 @@
 #define PCI_CONF_SEL 0xcf8
 #define PCI_CONF_DATA 0xcfc
 
+#define PIC_MASTER_IMR 0x21
+#define PIC_SLAVE_IMR 0xa1
+
 #define PCI_EXT_CONF(bus, device, func, reg) \
 	(0x80000000 | (((reg) & 0xF00) << 16) |	\
 	 ((bus) << 16) | ((device) << 11) | ((func) << 8) | ((reg) & 0xFC))

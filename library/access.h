@@ -40,9 +40,6 @@ extern "C" {
 #define RTC_YEAR        9
 #define RTC_SETTINGS    11
 
-#define PIC_MASTER_IMR          0x21
-#define PIC_SLAVE_IMR           0xa1
-
 static inline void disable_cache(void)
 {
 #ifndef SIM
