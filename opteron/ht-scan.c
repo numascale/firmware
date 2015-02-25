@@ -93,10 +93,10 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 	  lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4),
 	  rtt, ron);
 
-	if (rtt < 12 || rtt > 13)
+	if (rtt < 7 || rtt > 13)
 		warning("Rtt %u is different than expected value of 12", rtt);
 
-	if (ron != 11)
+	if (ron < 11 || rtt >> 15)
 		warning("Ron %u is different than expected value of 11", ron);
 }
 
@@ -262,7 +262,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 {
 	uint32_t scrub[7];
 	uint32_t val;
-	int pf_enabled = lib::cht_read32(0, PROBEFILTER_CTRL) & 3;
+	int pf_enabled = 0; // lib::cht_read32(0, PROBEFILTER_CTRL) & 3;
 
 	printf("Adjusting HT fabric (PF %s)",
 	       (pf_enabled == 2) ? "enabled, 4-way" :
