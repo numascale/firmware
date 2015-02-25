@@ -102,12 +102,6 @@ void Numachip2::late_init(void)
 //	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 
-	write32(SIU_NODEID, sci);
-
-	// set master SCI ID for PCI IO routing
-	uint32_t val = read32(PIU_PCIIO_NODE) & ~0xfff;
-	write32(PIU_PCIIO_NODE, val | master);
-
 	fabric_routing();
 }
 
@@ -162,4 +156,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		printf("Virtex");
 	printf("] assigned HT%u\n", ht);
 #endif
+	// set local SIU SCI ID
+	write32(SIU_NODEID, sci);
+
+	// set master SCI ID for PCI IO routing
+	uint32_t val = read32(PIU_PCIIO_NODE) & ~0xfff;
+	write32(PIU_PCIIO_NODE, val | master);
 }
