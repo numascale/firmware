@@ -905,7 +905,7 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
-	test_cores();
+//	test_cores();
 	check();
 	finished();
 }
