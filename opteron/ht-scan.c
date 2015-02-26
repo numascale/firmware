@@ -287,10 +287,10 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	lib::udelay(40);
 	lib::critical_enter();
 
+#ifdef BROKEN
 	/* Issue WBINVD on all active cores in the system */
 	disable_cache();
 
-#ifdef BROKEN
 	uint32_t pfctrl[7];
 	if (pf_enabled > 0) {
 		/* Set F3x1C4[L3TagInit]=1 */
@@ -363,6 +363,9 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	}
 
 	printf(".");
+
+	/* Re-enable cache */
+	enable_cache();
 #endif
 
 	/* Reassert LimitCldtCfg */
@@ -385,7 +388,6 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	printf(".");
 
-	enable_cache();
 	lib::critical_leave();
 	printf("\n");
 }
