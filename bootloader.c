@@ -697,44 +697,36 @@ static void acpi_tables(void)
 	acpi->check();
 }
 
-static void finalise(void)
+static void clear_dram(void)
 {
-	if (!options->tracing) {
-		printf("Clearing DRAM");
-		lib::critical_enter();
+	printf("Clearing DRAM");
+	lib::critical_enter();
 
-		// start clearing DRAM
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			unsigned start = node == nodes ? 1 : 0;
-			for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-				(*nb)->dram_clear_start();
-		}
-
-		// wait for clear to complete
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-			unsigned start = node == nodes ? 1 : 0;
-			for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-				(*nb)->dram_clear_wait();
-		}
-
-		lib::critical_leave();
-		printf("\n");
-
-		printf("Enabling scrubbers");
-
-		// enable DRAM scrubbers
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-			for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
-				(*nb)->dram_scrub_enable();
-
-		printf("\n");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned start = node == nodes ? 1 : 0;
+		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_start();
 	}
 
-	e820->test();
-	setup_cores();
-	acpi_tables();
-	test_cores();
-	check();
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		unsigned start = node == nodes ? 1 : 0;
+		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_clear_wait();
+	}
+
+	lib::critical_leave();
+	printf("\n");
+
+	// avoid noise when tracing
+	if (options->tracing)
+		return;
+
+	printf("Enabling scrubbers");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
+			(*nb)->dram_scrub_enable();
+
+	printf("\n");
 }
 
 static void finished(void)
@@ -913,9 +905,14 @@ int main(const int argc, char *const argv[])
 	scan();
 	remap();
 	copy_inherit();
+	clear_dram();
 	if (options->tracing)
 		setup_gsm();
 	setup_info();
-	finalise();
+	e820->test();
+	setup_cores();
+	acpi_tables();
+	test_cores();
+	check();
 	finished();
 }
