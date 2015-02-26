@@ -20,7 +20,6 @@
 
 #define EXPORT(sym) .global sym ## _relocate; sym ## _relocate: sym:
 #define SYM_OFFSET(sym) ((sym) - asm_relocate_start)
-#define STATUS(val) movl $val, %cs:SYM_OFFSET(status)
 
 	.code16
 	.text
@@ -36,7 +35,7 @@ EXPORT(entry)
 	mov	%ax, %ss
 	mov	$(stack_end - stack_start), %sp
 
-	movl	%cs:SYM_OFFSET(status), %edx
+	movl	%cs:SYM_OFFSET(vector), %edx
 
 	cmpl	$VECTOR_CACHE_DISABLE, %edx
 	je	cache_disable
@@ -57,29 +56,14 @@ cache_disable:
 	or	$(1 << 30), %eax
 	mov	%eax, %cr0
 	wbinvd
-	STATUS(VECTOR_SUCCESS)
-1:	cli
-	hlt
-	jmp	1b
-
-cache_enable:
-	mov	%cr0, %eax
-	and	$~((1 << 30) | (1 << 29)), %eax
-	mov	%eax, %cr0
-	STATUS(VECTOR_SUCCESS)
+	lock decw %cs:SYM_OFFSET(pending)
 1:	cli
 	hlt
 	jmp	1b
 
 setup:
-        // make sure cache is enabled
-	mov	%cr0, %eax
-	and	$~((1 << 30) | (1 << 29)), %eax
-	mov	%eax, %cr0
-
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
-	push	%eax
 
 	mov	$0x70800, %eax
 	mov	$MSR_APIC_BAR, %ecx
@@ -93,18 +77,20 @@ setup:
 	mov	%eax, %es:0x20
 
 	// clear BSP flag to let core accept INIT and STARTUP IPIs
-	pop	%eax
+	mov	$MSR_APIC_BAR, %ecx
+	rdmsr
 	and	$~0x100, %eax
 	mov	$MSR_APIC_BAR, %ecx
 	wrmsr
 
+	// fall through to common code for observer
 setup_observer:
 	mov	$SYM_OFFSET(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
 	add	$4, %edi
 
 	cmp	$0, %ecx
-	je	2f
+	je	cache_enable
 
 	mov	%cs:(%edi), %eax // value[0]
 	add	$4, %edi
@@ -114,49 +100,77 @@ setup_observer:
 	wrmsr
 	jmp	1b
 
-2:	STATUS(VECTOR_SUCCESS)
+	// fall through to enable cache
+cache_enable:
+	mov	%cr0, %eax
+	and	$~((1 << 30) | (1 << 29)), %eax
+	mov	%eax, %cr0
+
+	lock decw %cs:SYM_OFFSET(pending)
+	wbinvd
+1:	cli
+	hlt
+	jmp	1b
+
+test:
+	// disable wrap32
+	mov $MSR_HWCR, %ecx
+	rdmsr
+	or $(1 << 17), %eax
+	wrmsr
+
+	mov	$1, %ebx // seed
+
+	// generate random number
+1:	mov	$1103515245, %eax
+	mul	%ebx // result in EAX:EDX
+	add	$12345, %eax
+
+	and	$~7, %eax  // align access
+	mov	$0x1, %edx // 4GB base
+
+	// generate 64-bit load using FS
+	mov	$MSR_FS_BASE, %ecx
+	wrmsr
+	mov	%fs:(0), %ecx
+
+	inc	%ebx
+
+	// check for termination condition
+	cmpl $VECTOR_TEST_FINISH, %cs:SYM_OFFSET(vector)
+	jne	1b
+
+	// reenable wrap32
+	mov $MSR_HWCR, %eax
+	rdmsr
+	and $~(1 << 17), %eax
+	wrmsr
+
+	// clear FS
+	mov $0, %eax
+	mov $0, %edx
+	mov	$MSR_FS_BASE, %ecx
+	wrmsr
+
+	// signal semaphore
+	lock decw %cs:SYM_OFFSET(pending)
+	wbinvd
 3:	cli
 	hlt
 	jmp	3b
 
-// seed passed in EBX
-// random number returned in EAX
-prng:
-	push	%edx
-	mov	$1103515245, %eax
-	mul	%ebx
-	add	$12345, %eax
-	pop	%edx
-	ret
-
-// address passed in EDX:EAX
-// data returned in ECX
-read32:
-	mov	$MSR_FS_BASE, %ecx
-	wrmsr
-	mov	%fs:(0), %ecx
-	ret
-
-test:
-	mov	$1, %ebx
-	STATUS(VECTOR_SUCCESS)
-1:	call	prng
-	and	$~63, %eax // align access
-	mov	$0x1, %edx // 4GB base
-	call	read32
-	inc	%ebx
-	jmp	1b
-
 	.align 64
 EXPORT(msrs)
 	.skip MSR_MAX * 12, 0
-EXPORT(status)
+EXPORT(vector)
 	.long 0
 EXPORT(old_int15_vec)
 	.long 0
 EXPORT(new_e820_map)
 	.skip E820_MAP_MAX, 0
 EXPORT(new_e820_len)
+	.word 0
+EXPORT(pending)
 	.word 0
 EXPORT(apic_local)
 	.byte 0

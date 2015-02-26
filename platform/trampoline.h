@@ -27,10 +27,11 @@
 #define VECTOR_SETUP          3
 #define VECTOR_SETUP_OBSERVER 4
 #define VECTOR_TEST           5
-#define VECTOR_SUCCESS        255
+#define VECTOR_TEST_FINISH    6
 
 #define E820_MAP_MAX 4096
 #define MSR_MAX 32
+#define CORE_SPINS        1000000
 
 #ifndef __ASSEMBLER__
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate
@@ -44,7 +45,8 @@ extern char *asm_relocated;
 
 IMPORT_RELOCATED(entry);
 IMPORT_RELOCATED(msrs);
-IMPORT_RELOCATED(status);
+IMPORT_RELOCATED(vector);
+IMPORT_RELOCATED(pending);
 IMPORT_RELOCATED(apic_local);
 IMPORT_RELOCATED(old_int15_vec);
 IMPORT_RELOCATED(new_e820_len);

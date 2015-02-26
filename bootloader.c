@@ -349,31 +349,24 @@ static void tracing_stop(void)
 		(*node)->tracing_stop();
 }
 
-static bool native_boot_core(const uint32_t apicid, const uint32_t vector)
+static void boot_core_host(const uint32_t apicid, const uint32_t vector)
 {
-	*REL32(status) = vector;
+	*REL32(vector) = vector;
 	uint32_t start_eip = (uint32_t)REL32(entry);
 	xassert(!(start_eip & ~0xff000));
+
+	// ensure semaphore set
+	xassert(*REL16(pending));
 
 	// init IPI
 	lib::native_apic_icr_write(APIC_INT_ASSERT | APIC_DM_INIT, apicid);
 	// startup IPI
 	lib::native_apic_icr_write(APIC_INT_ASSERT | APIC_DM_STARTUP | (start_eip >> 12), apicid);
-
-	printf(" 0x%05x", apicid);
-
-	for (unsigned i = 0; i < 1000000; i++) {
-		if (*REL32(status) == VECTOR_SUCCESS)
-			return 0;
-		lib::udelay(10000);
-	}
-
-	return 1;
 }
 
-static bool boot_core(const uint32_t apicid, const uint32_t vector)
+static void boot_core(const uint32_t apicid, const uint32_t vector)
 {
-	*REL32(status) = vector;
+	*REL32(vector) = vector;
 	uint32_t start_eip = (uint32_t)REL32(entry);
 	xassert(!(start_eip & ~0xff000));
 
@@ -381,31 +374,23 @@ static bool boot_core(const uint32_t apicid, const uint32_t vector)
 	local_node->numachip->apic_icr_write(APIC_DM_INIT, apicid);
 	// startup IPI
 	local_node->numachip->apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12), apicid);
-
-	printf(" 0x%05x", apicid);
-
-	for (unsigned i = 0; i < 1000000; i++) {
-		if (*REL32(status) == VECTOR_SUCCESS)
-			return 0;
-		cpu_relax();
-	}
-
-	return 1;
 }
 
 static void setup_cores_observer(void)
 {
 	printf("APICs:");
 
-	lib::critical_enter();
-	for (unsigned n = 1; n < acpi->napics; n++) {
-		uint32_t apic = ((uint32_t)local_node->sci << 8) | acpi->apics[n];
+	*REL16(pending) = acpi->napics - 1;
 
-		if (boot_core(apic, VECTOR_SETUP_OBSERVER))
-			fatal("APIC 0x%05x has status 0x%x", apic, *REL32(status));
+	for (unsigned n = 1; n < acpi->napics; n++)
+		boot_core(((uint32_t)local_node->sci << 8) | acpi->apics[n], VECTOR_SETUP_OBSERVER);
+
+	unsigned spin = 0;
+	while (*REL16(pending)) {
+		cpu_relax();
+		assertf(spin++ < CORE_SPINS, "%u cores failed to complete observer setup", *REL16(pending));
 	}
 
-	lib::critical_leave();
 	printf("\n");
 }
 
@@ -444,15 +429,14 @@ static void setup_cores(void)
 	}
 #endif
 
-	lib::critical_enter();
-	tracing_start();
-
-	xassert(!((unsigned long)REL32(status) & 3));
+	xassert(!((unsigned long)REL32(vector) & 3));
 	xassert(!((unsigned long)REL32(entry) & 3));
+	xassert(!((unsigned long)REL32(pending) & 1));
 
-	// boot cores
+	// setup cores
+	printf("APICs:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		printf("APICs on %03x:", (*node)->sci);
+		printf(" %03x", (*node)->sci);
 
 		// set correct MCFG base per node
 		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
@@ -468,45 +452,45 @@ static void setup_cores(void)
 			}
 
 			*REL8(apic_local) = (*node)->apics[n] & 0xff;
-			if (boot_core((*node)->apics[n], VECTOR_SETUP)) {
-				tracing_stop();
-				fatal("APIC 0x%02x->0x%05x has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
+			*REL16(pending) = 1;
+			boot_core((*node)->apics[n], VECTOR_SETUP);
+
+			unsigned spin = 0;
+			while (*REL16(pending)) {
+				cpu_relax();
+				assertf(spin++ < CORE_SPINS, "APIC 0x%x failed to complete setup", (*node)->apics[n]);
 			}
-			printf("->0x%05x", (*node)->apics[n]);
 		}
 		(*node)->napics = acpi->napics;
-		printf("\n");
 	}
-
-	tracing_stop();
-	lib::critical_leave();
+	printf("\n");
 }
 
 static void test_cores(void)
 {
 	lib::critical_enter();
-	tracing_start();
-
 	printf("Testing APICs:");
+
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < (*node)->napics; n++) {
 			if (node == &nodes[0] && n == 0)
 				continue; // skip BSC
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST)) {
-				tracing_stop();
-				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
-			}
+			*REL16(pending) = 1;
+			boot_core((*node)->apics[n], VECTOR_TEST);
 
-			lib::udelay(100000);
+			// initiate finish
+			*REL32(vector) = VECTOR_TEST_FINISH;
 
-			if (boot_core((*node)->apics[n], VECTOR_CACHE_ENABLE)) {
-				tracing_stop();
-				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
+			unsigned spin = 0;
+			while (*REL16(pending)) {
+				cpu_relax();
+				assertf(spin++ < CORE_SPINS, "APIC %03x failed to finish sequential test (status %u)", (*node)->apics[n], *REL32(vector));
 			}
 		}
 	}
 	printf("\n");
+	*REL16(pending) = 0;
 
 	printf("Starting APICs:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -515,32 +499,25 @@ static void test_cores(void)
 			if (node == &nodes[0] && n == 0)
 				continue;
 
-			if (boot_core((*node)->apics[n], VECTOR_TEST)) {
-				tracing_stop();
-				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
-			}
+			boot_core((*node)->apics[n], VECTOR_TEST);
+			*REL16(pending) += 1;
 		}
 	}
 	printf("\n");
 
 	lib::udelay(5000000);
-	printf("Stopping APICs:");
+	printf("Stopping %u APICs:", *REL16(pending));
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < (*node)->napics; n++) {
-			// skip BSC
-			if (node == &nodes[0] && n == 0)
-				continue;
+	// initiate finish
+	*REL32(vector) = VECTOR_TEST_FINISH;
 
-			if (boot_core((*node)->apics[n], VECTOR_CACHE_ENABLE)) {
-				tracing_stop();
-				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
-			}
-		}
+	unsigned spin = 0;
+	while (*REL16(pending)) {
+		cpu_relax();
+		assertf(spin++ < CORE_SPINS, "%u cores failed to finish parallel test", *REL16(pending));
 	}
-	printf("\n");
 
-	tracing_stop();
+	printf("\n");
 	lib::critical_leave();
 }
 
@@ -742,6 +719,28 @@ static void finished(void)
 	os->exec(options->next_label);
 }
 
+static void caches(const bool enable)
+{
+	if (enable)
+		enable_cache();
+
+	printf("%sing caches", enable ? "Enabl" : "Disabl");
+	*REL16(pending) = acpi->napics - 1;
+
+	for (unsigned n = 1; n < acpi->napics; n++)
+		boot_core_host(acpi->apics[n], VECTOR_CACHE_DISABLE);
+
+	unsigned spin = 0;
+	while (*REL16(pending)) {
+		cpu_relax();
+		assertf(spin < CORE_SPINS, "%u cores failed finish", *REL16(pending));
+	}
+
+	if (!enable)
+		disable_cache();
+	printf("\n");
+}
+
 int main(const int argc, char *const argv[])
 {
 	os = new OS(); // needed first for console access
@@ -815,6 +814,7 @@ int main(const int argc, char *const argv[])
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 			(*nb)->check();
 		}
+
 		setup_cores_observer();
 		setup_info();
 		finished();
@@ -854,14 +854,7 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		// Disable caches on all local cores
-		printf("Disable caches");
-		for (unsigned n = 1; n < acpi->napics; n++) {
-			if (native_boot_core(acpi->apics[n], VECTOR_CACHE_DISABLE))
-				fatal("APIC 0x%05x has status 0x%x", acpi->apics[n], *REL32(status));
-		}
-		disable_cache();
-		printf("\n");
+		caches(0);
 
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
 		       "Refer to the console on SCI%03x/%s", config->local_node->sci, config->local_node->hostname,
