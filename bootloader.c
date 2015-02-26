@@ -728,7 +728,7 @@ static void caches(const bool enable)
 	*REL16(pending) = acpi->napics - 1;
 
 	for (unsigned n = 1; n < acpi->napics; n++)
-		boot_core_host(acpi->apics[n], VECTOR_CACHE_DISABLE);
+		boot_core_host(acpi->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
 
 	unsigned spin = 0;
 	while (*REL16(pending)) {
