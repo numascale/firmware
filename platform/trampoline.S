@@ -72,6 +72,11 @@ cache_enable:
 	jmp	1b
 
 setup:
+        // make sure cache is enabled
+	mov	%cr0, %eax
+	and	$~((1 << 30) | (1 << 29)), %eax
+	mov	%eax, %cr0
+
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
 	push	%eax
