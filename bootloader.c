@@ -329,7 +329,26 @@ static void copy_inherit(void)
 	}
 }
 
-#ifdef UNUSED
+static void tracing_start(void)
+{
+	if (!options->tracing)
+		return;
+
+	printf("\n");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->tracing_start();
+}
+
+static void tracing_stop(void)
+{
+	if (!options->tracing)
+		return;
+
+	printf("\n");
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->tracing_stop();
+}
+
 static bool native_boot_core(const uint32_t apicid, const uint32_t vector)
 {
 	*REL32(status) = vector;
@@ -351,7 +370,6 @@ static bool native_boot_core(const uint32_t apicid, const uint32_t vector)
 
 	return 1;
 }
-#endif
 
 static bool boot_core(const uint32_t apicid, const uint32_t vector)
 {
@@ -427,6 +445,7 @@ static void setup_cores(void)
 #endif
 
 	lib::critical_enter();
+	tracing_start();
 
 	xassert(!((unsigned long)REL32(status) & 3));
 	xassert(!((unsigned long)REL32(entry) & 3));
@@ -449,33 +468,18 @@ static void setup_cores(void)
 			}
 
 			*REL8(apic_local) = (*node)->apics[n] & 0xff;
-			if (boot_core((*node)->apics[n], VECTOR_SETUP))
+			if (boot_core((*node)->apics[n], VECTOR_SETUP)) {
+				tracing_stop();
 				fatal("APIC 0x%02x->0x%05x has status 0x%x", acpi->apics[n], (*node)->apics[n], *REL32(status));
+			}
 			printf("->0x%05x", (*node)->apics[n]);
 		}
 		(*node)->napics = acpi->napics;
 		printf("\n");
 	}
 
+	tracing_stop();
 	lib::critical_leave();
-}
-
-static void tracing_start(void)
-{
-	if (!options->tracing)
-		return;
-
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->tracing_start();
-}
-
-static void tracing_stop(void)
-{
-	if (!options->tracing)
-		return;
-
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
-		(*node)->tracing_stop();
 }
 
 static void test_cores(void)
@@ -490,8 +494,7 @@ static void test_cores(void)
 				continue; // skip BSC
 
 			if (boot_core((*node)->apics[n], VECTOR_TEST)) {
-				if (options->tracing)
-					tracing_stop();
+				tracing_stop();
 				fatal("APIC 0x%05x has status 0x%x", (*node)->apics[n], *REL32(status));
 			}
 
@@ -859,14 +862,21 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
-		  "Refer to the console on SCI%03x/%s ", config->local_node->sci, config->local_node->hostname,
-		  nnodes, config->master->sci, config->master->hostname);
-
+		// Disable caches on all local cores
+		printf("Disable caches");
+		for (unsigned n = 1; n < acpi->napics; n++) {
+			if (native_boot_core(acpi->apics[n], VECTOR_CACHE_DISABLE))
+				fatal("APIC 0x%05x has status 0x%x", acpi->apics[n], *REL32(status));
+		}
 		disable_cache();
+		printf("\n");
+
+		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
+		       "Refer to the console on SCI%03x/%s", config->local_node->sci, config->local_node->hostname,
+		       nnodes, config->master->sci, config->master->hostname);
 
 		// set 'go-ahead'
-		local_node->numachip->write32(Numachip2::INFO, 7 << 29);
+		local_node->numachip->write32(Numachip2::INFO, 7U << 29);
 
 		// reenable wrap32
 		val = lib::rdmsr(MSR_HWCR);
