@@ -40,7 +40,7 @@ EXPORT(entry)
 
 	movl	%cs:SYM_OFFSET(vector), %edx
 
-        // vector jump table
+	// vector jump table
 	cmpl	$VECTOR_CACHE_DISABLE, %edx
 	je	cache_disable
 	cmpl	$VECTOR_CACHE_ENABLE, %edx
@@ -51,7 +51,7 @@ EXPORT(entry)
 	je	setup_observer
 	cmpl	$VECTOR_TEST, %edx
 	je	test
-        // unknown vector
+	// unknown vector
 	STATUS(84)
 1:	cli
 	hlt
@@ -69,9 +69,16 @@ setup:
 
 	STATUS(71)
 
+	// set APIC ID
 	mov	%cs:SYM_OFFSET(apic_local), %al
 	shl	$24, %eax
 	mov	%eax, %fs:(0x20)
+
+	// clear FS
+	mov $0, %eax
+	mov $0, %edx
+	mov	$MSR_FS_BASE, %ecx
+	wrmsr
 
 	// fall through to common code for observer
 setup_observer:
@@ -98,6 +105,7 @@ cache_enable:
 	mov	%cr0, %eax
 	and	$~((1 << 30) | (1 << 29)), %eax
 	mov	%eax, %cr0
+
 	SEM_POST()
 1:	cli
 	hlt
@@ -108,6 +116,7 @@ cache_disable:
 	or	$(1 << 30), %eax
 	mov	%eax, %cr0
 	wbinvd
+
 	SEM_POST()
 1:	cli
 	hlt
@@ -140,7 +149,7 @@ test:
 	inc	%ebx
 
 	// check for termination condition
-        mfence
+	mfence
 	movl	%cs:SYM_OFFSET(vector), %edx
 	cmpl	$VECTOR_TEST_FINISH, %edx
 	jne	1b
@@ -156,6 +165,7 @@ test:
 	xor	%edx, %edx
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
+
 	SEM_POST()
 2:	cli
 	hlt
