@@ -162,18 +162,18 @@ test:
 	jmp	2b
 
 	.align 64
-EXPORT(msrs)
-	.skip MSR_MAX * 12, 0
 EXPORT(vector)
+	.long 0
+EXPORT(pending)
 	.long 0
 EXPORT(old_int15_vec)
 	.long 0
 EXPORT(new_e820_map)
 	.skip E820_MAP_MAX, 0
+EXPORT(msrs)
+	.skip MSR_MAX * 12, 0
 EXPORT(new_e820_len)
 	.word 0
-EXPORT(pending)
-	.long 0
 EXPORT(apic_local)
 	.byte 0
 
