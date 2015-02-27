@@ -356,7 +356,7 @@ static void boot_core_host(const uint32_t apicid, const uint32_t vector)
 	xassert(!(start_eip & ~0xff000));
 
 	// ensure semaphore set
-	xassert(*REL16(pending));
+	xassert(trampoline_sem_getvalue());
 
 	// init IPI
 	lib::native_apic_icr_write(APIC_INT_ASSERT | APIC_DM_INIT, apicid);
@@ -370,6 +370,9 @@ static void boot_core(const uint32_t apicid, const uint32_t vector)
 	uint32_t start_eip = (uint32_t)REL32(entry);
 	xassert(!(start_eip & ~0xff000));
 
+	// ensure semaphore set
+	xassert(trampoline_sem_getvalue());
+
 	// init	IPI
 	local_node->numachip->apic_icr_write(APIC_DM_INIT, apicid);
 	// startup IPI
@@ -380,15 +383,11 @@ static void setup_cores_observer(void)
 {
 	printf("APICs:");
 
-	*REL16(pending) = acpi->napics - 1;
-
-	for (unsigned n = 1; n < acpi->napics; n++)
+	for (unsigned n = 1; n < acpi->napics; n++) {
+		trampoline_sem_init(1);
 		boot_core(((uint32_t)local_node->sci << 8) | acpi->apics[n], VECTOR_SETUP_OBSERVER);
-
-	unsigned spin = 0;
-	while (*REL16(pending)) {
-		cpu_relax();
-		assertf(spin++ < CORE_SPINS, "%u cores failed to complete observer setup", *REL16(pending));
+		if (trampoline_sem_wait())
+			fatal("%u cores failed to complete observer setup (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 	}
 
 	printf("\n");
@@ -433,17 +432,20 @@ static void setup_cores(void)
 	xassert(!((unsigned long)REL32(entry) & 3));
 	xassert(!((unsigned long)REL32(pending) & 1));
 
+	lib::critical_enter();
+	tracing_start();
+
 	// setup cores
 	printf("APICs:");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		printf(" %03x", (*node)->sci);
-
 		// set correct MCFG base per node
 		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
 		push_msr(MSR_MCFG, mcfg);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			(*node)->apics[n] = ((uint32_t)(*node)->sci << 8) | acpi->apics[n];
+			printf(" 0x%05x", (*node)->apics[n]);
+
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
 				volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
@@ -452,72 +454,92 @@ static void setup_cores(void)
 			}
 
 			*REL8(apic_local) = (*node)->apics[n] & 0xff;
-			*REL16(pending) = 1;
+			trampoline_sem_init(1);
 			boot_core((*node)->apics[n], VECTOR_SETUP);
-
-			unsigned spin = 0;
-			while (*REL16(pending)) {
-				cpu_relax();
-				assertf(spin++ < CORE_SPINS, "APIC 0x%x failed to complete setup", (*node)->apics[n]);
+			if (trampoline_sem_wait()) {
+				tracing_stop();
+				fatal("APIC 0x%x failed to complete setup", (*node)->apics[n]);
 			}
 		}
 		(*node)->napics = acpi->napics;
 	}
 	printf("\n");
+//	tracing_stop();
+	lib::critical_leave();
 }
 
 static void test_cores(void)
 {
+//	lib::wait_key("Press enter to test cores");
+
 	lib::critical_enter();
+//	tracing_start();
 	printf("Testing APICs:");
 
+	uint16_t tcores = 0;
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < (*node)->napics; n++) {
 			if (node == &nodes[0] && n == 0)
 				continue; // skip BSC
 
-			*REL16(pending) = 1;
+			printf(" 0x%05x", (*node)->apics[n]);
+			trampoline_sem_init(1);
 			boot_core((*node)->apics[n], VECTOR_TEST);
+			if (trampoline_sem_wait()) {
+				tracing_stop();
+				fatal("APIC %03x failed to start sequential test (status %u)", (*node)->apics[n], *REL32(vector));
+			}
 
-			// initiate finish
+			// run for ~100 micro seconds
+			lib::udelay(100000);
+
+			// initiate finish, order here is important re-initialize the semaphore first
+			trampoline_sem_init(1);
 			*REL32(vector) = VECTOR_TEST_FINISH;
 
-			unsigned spin = 0;
-			while (*REL16(pending)) {
-				cpu_relax();
-				assertf(spin++ < CORE_SPINS, "APIC %03x failed to finish sequential test (status %u)", (*node)->apics[n], *REL32(vector));
+			if (trampoline_sem_wait()) {
+				tracing_stop();
+				fatal("APIC %03x failed to finish sequential test (status %u)", (*node)->apics[n], *REL32(vector));
 			}
+			tcores++;
 		}
 	}
 	printf("\n");
-	*REL16(pending) = 0;
 
-	printf("Starting APICs:");
+	trampoline_sem_init(tcores);
+
+	printf("Starting %u cores:", tcores);
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (unsigned n = 0; n < (*node)->napics; n++) {
 			// skip BSC
 			if (node == &nodes[0] && n == 0)
 				continue;
 
+			printf(" 0x%05x", (*node)->apics[n]);
 			boot_core((*node)->apics[n], VECTOR_TEST);
-			*REL16(pending) += 1;
 		}
 	}
 	printf("\n");
 
-	lib::udelay(5000000);
-	printf("Stopping %u APICs:", *REL16(pending));
+	if (trampoline_sem_wait()) {
+		tracing_stop();
+		fatal("%u cores failed to start parallel test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
+	}
 
-	// initiate finish
+	lib::udelay(5000000);
+	printf("Stopping %u cores:", tcores);
+
+	// initiate finish, order here is important re-initialize the semaphore first
+	trampoline_sem_init(tcores);
 	*REL32(vector) = VECTOR_TEST_FINISH;
 
-	unsigned spin = 0;
-	while (*REL16(pending)) {
-		cpu_relax();
-		assertf(spin++ < CORE_SPINS, "%u cores failed to finish parallel test", *REL16(pending));
+	if (trampoline_sem_wait()) {
+		tracing_stop();
+		fatal("%u cores failed to finish parallel test", trampoline_sem_getvalue());
 	}
 
 	printf("\n");
+	tracing_stop();
 	lib::critical_leave();
 }
 
@@ -725,16 +747,11 @@ static void caches(const bool enable)
 		enable_cache();
 
 	printf("%sing caches", enable ? "Enabl" : "Disabl");
-	*REL16(pending) = acpi->napics - 1;
-
+	trampoline_sem_init(acpi->napics - 1);
 	for (unsigned n = 1; n < acpi->napics; n++)
 		boot_core_host(acpi->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
-
-	unsigned spin = 0;
-	while (*REL16(pending)) {
-		cpu_relax();
-		assertf(spin < CORE_SPINS, "%u cores failed finish", *REL16(pending));
-	}
+	if (trampoline_sem_wait())
+		fatal("%u cores did not complete requested operation", trampoline_sem_getvalue());
 
 	if (!enable)
 		disable_cache();
@@ -905,7 +922,7 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
-//	test_cores();
+	test_cores();
 	check();
 	finished();
 }

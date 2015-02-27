@@ -20,6 +20,8 @@
 
 #define EXPORT(sym) .global sym ## _relocate; sym ## _relocate: sym:
 #define SYM_OFFSET(sym) ((sym) - asm_relocate_start)
+#define STATUS(val) movl $val, %cs:SYM_OFFSET(vector)
+#define SEM_POST() lock decw %cs:SYM_OFFSET(pending)
 
 	.code16
 	.text
@@ -30,6 +32,7 @@ asm_relocate_start:
 EXPORT(entry)
 	cli
 
+	// setup stack segment
 	mov	%cs, %ax
 	add	$SYM_OFFSET(stack_start) / 16, %ax
 	mov	%ax, %ss
@@ -37,6 +40,7 @@ EXPORT(entry)
 
 	movl	%cs:SYM_OFFSET(vector), %edx
 
+        // vector jump table
 	cmpl	$VECTOR_CACHE_DISABLE, %edx
 	je	cache_disable
 	cmpl	$VECTOR_CACHE_ENABLE, %edx
@@ -47,44 +51,32 @@ EXPORT(entry)
 	je	setup_observer
 	cmpl	$VECTOR_TEST, %edx
 	je	test
-1:	cli
-	hlt
-	jmp	1b
-
-cache_disable:
-	mov	%cr0, %eax
-	or	$(1 << 30), %eax
-	mov	%eax, %cr0
-	wbinvd
-	lock decw %cs:SYM_OFFSET(pending)
+        // unknown vector
+	STATUS(84)
 1:	cli
 	hlt
 	jmp	1b
 
 setup:
+	STATUS(70)
+
+	// load APIC BAR into FS
 	mov	$MSR_APIC_BAR, %ecx
 	rdmsr
-
-	mov	$0x70800, %eax
-	mov	$MSR_APIC_BAR, %ecx
+	and	$~0xfff, %eax
+	mov	$MSR_FS_BASE, %ecx
 	wrmsr
 
-	mov	$0x7000, %ax
-	mov	%ax, %es
+	STATUS(71)
 
 	mov	%cs:SYM_OFFSET(apic_local), %al
 	shl	$24, %eax
-	mov	%eax, %es:0x20
-
-	// clear BSP flag to let core accept INIT and STARTUP IPIs
-	mov	$MSR_APIC_BAR, %ecx
-	rdmsr
-	and	$~0x100, %eax
-	mov	$MSR_APIC_BAR, %ecx
-	wrmsr
+	mov	%eax, %fs:(0x20)
 
 	// fall through to common code for observer
 setup_observer:
+	STATUS(72)
+
 	mov	$SYM_OFFSET(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
 	add	$4, %edi
@@ -99,24 +91,35 @@ setup_observer:
 
 	wrmsr
 	jmp	1b
+	STATUS(74)
 
 	// fall through to enable cache
 cache_enable:
 	mov	%cr0, %eax
 	and	$~((1 << 30) | (1 << 29)), %eax
 	mov	%eax, %cr0
+	SEM_POST()
+1:	cli
+	hlt
+	jmp	1b
 
-	lock decw %cs:SYM_OFFSET(pending)
+cache_disable:
+	mov	%cr0, %eax
+	or	$(1 << 30), %eax
+	mov	%eax, %cr0
 	wbinvd
+	SEM_POST()
 1:	cli
 	hlt
 	jmp	1b
 
 test:
+	SEM_POST()
+
 	// disable wrap32
-	mov $MSR_HWCR, %ecx
+	mov	$MSR_HWCR, %ecx
 	rdmsr
-	or $(1 << 17), %eax
+	or	$(1 << 17), %eax
 	wrmsr
 
 	mov	$1, %ebx // seed
@@ -137,27 +140,26 @@ test:
 	inc	%ebx
 
 	// check for termination condition
-	cmpl $VECTOR_TEST_FINISH, %cs:SYM_OFFSET(vector)
+        mfence
+	movl	%cs:SYM_OFFSET(vector), %edx
+	cmpl	$VECTOR_TEST_FINISH, %edx
 	jne	1b
 
 	// reenable wrap32
-	mov $MSR_HWCR, %eax
+	mov	$MSR_HWCR, %eax
 	rdmsr
-	and $~(1 << 17), %eax
+	and	$~(1 << 17), %eax
 	wrmsr
 
 	// clear FS
-	mov $0, %eax
-	mov $0, %edx
+	xor	%eax, %eax
+	xor	%edx, %edx
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
-
-	// signal semaphore
-	lock decw %cs:SYM_OFFSET(pending)
-	wbinvd
-3:	cli
+	SEM_POST()
+2:	cli
 	hlt
-	jmp	3b
+	jmp	2b
 
 	.align 64
 EXPORT(msrs)
@@ -171,12 +173,13 @@ EXPORT(new_e820_map)
 EXPORT(new_e820_len)
 	.word 0
 EXPORT(pending)
-	.word 0
+	.long 0
 EXPORT(apic_local)
 	.byte 0
 
 	.align 64
-stack_start:  .skip 1024, 0
+stack_start:
+        .skip 1024, 0
 stack_end:
 
 	.align 64

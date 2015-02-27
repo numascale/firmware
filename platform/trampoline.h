@@ -58,6 +58,27 @@ struct msr_ent {
 	uint64_t val;
 };
 
+static inline void trampoline_sem_init(const uint16_t val)
+{
+	*REL16(pending) = val;
+}
+
+static inline bool trampoline_sem_wait(void)
+{
+	unsigned spin = 0;
+	while (*REL16(pending)) {
+		cpu_relax();
+		if (spin++ >= CORE_SPINS)
+			return 1;
+	}
+	return 0;
+}
+
+static inline uint16_t trampoline_sem_getvalue(void)
+{
+	return *REL16(pending);
+}
+
 static inline void push_msr(const uint32_t num, const uint64_t val)
 {
 	if (options->debug.cores)
