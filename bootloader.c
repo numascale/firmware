@@ -281,6 +281,9 @@ static void remap(void)
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
 	push_msr(MSR_TOPMEM2, dram_top);
 
+	uint64_t topmem = lib::rdmsr(MSR_TOPMEM);
+	push_msr(MSR_TOPMEM, topmem);
+
 	// 6. add NumaChip MMIO32 ranges
 	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
 	local_node->numachip->mmiomap.add(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
