@@ -19,9 +19,9 @@
 #include "trampoline.h"
 
 #define EXPORT(sym) .global sym ## _relocate; sym ## _relocate: sym:
-#define SYM_OFFSET(sym) ((sym) - asm_relocate_start)
-#define STATUS(val) movl $val, %cs:SYM_OFFSET(vector)
-#define SEM_POST() lock decw %cs:SYM_OFFSET(pending)
+#define RELOCATED(sym) ((sym) - asm_relocate_start)
+#define STATUS(val) movl $val, %cs:RELOCATED(vector)
+#define SEM_POST() lock decw %cs:RELOCATED(pending)
 
 	.text
 	.code16
@@ -31,15 +31,19 @@
 asm_relocate_start:
 EXPORT(entry)
 	cli
-	wbinvd
 
+	// invalidate TLB
+	xorl	%eax, %eax
+	movl	%eax, %cr3
+
+//	ljmp	$0x8800, $RELOCATED(1f)
 	// setup segments
-	mov %cs, %ax
-	add	$SYM_OFFSET(stack_start) / 16, %ax
+1:	mov	%cs, %ax
+	add	$RELOCATED(stack_start) / 16, %ax
 	mov	%ax, %ss
 	movl	$(stack_end - stack_start), %esp
 
-	movl	%cs:SYM_OFFSET(vector), %edx
+	movl	%cs:RELOCATED(vector), %edx
 
 	// vector jump table
 	cmpl	$VECTOR_CACHE_DISABLE, %edx
@@ -71,13 +75,13 @@ setup:
 	STATUS(71)
 
 	// set APIC ID
-	mov	%cs:SYM_OFFSET(apic_local), %al
+	mov	%cs:RELOCATED(apic_local), %al
 	shl	$24, %eax
 	mov	%eax, %fs:(0x20)
 
 	// clear FS
-	mov $0, %eax
-	mov $0, %edx
+	xor	%eax, %eax
+	xor	%edx, %edx
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
 
@@ -85,7 +89,7 @@ setup:
 setup_observer:
 	STATUS(72)
 
-	mov	$SYM_OFFSET(msrs), %edi
+	mov	$RELOCATED(msrs), %edi
 1:	mov	%cs:(%edi), %ecx // MSR number
 	add	$4, %edi
 
@@ -151,7 +155,7 @@ test:
 
 	// check for termination condition
 	mfence
-	movl	%cs:SYM_OFFSET(vector), %edx
+	movl	%cs:RELOCATED(vector), %edx
 	cmpl	$VECTOR_TEST_FINISH, %edx
 	jne	1b
 
@@ -190,7 +194,7 @@ EXPORT(apic_local)
 
 	.balign 64
 stack_start:
-        .skip 1024, 0
+	.skip 1024, 0
 stack_end:
 
 	.balign 64
@@ -199,14 +203,14 @@ EXPORT(new_e820_handler)
 	jne	1f
 	cmp	$0x534d4150, %edx
 	je	2f
-1:	ljmp	%cs:*SYM_OFFSET(old_int15_vec)
+1:	ljmp	%cs:*RELOCATED(old_int15_vec)
 
 2:	mov	$0x534d4150, %eax
 	cmp	$20, %ecx
 	jl	1f
 	test	$0xffff0000, %ebx
 	jnz	1f
-	cmp	%cs:SYM_OFFSET(new_e820_len), %bx
+	cmp	%cs:RELOCATED(new_e820_len), %bx
 	jg	1f
 
 	push	%ds
@@ -215,7 +219,7 @@ EXPORT(new_e820_handler)
 	push	%di
 	push	%esi
 	shl	$2, %ebx
-	leal	SYM_OFFSET(new_e820_map)(%ebx, %ebx, 4), %esi
+	leal	RELOCATED(new_e820_map)(%ebx, %ebx, 4), %esi
 	mov	$5, %ecx
 	rep	movsl
 	pop	%esi
@@ -225,7 +229,7 @@ EXPORT(new_e820_handler)
 	inc	%ebx
 	mov	$20, %ecx
 	and	$~1, 4(%esp)	// clear carry flag
-	cmp	%cs:SYM_OFFSET(new_e820_len), %bx
+	cmp	%cs:RELOCATED(new_e820_len), %bx
 	jge	2f
 	iret
 
