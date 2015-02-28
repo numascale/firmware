@@ -262,7 +262,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 {
 	uint32_t scrub[7];
 	uint32_t val;
-	int pf_enabled = 0; // lib::cht_read32(0, PROBEFILTER_CTRL) & 3;
+	int pf_enabled = lib::cht_read32(0, PROBEFILTER_CTRL) & 3;
 
 	printf("Adjusting HT fabric (PF %s)",
 	       (pf_enabled == 2) ? "enabled, 4-way" :
