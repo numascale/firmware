@@ -225,8 +225,10 @@ static void setup_gsm(void)
 
 static void setup_info(void)
 {
-	uint32_t info[Numachip2::INFO_SIZE];
-	struct info *infop = (struct info *)&info;
+	struct info *infop;
+	uint32_t info[sizeof(*infop)];
+	assert(sizeof(*infop) < (Numachip::INFO_SIZE * 4));
+	infop = (struct info *)&info;
 
 	memset(info, 0, sizeof(info));
 	infop->partition = config->local_node->partition;
