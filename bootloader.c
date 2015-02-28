@@ -227,7 +227,7 @@ static void setup_info(void)
 {
 	struct info *infop;
 	uint32_t info[sizeof(*infop)];
-	assert(sizeof(*infop) < (Numachip::INFO_SIZE * 4));
+	xassert(sizeof(*infop) < (Numachip2::INFO_SIZE * 4));
 	infop = (struct info *)&info;
 
 	memset(info, 0, sizeof(info));
