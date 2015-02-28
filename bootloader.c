@@ -241,7 +241,8 @@ static void setup_info(void)
 	}
 
 	infop->part_nodes = nnodes;
-	infop->ver = 0;
+	infop->ver = 1;
+	infop->ht = local_node->numachip->ht;
 	infop->neigh_ht = local_node->neigh_ht;
 	infop->neigh_link = local_node->neigh_link;
 	infop->neigh_sublink = 0;
