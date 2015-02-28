@@ -23,20 +23,21 @@
 #define STATUS(val) movl $val, %cs:SYM_OFFSET(vector)
 #define SEM_POST() lock decw %cs:SYM_OFFSET(pending)
 
-	.code16
 	.text
-	.align 4096
+	.code16
+	.balign 4096
 
 	.global asm_relocate_start
 asm_relocate_start:
 EXPORT(entry)
 	cli
+	wbinvd
 
-	// setup stack segment
-	mov	%cs, %ax
+	// setup segments
+	mov %cs, %ax
 	add	$SYM_OFFSET(stack_start) / 16, %ax
 	mov	%ax, %ss
-	mov	$(stack_end - stack_start), %sp
+	movl	$(stack_end - stack_start), %esp
 
 	movl	%cs:SYM_OFFSET(vector), %edx
 
@@ -171,7 +172,7 @@ test:
 	hlt
 	jmp	2b
 
-	.align 64
+	.balign 64
 EXPORT(vector)
 	.long 0
 EXPORT(pending)
@@ -187,12 +188,12 @@ EXPORT(new_e820_len)
 EXPORT(apic_local)
 	.byte 0
 
-	.align 64
+	.balign 64
 stack_start:
         .skip 1024, 0
 stack_end:
 
-	.align 64
+	.balign 64
 EXPORT(new_e820_handler)
 	cmp	$0xe820, %eax
 	jne	1f
@@ -236,9 +237,9 @@ EXPORT(new_e820_handler)
 asm_relocate_end:
 
 	// replacement code for brute-force SMM disable
-	.code16
 	.text
-	.align 4096
+	.code16
+	.balign 4096
 
 	.global smm_handler_start
 smm_handler_start:
