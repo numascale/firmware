@@ -226,11 +226,10 @@ static void setup_gsm(void)
 static void setup_info(void)
 {
 	struct info *infop;
-	uint32_t info[sizeof(*infop)];
-	xassert(sizeof(*infop) < (Numachip2::INFO_SIZE * 4));
-	infop = (struct info *)&info;
-
+	uint32_t info[sizeof(*infop) / 4];
 	memset(info, 0, sizeof(info));
+
+	infop = (struct info *)&info;
 	infop->partition = config->local_node->partition;
 	infop->fabric_nodes = config->nnodes;
 
@@ -251,9 +250,12 @@ static void setup_info(void)
 	infop->symmetric = 1;
 	infop->devices = config->local_node->devices;
 
-	for (unsigned n = 0; n < nnodes; n++)
-		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++)
+	for (unsigned n = 0; n < nnodes; n++) {
+		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++) {
+			xassert(i < Numachip2::INFO_SIZE);
 			nodes[n]->numachip->write32(Numachip2::INFO + i*4, info[i]);
+		}
+	}
 }
 
 static void remap(void)
