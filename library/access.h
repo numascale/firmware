@@ -93,6 +93,26 @@ static inline  __attribute__((always_inline)) void enable_cache(void)
 
 namespace lib
 {
+	static inline uint16_t apicid_pack(const sci_t sci, const uint8_t lapicid)
+	{
+		uint8_t x = sci & 0xf;
+		uint8_t y = (sci >> 4) & 0xf;
+		uint8_t z = (sci >> 8) & 0xf;
+
+		return lapicid | (x << 6) | (y << 9) | (z << 12);
+	}
+
+	static inline sci_t apicid_unpack(const uint16_t apicid, uint8_t *lapicid)
+	{
+		*lapicid = apicid & 0x3f;
+
+		uint8_t x = (apicid >> 6) & 7;
+		uint8_t y = (apicid >> 9) & 7;
+		uint8_t z = (apicid >> 12) & 7;
+
+		return x | (y << 4) | (z << 8);
+	}
+
 	static inline uint64_t rdmsr(const msr_t msr)
 	{
 		uint64_t val;
