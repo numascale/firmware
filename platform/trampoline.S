@@ -140,8 +140,9 @@ test:
 
 	// generate random number
 1:	mov	$1103515245, %eax
-	mul	%ebx // result in EAX:EDX
+	mul	%ebx // result in EDX:EAX
 	add	$12345, %eax
+	mov	%eax, %ebx
 
 	and	$~7, %eax  // align access
 	mov	$0x1, %edx // 4GB base
@@ -149,11 +150,15 @@ test:
 	// generate 64-bit load using FS
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
+
+	// read or write depending on first bit
+	test $1, %ebx
+	je 2f
 	mov	%fs:(0), %ecx
+	jmp 3f
+2:	movl $0, %fs:(0)
 
-	inc	%ebx
-
-	// check for termination condition
+3:	// check for termination condition
 	mfence
 	movl	%cs:RELOCATED(vector), %edx
 	cmpl	$VECTOR_TEST_FINISH, %edx
