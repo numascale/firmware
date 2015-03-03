@@ -60,7 +60,7 @@ class Numachip2 {
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
 
-	static const unsigned training_period = 20000;
+	static const unsigned training_period = 500000;
 	static const unsigned dram_training_period = 500000;
 	static const unsigned stability_period = 500000;
 	static const unsigned i2c_timeout = 1000;
