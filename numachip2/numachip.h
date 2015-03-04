@@ -104,6 +104,7 @@ public:
 	static const uint64_t MCFG_LIM         = 0x3fffffffffff;
 	static const uint64_t LOC_BASE         = 0xf0000000;
 	static const uint64_t LOC_LIM          = 0xf0ffffff;
+	static const uint64_t PIU_APIC_ICR     = 0xf0100000;
 
 	/* Registers; function in bits 15:12 */
 	static const reg_t VENDEV            = 0x0000;
@@ -128,7 +129,6 @@ public:
 	static const reg_t DRAM_SHARED_LIMIT = 0x1074;
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
 	static const reg_t PIU_ATT_ENTRY     = 0x107c;
-	static const reg_t PIU_APIC          = 0x1080;
 	static const reg_t PIU_PCIIO_NODE    = 0x1084;
 	static const reg_t INFO              = 0x1090;
 	static const reg_t INFO_SIZE         = 0x8;
