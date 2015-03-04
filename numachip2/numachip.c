@@ -143,8 +143,8 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	printf("NumaChip2 [");
 	const bool ht3 = !!(read32(LINK_FREQ_REV) & 0xffc00000);
 	if (ht3) {
-		write32(IMG_PROP_TEMP, 1 << 31);
 #ifdef UNIMPLEMENTED
+		write32(IMG_PROP_TEMP, 1 << 31);
 		uint32_t val;
 		while (!(val = read32(IMG_PROP_TEMP) & (1 << 8)))
 			cpu_relax();
