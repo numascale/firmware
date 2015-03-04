@@ -17,21 +17,19 @@
 
 #pragma once
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdbool.h>
 
-#include "platform/config.h"
-#include "platform/os.h"
-#include "platform/options.h"
-#include "platform/e820.h"
-#include "platform/acpi.h"
-#include "library/access.h"
-#include "opteron/opteron.h"
-#include "numachip2/numachip.h"
-#include "numachip2/info.h"
-#include "node.h"
-
-#define foreach_node(x) for (Node **(x) = &nodes[0]; (x) < &nodes[config->nnodes]; (x)++)
-#define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
-
+struct numachip_info {
+	uint8_t partition; // 0 for observer
+	uint16_t fabric_nodes : 12;
+	uint16_t part_start : 12;
+	uint16_t part_nodes : 12;
+	uint8_t ver : 4;
+	uint8_t ht : 3;
+	uint8_t neigh_ht : 3;
+	uint8_t neigh_link : 2;
+	uint8_t neigh_sublink : 1;
+	bool symmetric : 1;
+	bool devices : 1;
+} __attribute__((packed)) __attribute__((aligned(4)));

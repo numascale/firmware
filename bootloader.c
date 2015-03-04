@@ -225,11 +225,11 @@ static void setup_gsm(void)
 
 static void setup_info(void)
 {
-	struct info *infop;
+	struct numachip_info *infop;
 	uint32_t info[sizeof(*infop) / 4];
 	memset(info, 0, sizeof(info));
 
-	infop = (struct info *)&info;
+	infop = (struct numachip_info *)&info;
 	infop->partition = config->local_node->partition;
 	infop->fabric_nodes = config->nnodes;
 
