@@ -774,7 +774,7 @@ int main(const int argc, char *const argv[])
 		warning("Last reboot reason (PM44h) was 0x%x", reason);
 
 	if (lib::mcfg_read32(SCI_LOCAL, 0, 0x14, 0, 0x4c) & (1 << 30))
-		warning("Last reboot reason by BootFail timer");
+		warning("Last reboot is due to BootFail timer");
 
 	// SMI often assumes HT nodes are Northbridges, so handover early
 	if (options->handover_acpi)

@@ -32,7 +32,7 @@ void SR56x0::write32(const uint16_t reg, const uint32_t val)
 	lib::mcfg_write32(sci, 0, 0, 0, reg, val);
 }
 
-uint32_t SR56x0::nbmiscind_read(uint8_t reg)
+uint32_t SR56x0::nbmiscind_read(const uint8_t reg)
 {
 	write32(0x60, reg);
 	return read32(0x64);
@@ -72,13 +72,40 @@ bool SR56x0::probe(const sci_t sci)
 SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 {
 	if (local) {
-		// enable 52-bit PCIe address generation
 		uint32_t val = read32(0xc8);
+		if (val & (1 << 4))
+			warning("Last reboot was due to IOH link failure");
+
+		if (val & (3 << 8))
+			warning("HT CRC errors detected during last boot");
+
+		if (htiu_read(0x7e) & (1 << 7))
+			warning("Last reboot was due to IOH input pin");
+
+		// ensure sync flood generation isn't enabled
+		xassert(!read32(0xd8));
+		xassert(!nbmiscind_read(0x77));
+		xassert(!nbmiscind_read(0x78));
+		xassert(!nbmiscind_read(0x79));
+		xassert(!nbmiscind_read(0x7a));
+		xassert(!htiu_read(0x3a));
+		xassert(!htiu_read(0x3b));
+
+		// disable sync flood detection
+		val = htiu_read(0x1d);
+		htiu_write(0x1d, 1 << 4);
+
+		// enable 52-bit PCIe address generation
+		val = read32(0xc8);
 		write32(0xc8, val | (1 << 15));
 
 		// SERR_EN: initiate sync flood when PCIe System Error detected in IOH
 		val = read32(0x4);
 		write32(0x4, val & ~(1 << 8));
+
+		// disable CRC syncflood
+		val = read32(0xc8);
+		write32(0xc8, val | (1 << 1));
 	}
 }
 

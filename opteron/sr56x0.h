@@ -32,7 +32,7 @@ class SR56x0 {
 
 	uint32_t read32(const uint16_t reg);
 	void write32(const uint16_t reg, const uint32_t val);
-	uint32_t nbmiscind_read(uint8_t reg);
+	uint32_t nbmiscind_read(const uint8_t reg);
 	void nbmiscind_write(const uint8_t reg, const uint32_t val);
 	uint32_t htiu_read(const uint8_t reg);
 	void htiu_write(const uint8_t reg, const uint32_t val);
