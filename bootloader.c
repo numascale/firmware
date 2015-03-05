@@ -475,14 +475,14 @@ static void setup_cores(void)
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
-		lib::mem_write32(TEST_BASE + i * 4, lib::hash64(i));
+		lib::mem_write32((1ULL << TEST_BASE_SHIFT) + i * 4, lib::hash64(i));
 }
 
 static void test_verify(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
 		uint32_t corr = lib::hash64(i);
-		uint64_t addr = TEST_BASE + i * 4;
+		uint64_t addr = (1ULL << TEST_BASE_SHIFT) + i * 4;
 		uint32_t val = lib::mem_read32(addr);
 
 		if (val != corr && val != ~corr)

@@ -146,7 +146,7 @@ test:
 
 	// setup FS
 	mov	$MSR_FS_BASE, %ecx
-	mov	$(TEST_BASE >> 32), %edx
+	mov	$(1 << (TEST_BASE_SHIFT - 32)), %edx
 	and $(TEST_SIZE - 1), %eax
 	wrmsr
 
