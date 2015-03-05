@@ -42,7 +42,6 @@ public:
 
 	void init(void);
 	void check(void);
-	void tracing_arm(void);
 	void tracing_start(void);
 	void tracing_stop(void);
 

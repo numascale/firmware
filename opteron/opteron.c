@@ -344,6 +344,7 @@ void Opteron::init(void)
 	if (options->tracing) {
 		trace_base = dram_base + dram_size - options->tracing;
 		trace_limit = trace_base + options->tracing - 1;
+		tracing_arm();
 	}
 
 	// Enable reporting of WatchDog error through MCA
