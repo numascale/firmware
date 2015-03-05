@@ -472,6 +472,25 @@ static void setup_cores(void)
 	lib::critical_leave();
 }
 
+static void test_prepare(void)
+{
+	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
+		lib::mem_write32(TEST_BASE + i * 4, lib::hash64(i));
+}
+
+static void test_verify(void)
+{
+	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
+		uint32_t corr = lib::hash64(i);
+		uint64_t addr = TEST_BASE + i * 4;
+		uint32_t val = lib::mem_read32(addr);
+
+		if (val != corr && val != ~corr)
+			fatal("address 0x%llx should have %08x or 0x%08x, but has %08x", addr, corr, ~corr, val);
+
+	}
+}
+
 static void test_cores(void)
 {
 	uint16_t cores = 0;
@@ -483,6 +502,7 @@ static void test_cores(void)
 	lib::critical_enter();
 	for (unsigned loop = 0; loop < 10; loop++) {
 		trampoline_sem_init(cores);
+		test_prepare();
 		tracing_start();
 
 		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
@@ -509,6 +529,7 @@ static void test_cores(void)
 		}
 
 		tracing_stop();
+		test_verify();
 		printf(" %u", loop);
 	}
 	lib::critical_leave();

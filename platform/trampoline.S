@@ -144,16 +144,13 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-//	and	$0x3fc, %eax  // align access
-	mov	$8, %edx // 32GB base
-	mov %ecx, %eax
-	and $1, %ecx
-	or %ecs, %edx
-
-	// generate 64-bit load using FS
-	movl	$MSR_FS_BASE, %ecx
+	// setup FS
+	mov	$MSR_FS_BASE, %ecx
+	mov	$(TEST_BASE >> 32), %edx
+	and $(TEST_SIZE - 1), %eax
 	wrmsr
 
+	// generate 64-bit load using FS
 	movl	%fs:(0), %ecx
 	xorl	$0xffffffff, %fs:(0)
 
