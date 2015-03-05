@@ -144,22 +144,20 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	and	$~7, %eax  // align access
-	mov	$0x1, %edx // 4GB base
+//	and	$0x3fc, %eax  // align access
+	mov	$8, %edx // 32GB base
+	mov %ecx, %eax
+	and $1, %ecx
+	or %ecs, %edx
 
 	// generate 64-bit load using FS
-	mov	$MSR_FS_BASE, %ecx
+	movl	$MSR_FS_BASE, %ecx
 	wrmsr
 
-	// read or write depending on first bit
-	test $1, %ebx
-	je 2f
-	mov	%fs:(0), %ecx
-	jmp 3f
-2:	movl $0, %fs:(0)
+	movl	%fs:(0), %ecx
+	xorl	$0xffffffff, %fs:(0)
 
 3:	// check for termination condition
-	mfence
 	movl	%cs:RELOCATED(vector), %edx
 	cmpl	$VECTOR_TEST_FINISH, %edx
 	jne	1b

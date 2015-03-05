@@ -342,7 +342,6 @@ static void tracing_start(void)
 	if (!options->tracing)
 		return;
 
-	printf("\n");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->tracing_start();
 }
@@ -352,7 +351,6 @@ static void tracing_stop(void)
 	if (!options->tracing)
 		return;
 
-	printf("\n");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->tracing_stop();
 }
@@ -441,7 +439,6 @@ static void setup_cores(void)
 	xassert(!((unsigned long)REL32(pending) & 1));
 
 	lib::critical_enter();
-	tracing_start();
 
 	// setup cores
 	printf("APICs:");
@@ -472,83 +469,50 @@ static void setup_cores(void)
 		(*node)->napics = acpi->napics;
 	}
 	printf("\n");
-//	tracing_stop();
 	lib::critical_leave();
 }
 
 static void test_cores(void)
 {
-//	lib::wait_key("Press enter to test cores");
+	uint16_t cores = 0;
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		cores += (*node)->napics;
+	cores -= 1; // exclude BSC
 
+	printf("Testing %u cores:", cores);
 	lib::critical_enter();
-//	tracing_start();
-	printf("Testing APICs:");
+	for (unsigned loop = 0; loop < 10; loop++) {
+		trampoline_sem_init(cores);
+		tracing_start();
 
-	uint16_t tcores = 0;
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < (*node)->napics; n++) {
-			if (node == &nodes[0] && n == 0)
-				continue; // skip BSC
-
-			printf(" 0x%05x", (*node)->apics[n]);
-			trampoline_sem_init(1);
-			boot_core((*node)->apics[n], VECTOR_TEST);
-			if (trampoline_sem_wait()) {
-				tracing_stop();
-				fatal("APIC %03x failed to start sequential test (status %u)", (*node)->apics[n], *REL32(vector));
+		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+			for (unsigned n = 0; n < (*node)->napics; n++) {
+				if (node == &nodes[0] && n == 0) // skip BSC
+					continue;
+				boot_core((*node)->apics[n], VECTOR_TEST);
 			}
-
-			// run for ~100 micro seconds
-			lib::udelay(100000);
-
-			// initiate finish, order here is important re-initialize the semaphore first
-			trampoline_sem_init(1);
-			*REL32(vector) = VECTOR_TEST_FINISH;
-
-			if (trampoline_sem_wait()) {
-				tracing_stop();
-				fatal("APIC %03x failed to finish sequential test (status %u)", (*node)->apics[n], *REL32(vector));
-			}
-			tcores++;
 		}
-	}
-	printf("\n");
-
-	trampoline_sem_init(tcores);
-
-	printf("Starting %u cores:", tcores);
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
-		for (unsigned n = 0; n < (*node)->napics; n++) {
-			// skip BSC
-			if (node == &nodes[0] && n == 0)
-				continue;
-
-			printf(" 0x%05x", (*node)->apics[n]);
-			boot_core((*node)->apics[n], VECTOR_TEST);
+		if (trampoline_sem_wait()) {
+			tracing_stop();
+			fatal("%u cores failed to start parallel test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 		}
-	}
-	printf("\n");
 
-	if (trampoline_sem_wait()) {
+		lib::udelay(1000000);
+
+		// initiate finish, order here is important re-initialize the semaphore first
+		trampoline_sem_init(cores);
+		*REL32(vector) = VECTOR_TEST_FINISH;
+
+		if (trampoline_sem_wait()) {
+			tracing_stop();
+			fatal("%u cores failed to finish parallel test", trampoline_sem_getvalue());
+		}
+
 		tracing_stop();
-		fatal("%u cores failed to start parallel test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
+		printf(" %u", loop);
 	}
-
-	lib::udelay(5000000);
-	printf("Stopping %u cores:", tcores);
-
-	// initiate finish, order here is important re-initialize the semaphore first
-	trampoline_sem_init(tcores);
-	*REL32(vector) = VECTOR_TEST_FINISH;
-
-	if (trampoline_sem_wait()) {
-		tracing_stop();
-		fatal("%u cores failed to finish parallel test", trampoline_sem_getvalue());
-	}
-
-	printf("\n");
-	tracing_stop();
 	lib::critical_leave();
+	printf("\n");
 }
 
 static void acpi_tables(void)
