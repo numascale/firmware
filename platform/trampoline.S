@@ -144,19 +144,17 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	// setup FS
-	mov	$MSR_FS_BASE, %ecx
-	mov	$(1 << (TEST_BASE_SHIFT - 32)), %edx
-	and $(TEST_SIZE - 1), %eax
-	wrmsr
+	and	$(TEST_SIZE - 1), %eax  // align access
+	mov	$0x1, %edx // 4GB base
 
 	// generate 64-bit load using FS
-	movl	%fs:(0), %ecx
-	xorl	$0xffffffff, %fs:(0)
+	mov	$MSR_FS_BASE, %ecx
+	wrmsr
 
-3:	// check for termination condition
-	movl	%cs:RELOCATED(vector), %edx
-	cmpl	$VECTOR_TEST_FINISH, %edx
+	xorl $0xffffffff, %fs:(0)
+
+2:	// check for termination condition
+	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
 	jne	1b
 
 	// reenable wrap32
