@@ -93,7 +93,7 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 
 		// disable sync flood detection
 		val = htiu_read(0x1d);
-		htiu_write(0x1d, 1 << 4);
+		htiu_write(0x1d, val | (1 << 4));
 
 		// enable 52-bit PCIe address generation
 		val = read32(0xc8);
