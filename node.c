@@ -54,6 +54,7 @@ void Node::check(void)
 
 void Node::tracing_start(void)
 {
+	asm volatile("wbinvd");
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n]->tracing_start();
 }

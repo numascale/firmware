@@ -144,7 +144,7 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	and	$(TEST_SIZE - 1), %eax  // align access
+	and	$((TEST_SIZE - 1) & ~3), %eax  // align access
 	mov	$0x1, %edx // 4GB base
 
 	// generate 64-bit load using FS

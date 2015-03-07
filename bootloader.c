@@ -499,10 +499,11 @@ static void test_cores(void)
 	cores -= 1; // exclude BSC
 
 	printf("Testing %u cores:", cores);
+	test_prepare();
 	lib::critical_enter();
+
 	for (unsigned loop = 0; loop < 10; loop++) {
 		trampoline_sem_init(cores);
-		test_prepare();
 		tracing_start();
 
 		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
