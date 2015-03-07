@@ -502,7 +502,7 @@ static void test_cores(void)
 	test_prepare();
 	lib::critical_enter();
 
-	for (unsigned loop = 0; loop < 10; loop++) {
+	for (unsigned loop = 0; loop < 15; loop++) {
 		trampoline_sem_init(cores);
 		tracing_start();
 
@@ -515,7 +515,7 @@ static void test_cores(void)
 		}
 		if (trampoline_sem_wait()) {
 			tracing_stop();
-			fatal("%u cores failed to start parallel test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
+			fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 		}
 
 		lib::udelay(1000000);
@@ -652,15 +652,18 @@ static void acpi_tables(void)
 	uint64_t *n = (uint64_t *)slit.reserve(8);
 	*n = 0;
 
-	printf("Topology distances:\n   ");
-	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
-		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
-			printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
-	printf("\n");
+	if (options->debug.acpi) {
+		printf("Topology distances:\n   ");
+		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
+			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
+				printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
+		printf("\n");
+	}
 
 	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
 		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
-			printf("%3u", 000); // FIXME
+			if (options->debug.acpi)
+				printf("%3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
 
 			for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
 				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
@@ -673,16 +676,18 @@ static void acpi_tables(void)
 					} else
 						dist = 160;
 
-					printf(" %3u", dist);
+					if (options->debug.acpi)
+						printf(" %3u", dist);
 					slit.append((const char *)&dist, sizeof(dist));
 				}
 			}
-			printf("\n");
+			if (options->debug.acpi)
+				printf("\n");
 			(*n)++;
 		}
 	}
 
-	acpi->allocate(1024 + sizeof(struct acpi_sdt) * 4 + mcfg.used + apic.used + srat.used + slit.used);
+	acpi->allocate((sizeof(struct acpi_sdt) + 64) * 4 + mcfg.used + apic.used + srat.used + slit.used);
 	acpi->replace(mcfg);
 	acpi->replace(apic);
 	acpi->replace(srat);

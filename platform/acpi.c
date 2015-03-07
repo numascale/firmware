@@ -355,6 +355,8 @@ void ACPI::allocate(unsigned len)
 	xassert(allocated);
 	nallocated = len;
 	used = 0;
+
+	e820->add((uint64_t)(uint32_t)allocated, nallocated, E820::ACPI);
 }
 
 void ACPI::dump(const acpi_sdt *table, const unsigned limit)
@@ -391,42 +393,41 @@ bool ACPI::append(const acpi_sdt *parent, const int ptrsize, const char *sig, co
 
 void ACPI::check(void)
 {
-	printf("ACPI tables:\n");
-
 	assert_checksum((acpi_sdt *)rptr, 20);
-	printf(" ptr:   %p, RSDP, %.6s, %d, %08x, %d\n",
-	       rptr,
-	       rptr->oemid,
-	       rptr->revision,
-	       rptr->rsdt_addr,
-	       rptr->len);
-
 	assert_checksum(rsdt, rsdt->len);
-	printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
-	       rsdt,
-	       rsdt->sig.l,
-	       rsdt->sig.s,
-	       rsdt->oemid,
-	       rsdt->oemtableid,
-	       rsdt->checksum,
-	       rsdt->revision,
-	       rsdt->len,
-	       sizeof(*rsdt));
+
+	if (options->debug.acpi) {
+		printf("ACPI tables:\n");
+
+		printf(" ptr:   %p, RSDP, %.6s, %d, %08x, %d\n",
+			   rptr,
+			   rptr->oemid,
+			   rptr->revision,
+			   rptr->rsdt_addr,
+			   rptr->len);
+
+		printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
+			   rsdt,
+			   rsdt->sig.l,
+			   rsdt->sig.s,
+			   rsdt->oemid,
+			   rsdt->oemtableid,
+			   rsdt->checksum,
+			   rsdt->revision,
+			   rsdt->len,
+			   sizeof(*rsdt));
+	}
+
 	uint32_t *rsdt_entries = (uint32_t *)&(rsdt->data);
 
 	for (int i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
 		acpi_sdt *table = (acpi_sdt *)rsdt_entries[i];
 		assert_checksum(table, table->len);
 
-		printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
-		       table,
-		       table->sig.l,
-		       table->sig.s,
-		       table->oemid,
-		       table->oemtableid,
-		       table->checksum,
-		       table->revision,
-		       table->len);
+		if (options->debug.acpi)
+			printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
+				table, table->sig.l, table->sig.s, table->oemid,
+				table->oemtableid, table->checksum, table->revision, table->len);
 
 		// find the DSDT table also
 		if (table->sig.l == STR_DW_H("FACP")) {
@@ -434,15 +435,10 @@ void ACPI::check(void)
 			memcpy(&dsdt, &table->data[4], sizeof(dsdt));
 			assert_checksum(dsdt, dsdt->len);
 
-			printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
-			       dsdt,
-			       dsdt->sig.l,
-			       dsdt->sig.s,
-			       dsdt->oemid,
-			       dsdt->oemtableid,
-			       dsdt->checksum,
-			       dsdt->revision,
-			       dsdt->len);
+			if (options->debug.acpi)
+				printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
+					dsdt, dsdt->sig.l, dsdt->sig.s, dsdt->oemid,
+					dsdt->oemtableid, dsdt->checksum, dsdt->revision, dsdt->len);
 
 			for (int j = 0; j < 4; j++) {
 				char c = (dsdt->sig.l >> (j * 8)) & 0xff;
@@ -467,16 +463,12 @@ void ACPI::check(void)
 			memcpy(&xsdtp, &rptr->xsdt_addr, sizeof(xsdtp));
 			assert_checksum(xsdtp, xsdtp->len);
 
-			printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
-			       xsdtp,
-			       xsdtp->sig.l,
-			       xsdtp->sig.s,
-			       xsdtp->oemid,
-			       xsdtp->oemtableid,
-			       xsdtp->checksum,
-			       xsdtp->revision,
-			       xsdtp->len,
-			       sizeof(*xsdtp));
+			if (options->debug.acpi)
+				printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d, %d\n",
+					xsdtp, xsdtp->sig.l, xsdtp->sig.s, xsdtp->oemid,
+					xsdtp->oemtableid, xsdtp->checksum, xsdtp->revision, xsdtp->len,
+					sizeof(*xsdtp));
+
 			uint64_t *xsdt_entries = (uint64_t *)&(xsdtp->data);
 
 			for (int i = 0; i * 8 + sizeof(*xsdtp) < xsdtp->len; i++) {
@@ -484,15 +476,11 @@ void ACPI::check(void)
 				memcpy(&table, &xsdt_entries[i], sizeof(table));
 				assert_checksum(table, table->len);
 
-				printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
-				       table,
-				       table->sig.l,
-				       table->sig.s,
-				       table->oemid,
-				       table->oemtableid,
-				       table->checksum,
-				       table->revision,
-				       table->len);
+				if (options->debug.acpi)
+					printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
+						table, table->sig.l, table->sig.s, table->oemid,
+						table->oemtableid, table->checksum, table->revision,
+						table->len);
 
 				// find the DSDT table also
 				if (table->sig.l == STR_DW_H("FACP")) {
@@ -500,15 +488,11 @@ void ACPI::check(void)
 					memcpy(&dsdt, &table->data[4], sizeof(dsdt));
 					assert_checksum(dsdt, dsdt->len);
 
-					printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
-					       dsdt,
-					       dsdt->sig.l,
-					       dsdt->sig.s,
-					       dsdt->oemid,
-					       dsdt->oemtableid,
-					       dsdt->checksum,
-					       dsdt->revision,
-					       dsdt->len);
+					if (options->debug.acpi)
+						printf(" table: %p, %08x, %.4s, %.6s, %.8s, %d, %d, %d\n",
+							dsdt, dsdt->sig.l, dsdt->sig.s, dsdt->oemid,
+							dsdt->oemtableid, dsdt->checksum, dsdt->revision,
+							dsdt->len);
 				}
 
 #ifdef UNUSED
