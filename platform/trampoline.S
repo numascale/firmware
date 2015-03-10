@@ -145,7 +145,7 @@ test:
 	mov	%eax, %ebx
 
 	and	$((TEST_SIZE - 1) & ~3), %eax  // align access
-	mov	$0x1, %edx // 4GB base
+	mov	$(1 << (TEST_BASE_SHIFT - 32)), %edx // 4GB base
 
 	// generate 64-bit load using FS
 	mov	$MSR_FS_BASE, %ecx
