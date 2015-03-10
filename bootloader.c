@@ -475,20 +475,27 @@ static void setup_cores(void)
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
-		lib::mem_write32((1ULL << TEST_BASE_SHIFT) + i * 4, lib::hash64(i));
+		lib::mem_write32((1ULL << TEST_BASE_SHIFT) + i * 4, i);
 }
 
 static void test_verify(void)
 {
+	unsigned errors = 0;
+
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
-		uint32_t corr = lib::hash64(i);
+		uint32_t corr = i;
 		uint64_t addr = (1ULL << TEST_BASE_SHIFT) + i * 4;
 		uint32_t val = lib::mem_read32(addr);
 
-		if (val != corr && val != ~corr)
-			fatal("address 0x%llx should have %08x or 0x%08x, but has %08x", addr, corr, ~corr, val);
-
+		if (val != corr) {
+			if (!errors)
+				printf("\n");
+			printf("address 0x%llx should have 0x%08x, but has 0x%08x\n", addr, corr, val);
+			errors++;
+		}
 	}
+
+	assertf(!errors, "%u errors detected", errors);
 }
 
 static void test_cores(void)
@@ -526,7 +533,7 @@ static void test_cores(void)
 
 		if (trampoline_sem_wait()) {
 			tracing_stop();
-			fatal("%u cores failed to finish parallel test", trampoline_sem_getvalue());
+			fatal("%u cores failed to finish test", trampoline_sem_getvalue());
 		}
 
 		tracing_stop();

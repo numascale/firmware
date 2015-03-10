@@ -151,7 +151,7 @@ test:
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
 
-	xorl $0xffffffff, %fs:(0)
+	xorl $0, %fs:(0)
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
