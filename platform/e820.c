@@ -268,16 +268,50 @@ void E820::test_address(const uint64_t addr, const uint64_t val)
 	}
 }
 
-void E820::test_location(const uint64_t addr)
+void E820::test_location(const uint64_t addr, const test_state state)
 {
-	uint64_t val = lib::mem_read64(addr);
-	test_address(addr, PATTERN);
-	test_address(addr, ~PATTERN);
-	test_address(addr, ~0ULL);
-	test_address(addr, val);
+	// only do read under 4GB
+	if (addr < (4ULL << 32)) {
+		(void)lib::mem_read64(addr);
+		return;
+	}
+
+	uint64_t hash, val;
+
+	switch (state) {
+	case Seed:
+		// memory was zeroed ealier; verify
+		val = lib::mem_read64(addr);
+		if (val != 0) {
+			printf("address 0x%llx was 0x%016llx but should have been 0 (seed)\n", addr, val);
+			test_errors++;
+		}
+
+		lib::mem_write64(addr, lib::hash64(addr));
+		break;
+	case Test:
+		val = lib::mem_read64(addr);
+		hash = lib::hash64(addr);
+		if (val != hash) {
+			printf("address 0x%llx was 0x%016llx but should have been 0x%016llx (seed)\n", addr, val, hash);
+			test_errors++;
+		}
+
+		// re-zero memory
+		lib::mem_write64(addr, 0);
+		break;
+	case Rezero:
+		// verify zeroing
+		val = lib::mem_read64(addr);
+		if (val != 0) {
+			printf("address 0x%llx was 0x%016llx but should have been 0 (rezero)\n", addr, val);
+			test_errors++;
+		}
+		break;
+	}
 }
 
-void E820::test_range(const uint64_t start, const uint64_t end)
+void E820::test_range(const uint64_t start, const uint64_t end, const test_state state)
 {
 	// memory on the first northbridge is actively used
 	if (start < (4ULL << 30))
@@ -288,40 +322,49 @@ void E820::test_range(const uint64_t start, const uint64_t end)
 	const uint64_t mid = start + (end - start) / 2;
 	uint64_t step = STEP_MIN;
 
-	printf(" [");
+	if (options->debug.e820)
+		printf(" [");
 	while (pos < mid) {
-		test_location(pos);
+		test_location(pos, state);
 		pos = (pos + step) & ~7;
 		step = min(step << 1, STEP_MAX);
 	}
 
 	while (pos < end) {
-		test_location(pos);
+		test_location(pos, state);
 		step = min((end - pos) / 2, STEP_MAX);
 		pos += max(step, STEP_MIN) & ~7;
 	}
-	printf("accessible]");
+	if (options->debug.e820)
+		printf("accessible]");
 }
 
 void E820::test(void)
 {
-	printf("Testing e820 handler and access:\n");
+	printf("Testing e820 handler and access");
 
 	// read existing E820 entries
 	uint64_t base, length, type;
 	os->memmap_start();
 
-	bool left;
-	test_errors = 0;
+	for (test_state phase = Seed; phase <= Rezero; phase = test_state(phase + 1)) {
+		bool left;
+		test_errors = 0;
 
-	do {
-		left = os->memmap_entry(&base, &length, &type);
-		printf("%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
-		if (type == RAM)
-			test_range(base, base + length);
-		printf("\n");
-	} while (left);
+		do {
+			left = os->memmap_entry(&base, &length, &type);
+			if (options->debug.e820)
+				printf("\n%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
+			if (type == RAM)
+				test_range(base, base + length, phase);
 
+			if (options->debug.e820)
+				printf("\n");
+		} while (left);
+
+	}
+
+	printf("\n");
 	if (test_errors)
 		warning("%"PRIu64" errors", test_errors);
 }

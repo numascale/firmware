@@ -116,6 +116,12 @@ uint32_t Numachip2::rom_read(const uint8_t reg)
 	return read32(IMG_PROP_DATA);
 }
 
+void Numachip2::check(void) const
+{
+	fabric_check();
+	dram_check();
+}
+
 Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t _master):
   local(_local), master(_master), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {

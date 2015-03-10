@@ -33,7 +33,7 @@ void Numachip2::fabric_reset(void)
 	write32(HSS_PLLCTL, 0);
 }
 
-void Numachip2::fabric_check(void)
+void Numachip2::fabric_check(void) const
 {
 	uint32_t val = read32(SIU_EVENTSTAT);
 

@@ -495,6 +495,7 @@ static void test_verify(void)
 		}
 	}
 
+	check();
 	assertf(!errors, "%u errors detected", errors);
 }
 

@@ -22,7 +22,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-void Numachip2::dram_check(void)
+void Numachip2::dram_check(void) const
 {
 	uint32_t val = read32(NCACHE_CTRL);
 	if (val & (3 << 7))

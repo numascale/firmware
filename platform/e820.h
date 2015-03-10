@@ -30,6 +30,7 @@ struct e820entry {
 
 class E820 {
 private:
+	enum test_state {Seed, Test, Rezero};
 	uint64_t test_errors;
 	struct e820entry *map;
 	uint16_t *used;
@@ -41,8 +42,8 @@ private:
 	void remove(struct e820entry *start, struct e820entry *end) nonnull;
 	bool overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const;
 	void test_address(const uint64_t addr, const uint64_t val);
-	void test_location(const uint64_t addr);
-	void test_range(const uint64_t start, const uint64_t end);
+	void test_location(const uint64_t addr, const test_state state);
+	void test_range(const uint64_t start, const uint64_t end, const test_state state);
 public:
 	static const uint64_t RAM = 1;
 	static const uint64_t RESERVED = 2;

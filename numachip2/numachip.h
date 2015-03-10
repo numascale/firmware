@@ -210,9 +210,10 @@ public:
 	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
 	void fabric_train(void);
-	void fabric_check(void);
+	void fabric_check(void) const;
 	void fabric_reset(void);
-	void dram_check(void);
+	void dram_check(void) const;
+	void check(void) const;
 };
 
 extern Numachip2 *numachip;

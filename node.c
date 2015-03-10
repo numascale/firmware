@@ -48,8 +48,7 @@ void Node::check(void)
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n]->check();
 
-	numachip->fabric_check();
-	numachip->dram_check();
+	numachip->check();
 }
 
 void Node::tracing_start(void)
