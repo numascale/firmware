@@ -475,7 +475,7 @@ static void setup_cores(void)
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
-		lib::mem_write32((1ULL << TEST_BASE_SHIFT) + i * 4, i);
+		lib::mem_write32(((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4, i); // alternative: lib::hash64(i));
 }
 
 static void test_verify(void)
@@ -483,8 +483,8 @@ static void test_verify(void)
 	unsigned errors = 0;
 
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
-		uint32_t corr = i;
-		uint64_t addr = (1ULL << TEST_BASE_SHIFT) + i * 4;
+		uint32_t corr = i; // alternative: lib::hash64(i);
+		uint64_t addr = ((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4;
 		uint32_t val = lib::mem_read32(addr);
 
 		if (val != corr) {

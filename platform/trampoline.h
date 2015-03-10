@@ -32,8 +32,9 @@
 #define E820_MAP_MAX 4096
 #define MSR_MAX 32
 #define CORE_SPINS        1000000
-#define TEST_BASE_SHIFT 32
-#define TEST_SIZE (1 << 20)
+#define TEST_BASE_HIGH 0x1 // 4GB base
+#define TEST_BASE_LOW  0x88000
+#define TEST_SIZE      (1 << 10)
 
 #ifndef __ASSEMBLER__
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate

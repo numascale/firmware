@@ -136,6 +136,12 @@ test:
 	or	$(1 << 17), %eax
 	wrmsr
 
+	// setup FS
+	movl $TEST_BASE_HIGH, %edx
+	movl $TEST_BASE_LOW, %eax
+	mov	$MSR_FS_BASE, %ecx
+	wrmsr
+
 	mov	$1, %ebx // seed
 
 	// generate random number
@@ -144,14 +150,10 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	and	$((TEST_SIZE - 1) & ~3), %eax  // align access
-	mov	$(1 << (TEST_BASE_SHIFT - 32)), %edx // 4GB base
+	andl $(TEST_SIZE - 1) & ~3, %eax // size and align
 
 	// generate 64-bit load using FS
-	mov	$MSR_FS_BASE, %ecx
-	wrmsr
-
-	xorl $0, %fs:(0)
+	xorl $0, %fs:(%eax)
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
