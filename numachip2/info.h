@@ -21,6 +21,7 @@
 #include <stdbool.h>
 
 struct numachip_info {
+	char firmware_ver[24];
 	uint8_t partition; // 0 for observer
 	uint16_t fabric_nodes : 12;
 	uint16_t part_start : 12;

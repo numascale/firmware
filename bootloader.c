@@ -241,6 +241,7 @@ static void setup_info(void)
 		}
 	}
 
+	strncpy(infop->firmware_ver, VER, sizeof(infop->firmware_ver));
 	infop->part_nodes = nnodes;
 	infop->ver = 1;
 	infop->ht = local_node->numachip->ht;
