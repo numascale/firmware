@@ -153,7 +153,7 @@ test:
 	andl $(TEST_SIZE - 1) & ~3, %eax // size and align
 
 	// generate 64-bit load using FS
-	xorl $0, %fs:(%eax)
+	xorl $0xffffffff, %fs:(%eax)
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
