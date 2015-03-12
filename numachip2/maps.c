@@ -42,6 +42,8 @@ void Numachip2::MmioMap::add(const int range, const uint64_t base, const uint64_
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(MMIO_MAP_BASE, a);
 	numachip.write32(MMIO_MAP_LIMIT, b);
+	xassert(numachip.read32(MMIO_MAP_BASE) == a);
+	xassert(numachip.read32(MMIO_MAP_LIMIT) == b);
 }
 
 void Numachip2::MmioMap::del(const int range)
@@ -104,6 +106,8 @@ void Numachip2::DramMap::add(const int range, const uint64_t base, const uint64_
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(DRAM_MAP_BASE, a);
 	numachip.write32(DRAM_MAP_LIMIT, b);
+	xassert(numachip.read32(DRAM_MAP_BASE) == a);
+	xassert(numachip.read32(DRAM_MAP_LIMIT) == b);
 }
 
 void Numachip2::DramMap::del(const int range)
@@ -142,4 +146,3 @@ void Numachip2::DramMap::print(const int range)
 	if (read(range, &base, &limit, &dht))
 		printf("NC DRAM range %d on SCI%03x: 0x%012"PRIx64":0x%012"PRIx64" to %d\n", range, numachip.sci, base, limit, dht);
 }
-
