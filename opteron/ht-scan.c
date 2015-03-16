@@ -288,6 +288,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	lib::critical_enter();
 
 	/* Issue WBINVD on all active cores in the system */
+	caches(0);
 	disable_cache();
 
 #ifdef BROKEN
@@ -367,6 +368,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	/* Re-enable cache */
 	enable_cache();
+	caches(1);
 
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {

@@ -749,7 +749,7 @@ static void finished(void)
 	os->exec(options->next_label);
 }
 
-static void caches(const bool enable)
+void caches(const bool enable)
 {
 	if (enable)
 		enable_cache();
