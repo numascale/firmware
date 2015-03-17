@@ -48,7 +48,8 @@ void Node::check(void)
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n]->check();
 
-	numachip->check();
+	if (numachip)
+		numachip->check();
 }
 
 void Node::tracing_start(void)
@@ -99,6 +100,7 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 #endif
 	assertf(nc, "NumaChip2 not found");
 
+	check(); // check for Protocol Error MCEs
 	numachip = new Numachip2(sci, nc, local, master);
 	xassert(nopterons == nc);
 

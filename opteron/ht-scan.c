@@ -289,7 +289,6 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	/* Issue WBINVD on all active cores in the system */
 	caches(0);
-	disable_cache();
 
 #ifdef BROKEN
 	uint32_t pfctrl[7];
@@ -366,8 +365,6 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	printf(".");
 #endif
 
-	/* Re-enable cache */
-	enable_cache();
 	caches(1);
 
 	/* Reassert LimitCldtCfg */
@@ -480,12 +477,8 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 				break;
 		}
 
-
-		if (use) {
+		if (use)
 			fatal("No unrouted coherent links found");
-			reset(Warm, nnodes);
-			/* Does not return */
-		}
 
 		printf("HT%u.%u is coherent and unrouted\n", neigh, link);
 

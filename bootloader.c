@@ -738,6 +738,8 @@ static void clear_dram(void)
 
 static void finished(void)
 {
+	check();
+
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
@@ -803,11 +805,9 @@ int main(const int argc, char *const argv[])
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
 	if (options->init_only) {
-		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-			(*nb)->check();
-		}
 		finished();
 	}
 
@@ -834,11 +834,9 @@ int main(const int argc, char *const argv[])
 		local_node->numachip->fabric_train();
 
 	if (!config->local_node->partition) {
-		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-			(*nb)->check();
-		}
 
 		setup_cores_observer();
 		setup_info();
@@ -900,7 +898,6 @@ int main(const int argc, char *const argv[])
 	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
 	xassert(nodes);
 	nodes[0] = local_node;
-	local_node->check();
 	printf("Servers ready:\n");
 
 	unsigned pos = 1;
@@ -931,6 +928,5 @@ int main(const int argc, char *const argv[])
 	setup_cores();
 	acpi_tables();
 	test_cores();
-	check();
 	finished();
 }
