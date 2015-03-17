@@ -139,6 +139,7 @@ public:
 	static const reg_t I2C_REG1          = 0x2044;
 	static const reg_t SPI_REG0          = 0x2048;
 	static const reg_t SPI_REG1          = 0x204c;
+	static const reg_t FLASH_REG0        = 0x2050;
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;

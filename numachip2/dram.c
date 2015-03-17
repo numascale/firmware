@@ -128,7 +128,7 @@ void Numachip2::dram_init(void)
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
 #else
-	dram_total_shift = 32;
+	dram_total_shift = (read32(FLASH_REG0) == 0) ? 32 : 33;
 #endif
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
 
