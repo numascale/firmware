@@ -287,50 +287,26 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	lib::udelay(40);
 	lib::critical_enter();
 
-	/* Disable all cache activity in the system by setting
-	   CR0.CD for all active cores in the system */
-	/* Issue WBINVD on all active cores in the system */
-	caches(0);
-
-#ifdef BROKEN
-	uint32_t pfctrl[7];
-	if (pf_enabled > 0) {
-		/* Set F3x1C4[L3TagInit]=1 */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
-			val = lib::cht_read32(ht, L3_CACHE_PARAM);
-			lib::cht_write32(ht, L3_CACHE_PARAM, val | (1 << 31));
-		}
-
-		/* Wait for F3x1C4[L3TagInit]=0 */
-		for (ht_t ht = 0; ht <= nnodes; ht++)
-			while (lib::cht_read32(ht, L3_CACHE_PARAM) & (1 << 31))
-				cpu_relax();
-
-		/* Set F3x1D4[PFMode]=00b */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
-			pfctrl[ht] = lib::cht_read32(ht, PROBEFILTER_CTRL);
-			lib::cht_write32(ht, PROBEFILTER_CTRL, pfctrl[ht] & ~3);
-		}
-	}
-
-	printf(".");
-#endif
-
-	/* Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0 on fam15h */
 	if (family >= 0x15) {
+		/* Disable all cache activity in the system by setting
+		   CR0.CD for all active cores in the system */
+		/* Issue WBINVD on all active cores in the system */
+		caches(0);
+
+		/* Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0 */
 		for (ht_t ht = 0; ht <= nnodes; ht++) {
 			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
 			lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 12));
 			val = lib::cht_read32(ht, L3_CTRL);
 			lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
 		}
+
+		/* Enable all cache activity in the system by clearing
+		   CR0.CD for all active cores in the system */
+		caches(1);
 	}
 
 	printf("+");
-
-	/* Enable all cache activity in the system by clearing
-	   CR0.CD for all active cores in the system */
-	caches(1);
 
 	for (int i = nnodes; i >= 0; i--) {
 		/* Update "neigh" bcast values for node about to increment fabric size */
@@ -339,37 +315,10 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		/* Increase fabric size */
 		val = lib::cht_read32(i, HT_NODE_ID);
 		lib::cht_write32(i, HT_NODE_ID, val + (1 << 4));
-		printf("%d", i);
+//		printf("%d", i);
 	}
 
 	printf("*");
-
-#ifdef BROKEN
-	if (pf_enabled > 0) {
-		/* Set F3x1C4[L3TagInit]=1 */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
-			val = lib::cht_read32(ht, L3_CACHE_PARAM);
-			lib::cht_write32(ht, L3_CACHE_PARAM, val | (1 << 31));
-		}
-
-		/* Wait for F3x1C4[L3TagInit]=0 */
-		for (ht_t ht = 0; ht <= nnodes; ht++)
-			while (lib::cht_read32(ht, L3_CACHE_PARAM) & (1 << 31))
-				cpu_relax();
-
-		/* Re-enable Probe Filter */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
-			lib::cht_write32(ht, PROBEFILTER_CTRL, pfctrl[ht]);
-		}
-
-		/* Wait for F3x1D4[PFInitDone]=1 */
-		for (ht_t ht = 0; ht <= nnodes; ht++)
-			while ((lib::cht_read32(ht, PROBEFILTER_CTRL) & (1 << 19)) == 0)
-				cpu_relax();
-	}
-
-	printf(".");
-#endif
 
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
