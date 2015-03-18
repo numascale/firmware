@@ -117,15 +117,33 @@ cache_enable:
 	jmp	1b
 
 cache_disable:
+        // detect cpu family
+	mov	$1, %eax
+	xor	%ecx,%ecx
+	cpuid
+	mov	%eax,%edx
+	shr	$0x8,%edx
+	and	$0xf,%edx
+	shr	$0x14,%eax
+	add	%edx,%eax
+	cmp	$0x15,%eax
+	jl	1f
+
+	// ensure CD bit is shared amongst cores on Fam15h
+	mov	$MSR_CU_CFG3, %ecx
+	rdmsr
+	or	$(1 << (49 - 32)), %edx
+	wrmsr
+1:
 	mov	%cr0, %eax
 	or	$(1 << 30), %eax
 	mov	%eax, %cr0
 	wbinvd
 
 	SEM_POST()
-1:	cli
+2:	cli
 	hlt
-	jmp	1b
+	jmp	2b
 
 test:
 	SEM_POST()

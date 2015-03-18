@@ -753,19 +753,22 @@ static void finished(void)
 
 void caches(const bool enable)
 {
-	if (enable)
+	if (!enable) {
+		if (Opteron::family >= 0x15) {
+			// ensure CombineCr0Cd is set on fam15h
+			uint64_t msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
+			lib::wrmsr(MSR_CU_CFG3, msr);
+		}
+		disable_cache();
+	} else
 		enable_cache();
 
-	printf("%sing caches", enable ? "Enabl" : "Disabl");
 	trampoline_sem_init(acpi->napics - 1);
 	for (unsigned n = 1; n < acpi->napics; n++)
 		boot_core_host(acpi->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
 	if (trampoline_sem_wait())
 		fatal("%u cores did not complete requested operation", trampoline_sem_getvalue());
 
-	if (!enable)
-		disable_cache();
-	printf("\n");
 }
 
 int main(const int argc, char *const argv[])
@@ -877,11 +880,13 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		caches(0);
-
 		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
 		       "Refer to the console on SCI%03x/%s", config->local_node->sci, config->local_node->hostname,
 		       nnodes, config->master->sci, config->master->hostname);
+
+		caches(0);
+
+		lib::udelay(1000);
 
 		// set 'go-ahead'
 		local_node->numachip->write32(Numachip2::INFO, 7U << 29);

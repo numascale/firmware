@@ -204,13 +204,6 @@ void Opteron::prepare(void)
 	uint32_t val = lib::cht_read32(0, NB_CPUID);
 	family = ((val >> 20) & 0xf) + ((val >> 8) & 0xf);
 
-	// ensure CombineCr0Cd is set on fam15h
-	if (family >= 0x15) {
-		msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
-		lib::wrmsr(MSR_CU_CFG3, msr);
-		push_msr(MSR_CU_CFG3, msr);
-	}
-
 	if (family == 0x10) {
 		// ERRATA #N28: Disable HT Lock mechanism on Fam10h
 		// AMD Email dated 31.05.2011 :
