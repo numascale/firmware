@@ -287,6 +287,8 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	lib::udelay(40);
 	lib::critical_enter();
 
+	/* Disable all cache activity in the system by setting
+	   CR0.CD for all active cores in the system */
 	/* Issue WBINVD on all active cores in the system */
 	caches(0);
 
@@ -326,6 +328,10 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	printf("+");
 
+	/* Enable all cache activity in the system by clearing
+	   CR0.CD for all active cores in the system */
+	caches(1);
+
 	for (int i = nnodes; i >= 0; i--) {
 		/* Update "neigh" bcast values for node about to increment fabric size */
 		val = lib::cht_read32(neigh, ROUTING + i * 4);
@@ -364,8 +370,6 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	printf(".");
 #endif
-
-	caches(1);
 
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= nnodes; ht++) {
