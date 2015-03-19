@@ -796,6 +796,9 @@ int main(const int argc, char *const argv[])
 	if (lib::mcfg_read32(SCI_LOCAL, 0, 0x14, 0, 0x4c) & (1 << 30))
 		warning("Last reboot is due to BootFail timer");
 
+	if (!lib::rdmsr(MSR_PATCHLEVEL))
+		warning("BIOS hasn't updated processor microcode; please use newer BIOS");
+
 	// SMI often assumes HT nodes are Northbridges, so handover early
 	if (options->handover_acpi)
 		acpi->handover();

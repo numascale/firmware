@@ -18,6 +18,7 @@
 #pragma once
 
 #define MSR_APIC_BAR          0x0000001b
+#define MSR_PATCHLEVEL        0x0000008b
 #define MSR_MC_CAP            0x00000179
 #define MSR_MTRR_PHYS_BASE0   0x00000200
 #define MSR_MTRR_PHYS_MASK0   0x00000201
