@@ -149,20 +149,15 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	printf("NumaChip2 [");
 	const bool ht3 = !!(read32(LINK_FREQ_REV) & 0xffc00000);
 	if (ht3) {
-#ifdef UNIMPLEMENTED
 		write32(IMG_PROP_TEMP, 1 << 31);
-		uint32_t val;
-		while (!(val = read32(IMG_PROP_TEMP) & (1 << 8)))
-			cpu_relax();
+		int temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
 
 		char buildtime[17];
 		for (unsigned i = 0; i < (sizeof(buildtime) - 1) / sizeof(uint32_t); i++)
 			*(uint32_t *)(buildtime + i * 4) = rom_read(i + IMG_PROP_STRING);
 		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-		printf("Stratix, %uC, flags 0x%x, built %s, hash %07x", (val & 0xff) - 128, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
-#endif
-		printf("Stratix");
+		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
 	} else
 		printf("Virtex");
 	printf("] assigned HT%u\n", ht);
