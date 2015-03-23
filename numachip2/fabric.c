@@ -298,4 +298,10 @@ void Numachip2::fabric_init(void)
 			lcs[nlcs++] = new LC5(*this, index);
 		}
 	}
+
+	// enable SIU CRC if LC5
+	if (!is_lc4) {
+		val = read32(SIU_NODEID);
+		write32(SIU_NODEID, val | (1<<31));
+	}
 }
