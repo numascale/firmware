@@ -158,7 +158,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
 		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
-		assertf(temp <= 50, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+		assertf(temp <= 60, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 	} else
 		printf("Virtex");
 	printf("] assigned HT%u\n", ht);
