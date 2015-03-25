@@ -45,7 +45,10 @@ void LC4::check(void)
 
 void LC4::clear(void)
 {
+	// Clear link error bits, and error counter
 	numachip.write32(ERROR_COUNT + index * SIZE, 0);
+	numachip.write32(ELOG0 + index * SIZE, 0);
+	numachip.write32(ELOG1 + index * SIZE, 0);
 }
 
 LC4::LC4(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUT_CTRL + _index * SIZE, ROUTE_RAM + _index * SIZE)
