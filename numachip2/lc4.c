@@ -21,6 +21,7 @@
 
 #include "lc.h"
 #include "../bootloader.h"
+#include "../platform/config.h"
 
 // returns 1 when link is up
 bool LC4::is_up(void)
@@ -51,6 +52,61 @@ void LC4::clear(void)
 	numachip.write32(ELOG1 + index * SIZE, 0);
 }
 
-LC4::LC4(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUT_CTRL + _index * SIZE, ROUTE_RAM + _index * SIZE)
+uint8_t LC4::route1(const sci_t src, const sci_t dst)
 {
+	if (src == dst)
+		return 0;
+
+	uint8_t dim = 0;
+	sci_t src2 = src;
+	sci_t dst2 = dst;
+
+	while ((src2 ^ dst2) & ~0xf) {
+		dim++;
+		src2 >>= 4;
+		dst2 >>= 4;
+	}
+	src2 &= 0xf;
+	dst2 &= 0xf;
+
+	xassert(dim < 3);
+	int out = dim * 2 + 1;
+	// Shortest path routing
+	int len = config->size[dim];
+	int forward = ((len - src2) + dst2) % len;
+	int backward = ((src2 + (len - dst2)) + len) % len;
+
+	out += (forward == backward) ? (src2 & 1) :
+	       (backward < forward) ? 1 : 0;
+	return out;
+}
+
+void LC4::add_route(const sci_t dst, const uint8_t out)
+{
+	// don't touch packets already on correct dim
+	if ((index / 2 ) == (out - 1) / 2)
+		return;
+
+	const unsigned regoffset = dst >> 4;
+	const unsigned bitoffset = dst & 0xf;
+	uint16_t *ent = &link_routes[regoffset];
+	*ent |= 1 << bitoffset;
+}
+
+void LC4::commit(void)
+{
+	for (unsigned chunk = 0; chunk <= numachip.chunk_lim; chunk++) {
+		numachip.write32(ROUT_CTRL + index * SIZE, (2 << 4) | chunk); // set table routing mode and chunk address
+		for (unsigned offset = 0; offset <= numachip.offset_lim; offset++) {
+			for (unsigned bit = 0; bit <= numachip.bit_lim; bit++)
+				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, numachip.xbar_routes[(chunk<<4)+offset][bit]);
+			// link routing table
+			numachip.write32(SCIROUTE + index * SIZE + offset * 4, link_routes[(chunk<<4)+offset]);
+		}
+	}
+}
+
+LC4::LC4(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index)
+{
+	memset(link_routes, 0x00, sizeof(link_routes));
 }

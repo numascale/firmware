@@ -65,6 +65,40 @@ void LC5::clear(void)
 	numachip.write32(LINKSTAT + index * SIZE, 7);
 }
 
-LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index, ROUTE_CHUNK + _index * SIZE, ROUTE_RAM + _index * SIZE)
+uint8_t LC5::route1(const sci_t src, const sci_t dst)
+{
+	if (src == dst)
+		return 0;
+
+	uint8_t dim = 0;
+	sci_t src2 = src;
+	sci_t dst2 = dst;
+
+	while ((src2 ^ dst2) & ~0xf) {
+		dim++;
+		src2 >>= 4;
+		dst2 >>= 4;
+	}
+	src2 &= 0xf;
+	dst2 &= 0xf;
+
+	xassert(dim < 3);
+	int out = dim * 2 + 1;
+	// 2QOS routing only on LC5 (otherwise we have credit loops)
+	out += (dst2 < src2) ? 1 : 0;
+	return out;
+}
+
+void LC5::commit(void)
+{
+	for (unsigned chunk = 0; chunk <= numachip.chunk_lim; chunk++) {
+		numachip.write32(ROUTE_CHUNK + index * SIZE, chunk);
+		for (unsigned offset = 0; offset <= numachip.offset_lim; offset++)
+			for (unsigned bit = 0; bit <= numachip.bit_lim; bit++)
+				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, numachip.xbar_routes[(chunk<<4)+offset][bit]);
+	}
+}
+
+LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index)
 {
 }

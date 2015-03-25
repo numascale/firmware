@@ -68,7 +68,6 @@ class Numachip2 {
 	char card_type[16];
 	struct ddr3_spd_eeprom spd_eeprom;
 	LC *lcs[6];
-	uint16_t routes[7][256][3];
 	uint8_t nlcs;
 	const bool local;
 	const sci_t master;
@@ -93,11 +92,8 @@ class Numachip2 {
 	void dram_reset(void);
 	void dram_init(void);
 
-	uint8_t next(sci_t src, sci_t dst) const;
-	void route(const uint8_t in, const sci_t sci, const uint8_t out);
+	void xbar_route(const sci_t sci, const uint8_t out);
 	void fabric_routing(void);
-	void routing_dump(void);
-	void routing_write(void);
 	void fabric_init(void);
 public:
 	static const uint64_t MCFG_BASE        = 0x3f0000000000;
@@ -173,7 +169,7 @@ public:
 	static const reg_t SIU_ATT_INDEX     = 0x2300;
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_EVENTSTAT     = 0x2308;
-	static const reg_t XBAR_TABLE_SIZE   = 0x40;
+	static const reg_t SIU_XBAR_TABLE_SIZE = 0x40;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
@@ -187,6 +183,11 @@ public:
 
 	const sci_t sci;
 	const ht_t ht;
+
+	uint16_t xbar_routes[256][3];
+	static const uint8_t chunk_lim = 7;
+	static const uint8_t offset_lim = 7;
+	static const uint8_t bit_lim = 2;
 
 	MmioMap mmiomap;
 	friend class MmioMap;

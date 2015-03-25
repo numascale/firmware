@@ -24,17 +24,19 @@ class LC
 {
 protected:
 	const Numachip2& numachip;
-	LC(Numachip2 &_numachip, const uint8_t _index, const uint16_t _chunkaddr, const uint16_t _tableaddr):
-	  numachip(_numachip), index(_index), chunkaddr(_chunkaddr), tableaddr(_tableaddr), link_up(1) {};
+	LC(Numachip2 &_numachip, const uint8_t _index):
+	  numachip(_numachip), index(_index), link_up(1) {};
 public:
 	const uint8_t index;
-	const uint16_t chunkaddr, tableaddr;
 	bool link_up;
 	// can't use pure virtual (= 0) due to link-time dependency with libstdc++
 	virtual bool is_up(void) {return 0;};
 	virtual uint64_t status(void) {return 0;};
 	virtual void check(void) {};
 	virtual void clear(void) {};
+	virtual uint8_t route1(const sci_t, const sci_t) {return 0;};
+	virtual void add_route(const sci_t, const uint8_t) {};
+	virtual void commit(void) {};
 };
 
 class LC4: public LC
@@ -70,12 +72,18 @@ class LC4: public LC
 	static const reg_t ELOG1         = 0x2474;
 	static const reg_t ROUTE_RAM     = 0x2500;
 	static const reg_t SCIROUTE      = 0x25c0;
+	static const reg_t TABLE_SIZE    = 0x40;
+
+	uint16_t link_routes[256];
 
 public:
 	bool is_up(void);
 	uint64_t status(void);
 	void check(void);
 	void clear(void);
+	uint8_t route1(const sci_t src, const sci_t dst);
+	void add_route(const sci_t dst, const uint8_t out);
+	void commit(void);
 	LC4(Numachip2 &_numachip, const uint8_t _index);
 };
 
@@ -84,6 +92,7 @@ class LC5: public LC
 	static const reg_t SIZE          = 0x100;
 	static const reg_t ROUTE_RAM     = 0x2800;
 	static const reg_t ROUTE_CHUNK   = 0x28c0;
+	static const reg_t TABLE_SIZE    = 0x40;
 	static const reg_t LINKSTAT      = 0x28c4;
 	static const reg_t EVENTSTAT     = 0x28c8;
 	static const reg_t ERRORCNT      = 0x28cc;
@@ -93,5 +102,7 @@ public:
 	uint64_t status(void);
 	void check(void);
 	void clear(void);
+	uint8_t route1(const sci_t src, const sci_t dst);
+	void commit(void);
 	LC5(Numachip2 &_numachip, const uint8_t _index);
 };
