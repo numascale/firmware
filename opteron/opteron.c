@@ -383,6 +383,25 @@ void Opteron::init(void)
 		}
 	}
 
+	// disable certain sources of SMI
+	val = read32(ONLN_SPARE_CTRL);
+	if (((val >> 14) & 3) == 2) {
+		printf("- disabling ECC error SMI on HT#%d\n", ht);
+		write32(ONLN_SPARE_CTRL, val & ~(3 << 14));
+	}
+
+	val = read32(ONLN_SPARE_CTRL);
+	if (((val >> 12) & 3) == 2) {
+		printf("- disabling online DIMM swap complete SMI on HT#%d\n", ht);
+		write32(ONLN_SPARE_CTRL, val & ~(3 << 12));
+	}
+
+	val = read32(PROBEFILTER_CTRL);
+	if (((val >> 22) & 3) == 2) {
+		printf("- disabling probe filter error SMI on HT#%d\n", ht);
+		write32(PROBEFILTER_CTRL, val & ~(3 << 22));
+	}
+
 	dram_scrub_disable();
 }
 
