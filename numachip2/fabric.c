@@ -222,51 +222,6 @@ void Numachip2::fabric_routing(void)
 	// default route is to link 7 to trap unexpected behaviour
 	memset(routes, 0xff, sizeof(routes));
 
-#ifdef FIXED_ROUTING
-	switch(sci) {
-	case 0x000:
-		route(0, 0x000, 0);
-		route(0, 0x002, 2);
-		route(0, 0x001, 1);
-
-		route(1, 0x000, 0);
-		route(1, 0x001, 2);
-		route(1, 0x002, 2);
-
-		route(2, 0x000, 0);
-		route(2, 0x001, 1);
-		route(2, 0x002, 1);
-		break;
-	case 0x001:
-		route(0, 0x001, 0);
-		route(0, 0x000, 2);
-		route(0, 0x002, 1);
-
-		route(1, 0x001, 0);
-		route(1, 0x000, 2);
-		route(1, 0x002, 2);
-
-		route(2, 0x001, 0);
-		route(2, 0x000, 1);
-		route(2, 0x002, 1);
-		break;
-	case 0x002:
-		route(0, 0x002, 0);
-		route(0, 0x001, 2);
-		route(0, 0x000, 1);
-
-		route(1, 0x002, 0);
-		route(1, 0x000, 2);
-		route(1, 0x001, 2);
-
-		route(2, 0x002, 0);
-		route(2, 0x000, 1);
-		route(2, 0x001, 1);
-		break;
-	default:
-		error("unexpected");
-	}
-#else
 	for (unsigned node = 0; node < config->nnodes; node++) {
 		uint8_t out = next(sci, config->nodes[node].sci);
 		for (unsigned xbarid = 0; xbarid <= 6; xbarid++) {
@@ -276,7 +231,7 @@ void Numachip2::fabric_routing(void)
 			route(xbarid, config->nodes[node].sci, out);
 		}
 	}
-#endif
+
 	routing_dump();
 	routing_write();
 }
