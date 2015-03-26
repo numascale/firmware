@@ -93,7 +93,6 @@ class Numachip2 {
 	void dram_init(void);
 
 	void xbar_route(const sci_t sci, const uint8_t out);
-	void fabric_routing(void);
 	void fabric_init(void);
 public:
 	static const uint64_t MCFG_BASE        = 0x3f0000000000;
@@ -212,6 +211,7 @@ public:
 	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
 	void fabric_train(void);
+	void fabric_routing(void);
 	void fabric_check(void) const;
 	void fabric_reset(void);
 	void dram_check(void) const;

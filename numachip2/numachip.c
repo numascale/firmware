@@ -106,8 +106,6 @@ void Numachip2::late_init(void)
 
 //	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
-
-	fabric_routing();
 }
 
 uint32_t Numachip2::rom_read(const uint8_t reg)

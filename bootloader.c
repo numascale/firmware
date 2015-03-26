@@ -836,8 +836,10 @@ int main(const int argc, char *const argv[])
 	if (options->tracing)
 		setup_gsm_early();
 
-	if (!options->singleton)
+	if (!options->singleton) {
 		local_node->numachip->fabric_train();
+		local_node->numachip->fabric_routing();
+	}
 
 	if (!config->local_node->partition) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
