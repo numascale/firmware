@@ -84,13 +84,12 @@ uint8_t LC4::route1(const sci_t src, const sci_t dst)
 void LC4::add_route(const sci_t dst, const uint8_t out)
 {
 	// don't touch packets already on correct dim
-	if ((index / 2 ) == (out - 1) / 2)
-		return;
-
-	const unsigned regoffset = dst >> 4;
-	const unsigned bitoffset = dst & 0xf;
-	uint16_t *ent = &link_routes[regoffset];
-	*ent |= 1 << bitoffset;
+	if ((out == 0) || (index / 2  != (out - 1) / 2)) {
+		const unsigned regoffset = dst >> 4;
+		const unsigned bitoffset = dst & 0xf;
+		uint16_t *ent = &link_routes[regoffset];
+		*ent |= 1 << bitoffset;
+	}
 }
 
 void LC4::commit(void)
