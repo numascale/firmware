@@ -25,8 +25,10 @@
 void Numachip2::dram_check(void) const
 {
 	uint32_t val = read32(NCACHE_CTRL);
-	if (val & (3 << 7))
-		warning("NumaChip DRAM issue 0x%08x on %03x", val, sci);
+	if (val & (1 << 7))
+		warning("Correctable ECC issue occurred on Numachip at %03x", sci);
+
+	assertf(!(val & (1 << 8)), "Uncorrectable ECC issue occurred on Numachip at %03x", sci);
 }
 
 void Numachip2::dram_test(void)
