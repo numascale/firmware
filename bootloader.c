@@ -225,11 +225,26 @@ static void setup_gsm(void)
 
 static void setup_info(void)
 {
+	xassert(sizeof(struct numachip_info) <= 32);
 	struct numachip_info *infop;
 	uint32_t info[sizeof(*infop) / 4];
 	memset(info, 0, sizeof(info));
 
 	infop = (struct numachip_info *)&info;
+
+	infop->layout = LAYOUT;
+	infop->size_x = config->size[0];
+	infop->size_y = config->size[1];
+	infop->size_z = config->size[2];
+	infop->northbridges = local_node->numachip->ht;
+	infop->neigh_ht = local_node->neigh_ht;
+	infop->neigh_link = local_node->neigh_link;
+	infop->symmetric = 1;
+	infop->renumbering = 0;
+	infop->devices = config->local_node->devices;
+	infop->observer = !config->local_node->partition;
+	infop->cores = acpi->napics;
+	infop->ht = local_node->numachip->ht;
 	infop->partition = config->local_node->partition;
 	infop->fabric_nodes = config->nnodes;
 
@@ -241,16 +256,11 @@ static void setup_info(void)
 		}
 	}
 
-	strncpy(infop->firmware_ver, VER, sizeof(infop->firmware_ver));
 	infop->part_nodes = nnodes;
-	infop->ver = 1;
-	infop->ht = local_node->numachip->ht;
-	infop->neigh_ht = local_node->neigh_ht;
-	infop->neigh_link = local_node->neigh_link;
-	infop->neigh_sublink = 0;
-	infop->symmetric = 1;
-	infop->devices = config->local_node->devices;
+	xassert(sizeof(VER) <= sizeof(infop->firmware_ver));
+	strncpy(infop->firmware_ver, VER, sizeof(infop->firmware_ver));
 
+	// write to numachip
 	for (unsigned n = 0; n < nnodes; n++) {
 		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++) {
 			xassert(i < Numachip2::INFO_SIZE);
