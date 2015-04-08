@@ -33,73 +33,6 @@ void Numachip2::dram_check(void) const
 #endif
 }
 
-void Numachip2::dram_test(void)
-{
-	write32(NCACHE_CTRL, 3 << 9);
-
-	printf("Writing:");
-	write32(NCACHE_MCTR_ADDR, 0);
-
-	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
-		if (!(qw % 0x100000))
-			printf(" %"PRIu64, qw >> (20 - 3));
-
-		write64_split(NCACHE_MCTR_DATA, lib::hash64(qw));
-	}
-	printf("\n");
-
-	printf("Readback:");
-	write32(NCACHE_MCTR_ADDR, 0);
-
-	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
-		if (!(qw % 0x100000))
-			printf(" %"PRIu64, qw >> (20 - 3));
-
-		xassert(read64(NCACHE_MCTR_DATA) == lib::hash64(qw));
-	}
-
-	write32(NCACHE_CTRL, 0);
-	printf("\n");
-}
-
-void Numachip2::dram_clear(void)
-{
-	printf("Clearing:");
-	write32(NCACHE_CTRL, 1 << 9);
-
-	// prepare block
-	for (unsigned qw = 0; qw < 8; qw++) {
-		write32(NCACHE_MCTR_ADDR, qw);
-		write64_split(NCACHE_MCTR_DATA, 0);
-	}
-
-	for (uint64_t blk = 0; blk < (1ULL << (dram_total_shift - 6)); blk++) {
-		write32(NCACHE_MCTR_ADDR, (blk << (6 - 3)) | 7);
-		write32(NCACHE_MCTR_DATA + 4, 0);
-	}
-
-	write32(NCACHE_CTRL, 0);
-	printf("\n");
-}
-
-void Numachip2::dram_verify(void)
-{
-	printf("Verifying:");
-	write32(NCACHE_CTRL, 3 << 9);
-	write32(NCACHE_MCTR_ADDR, 0);
-
-	for (uint64_t qw = 0; qw < (1ULL << (dram_total_shift - 3)); qw++) {
-		if (!(qw % 0x100000))
-			printf(" %"PRIu64, qw >> (20 - 3));
-
-		uint64_t val = read64(NCACHE_MCTR_DATA);
-		assertf(!val, "Address 0x%"PRIx64" contains 0x%"PRIx64, qw, val);
-	}
-
-	write32(NCACHE_CTRL, 0);
-	printf("\n");
-}
-
 void Numachip2::dram_reset(void)
 {
 	uint32_t mtag_ctrl = read32(MTAG_BASE + TAG_CTRL);
@@ -187,8 +120,7 @@ void Numachip2::dram_init(void)
 		write32(CTAG_BASE + TAG_MCTR_MASK, 0xff);
 		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
 		write32(MTAG_BASE + TAG_MCTR_MASK, 0xfff);
-		write32(NCACHE_MCTR_OFFSET, 0);
-		write32(NCACHE_MCTR_MASK, 0x7ff);
+		write32(NCACHE_CTRL, (0 << 3)); // 1 GByte nCache
 		break;
 	case 8ULL << 30:
 		// 0-2048MB nCache; 2048-2304MB CTag; 2304-4096MB unused; 4096-8192MB MTag
@@ -198,8 +130,7 @@ void Numachip2::dram_init(void)
 		write32(CTAG_BASE + TAG_MCTR_MASK, 0x1ff);
 		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x2000);
 		write32(MTAG_BASE + TAG_MCTR_MASK, 0x1fff);
-		write32(NCACHE_MCTR_OFFSET, 0);
-		write32(NCACHE_MCTR_MASK, 0xfff);
+		write32(NCACHE_CTRL, (1 << 3)); // 2 GByte nCache
 		break;
 	default:
 		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
@@ -239,8 +170,6 @@ void Numachip2::dram_init(void)
 	}
 
 	/* nCache, then CTag, then MTag */
-	write32(NCACHE_MCTR_OFFSET, 0 >> 19);
-	write32(NCACHE_MCTR_MASK, (ncache - 1) >> 19);
 	write32(CTAG_BASE + TAG_ADDR_MASK, (ncache >> 30) - 1);
 	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     /* No Tag comparison mask for MTag */
 	write32(CTAG_BASE + TAG_MCTR_OFFSET, ncache >> 19);

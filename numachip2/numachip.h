@@ -86,9 +86,6 @@ class Numachip2 {
 	void spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data) nonnull;
 
 	/* dram.c */
-	void dram_test(void);
-	void dram_clear(void);
-	void dram_verify(void);
 	void dram_reset(void);
 	void dram_init(void);
 
@@ -138,10 +135,6 @@ public:
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;
-	static const reg_t NCACHE_MCTR_OFFSET= 0x20c4;
-	static const reg_t NCACHE_MCTR_MASK  = 0x20c8;
-	static const reg_t NCACHE_MCTR_ADDR  = 0x20cc;
-	static const reg_t NCACHE_MCTR_DATA  = 0x20d0;
 	static const reg_t HSS_PLLCTL        = 0x20e0;
 	static const reg_t MCTL_SIZE         = 0x20;
 	static const reg_t TAG_CTRL          = 0x00;
