@@ -24,11 +24,13 @@
 
 void Numachip2::dram_check(void) const
 {
+#ifdef BROKEN
 	uint32_t val = read32(NCACHE_CTRL);
 	if (val & (1 << 7))
 		warning("Correctable ECC issue occurred on Numachip at %03x", sci);
 
 	assertf(!(val & (1 << 8)), "Uncorrectable ECC issue occurred on Numachip at %03x", sci);
+#endif
 }
 
 void Numachip2::dram_test(void)
@@ -203,10 +205,12 @@ void Numachip2::dram_init(void)
 		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
 	}
 
+#ifdef BROKEN
 	uint32_t val = read32(MTAG_BASE + TAG_CTRL);
 	assertf(!(val & (1 << 8)), "Uncorrectable ECC errors detected on NumaConnect DIMM");
 	if (val & (1 << 7))
 		warning("Correctable ECC errors detected on NumaConnect DIMM");
+#endif
 
 #ifdef BROKEN
 	const uint64_t hosttotal = e820->memlimit();
