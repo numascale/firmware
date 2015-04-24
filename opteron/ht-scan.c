@@ -29,7 +29,7 @@
 #include "../library/access.h"
 #include "../library/utils.h"
 
-void Opteron::reset(const enum reset mode, const int last)
+void Opteron::reset(const enum reset mode)
 {
 	/* Ensure console drains */
 	lib::udelay(1000000);
@@ -246,7 +246,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	if (!options->fastboot && reboot) {
 		printf("Rebooting to make new link settings effective...\n");
-		reset(Warm, nc - 1);
+		reset(Warm);
 		/* Does not return */
 	}
 }
