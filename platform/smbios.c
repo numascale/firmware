@@ -68,6 +68,13 @@ SMBIOS::SMBIOS(void)
 		} else if (h->type == 2) {
 			boardmanuf = string(next, data[4]);
 			boardproduct = string(next, data[5]);
+		} else if (h->type == 38) { /* IPMI Device Information */
+			if (data[4] == 1) { /* KCS */
+				memcpy(&kcs_base_addr, data+8, sizeof(uint16_t));
+				/* NOTE: We assume I/O address here */
+				kcs_base_addr &= 0xFFFE;
+				kcs_slave_addr = data[6];
+			}
 		}
 
 		while (next - buf + 1 < len && (next[0] != 0 || next[1] != 0))

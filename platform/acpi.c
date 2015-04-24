@@ -589,12 +589,16 @@ ACPI::ACPI(void): bios_shadowed(0)
 
 		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
 			if (!strcmp(smbios.boardproduct, acpi_blacklist[i])) {
-				printf(" (blacklisted)");
+				printf(" (ACPI workaround)");
 				options->handover_acpi = 1;
 				break;
 			}
 		}
 	}
+
+	if (smbios.kcs_base_addr != 0)
+		printf("\nIPMI device with KCS interface found @ IO 0x%04x, I2C slave adddress = 0x%02x",
+		       smbios.kcs_base_addr, smbios.kcs_slave_addr);
 
 	printf("\n");
 
