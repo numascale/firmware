@@ -747,7 +747,7 @@ static void clear_dram(void)
 	printf("\n");
 }
 
-static void finished(void)
+static void finished(const char *label)
 {
 	check();
 
@@ -830,7 +830,7 @@ int main(const int argc, char *const argv[])
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-		finished();
+		finished(options->next_label);
 	}
 
 	// initialize SPI/SPD, DRAM, NODEID etc
@@ -865,7 +865,7 @@ int main(const int argc, char *const argv[])
 
 		setup_cores_observer();
 		setup_info();
-		finished();
+		finished(options->observer_label ? options->observer_label : options->next_label);
 	}
 
 	for (unsigned n = 0; n < config->nnodes; n++)
@@ -955,5 +955,5 @@ int main(const int argc, char *const argv[])
 	setup_cores();
 	acpi_tables();
 	test_cores();
-	finished();
+	finished(options->next_label);
 }

@@ -145,6 +145,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 
 	static const struct optargs list[] = {
 		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
+		{"observer-label",	&Options::parse_string, &observer_label},  /* Next PXELINUX label to boot after loader for observers */
 		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
 		{"ht.200mhz-only",  &Options::parse_bool,   &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
 		{"ht.selftest",     &Options::parse_bool,   &ht_selftest},

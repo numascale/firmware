@@ -25,7 +25,7 @@ class Options {
 	static void parse_int64(const char *val, void *intp) nonnull;
 	static void parse_flags(const char *val, void *flags) nonnull;
 public:
-	const char *next_label;
+	const char *next_label, *observer_label;
 	const char *config_filename;
 	bool ht_200mhz_only, ht_8bit_only, ht_selftest;
 	bool init_only;
