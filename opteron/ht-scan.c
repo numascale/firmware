@@ -31,13 +31,6 @@
 
 void Opteron::reset(const enum reset mode, const int last)
 {
-	/* Prevent some BIOSs reprogramming the link back to 200MHz */
-	for (int i = 0; i <= last; i++) {
-		uint32_t val = lib::cht_read32(i, LINK_INIT_CTRL);
-		val &= ~(1 << 5);
-		lib::cht_write32(i, LINK_INIT_CTRL, val);
-	}
-
 	/* Ensure console drains */
 	lib::udelay(1000000);
 
