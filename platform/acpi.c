@@ -596,10 +596,6 @@ ACPI::ACPI(void): bios_shadowed(0)
 		}
 	}
 
-	if (smbios.kcs_base_addr != 0)
-		printf("\nIPMI device with KCS interface found @ IO 0x%04x, I2C slave adddress = 0x%02x",
-		       smbios.kcs_base_addr, smbios.kcs_slave_addr);
-
 	printf("\n");
 
 	// find table root in EBDA

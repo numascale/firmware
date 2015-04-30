@@ -33,8 +33,6 @@ public:
 	const char *biosver, *biosdate;
 	const char *sysmanuf, *sysproduct;
 	const char *boardmanuf, *boardproduct;
-	uint16_t kcs_base_addr;
-	uint8_t kcs_slave_addr;
 
 	SMBIOS(void);
 };

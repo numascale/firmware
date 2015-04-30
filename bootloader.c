@@ -35,6 +35,7 @@ extern "C" {
 #include "platform/options.h"
 #include "platform/os.h"
 #include "platform/e820.h"
+#include "platform/ipmi.h"
 #include "platform/config.h"
 #include "platform/acpi.h"
 #include "platform/trampoline.h"
@@ -49,6 +50,7 @@ E820 *e820;
 Node *local_node;
 Node **nodes;
 ACPI *acpi;
+IPMI *ipmi;
 char *asm_relocated;
 
 static uint64_t dram_top;

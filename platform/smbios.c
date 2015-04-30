@@ -21,6 +21,7 @@
 
 #include "../bootloader.h"
 #include "smbios.h"
+#include "ipmi.h"
 
 const char *SMBIOS::string(const char *table, uint8_t index)
 {
@@ -70,10 +71,10 @@ SMBIOS::SMBIOS(void)
 			boardproduct = string(next, data[5]);
 		} else if (h->type == 38) { /* IPMI Device Information */
 			if (data[4] == 1) { /* KCS */
-				memcpy(&kcs_base_addr, data+8, sizeof(uint16_t));
-				/* NOTE: We assume I/O address here */
-				kcs_base_addr &= 0xFFFE;
-				kcs_slave_addr = data[6];
+				uint16_t addr;
+				memcpy(&addr, data + 8, sizeof(uint16_t));
+				addr &= 0xFFFE;
+				ipmi = new IPMI(addr);
 			}
 		}
 

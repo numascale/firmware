@@ -26,23 +26,17 @@
 #include "../bootloader.h"
 #include "../platform/options.h"
 #include "../platform/devices.h"
+#include "../platform/ipmi.h"
 #include "../library/access.h"
 #include "../library/utils.h"
 
-void Opteron::reset(const enum reset mode)
+void Opteron::platform_reset_warm(void)
 {
 	/* Ensure console drains */
 	lib::udelay(1000000);
 
-	if (mode == Warm) {
-		outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);
-		outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
-	}
-
-	if (mode == Init) {
-		outb((0 << 3) | (0 << 2) | (0 << 1), 0xcf9);
-		outb((0 << 3) | (1 << 2) | (0 << 1), 0xcf9);
-	}
+	outb((0 << 3) | (0 << 2) | (1 << 1), 0xcf9);
+	outb((0 << 3) | (1 << 2) | (1 << 1), 0xcf9);
 
 	/* Cold reset */
 	outb((1 << 3) | (0 << 2) | (1 << 1), 0xcf9);
@@ -245,9 +239,8 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	printf("\n");
 
 	if (!options->fastboot && reboot) {
-		printf("Rebooting to make new link settings effective...\n");
-		reset(Warm);
-		/* Does not return */
+		printf(BANNER "Warm-booting to make new link settings effective...\n");
+		platform_reset_warm();
 	}
 }
 
@@ -423,8 +416,10 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 				break;
 		}
 
-		if (use)
-			fatal("No unrouted coherent links found");
+		if (use) {
+			printf(BANNER "Cold-booting to discover NumaConnect HT link...\n");
+			ipmi->reset_cold();
+		}
 
 		printf("HT%u.%u is coherent and unrouted\n", neigh, link);
 
