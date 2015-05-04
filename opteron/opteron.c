@@ -333,18 +333,18 @@ void Opteron::init(void)
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
 
-	// Set up buffer for HT tracing
+	// set up buffer for HT tracing
 	if (options->tracing) {
 		trace_base = dram_base + dram_size - options->tracing;
 		trace_limit = trace_base + options->tracing - 1;
 		tracing_arm();
 	}
 
-	// Enable reporting of WatchDog error through MCA
+	// enable reporting of WatchDog error through MCA
 	val = read32(MC_NB_CTRL);
 	write32(MC_NB_CTRL, val | (1 << 12));
 
-	// Mace sure WDT MCA address reporting is enabled
+	// make sure WDT MCA address reporting is enabled
 	val = read32(MC_NB_CONF_EXT);
 	write32(MC_NB_CONF_EXT, val | (1 << 24));
 
