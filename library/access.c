@@ -362,7 +362,6 @@ namespace lib
 		xassert(reg < 0xfff);
 
 		mem_write8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
-		sti();
 		if (options->debug.access & 1)
 			printf("\n");
 	}
