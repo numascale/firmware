@@ -48,7 +48,8 @@ void Numachip2::dram_reset(void)
 	write32(MTAG_BASE + TAG_CTRL, mtag_ctrl & ~(1<<31));
 	write32(CTAG_BASE + TAG_CTRL, ctag_ctrl & ~(1<<31));
 	write32(NCACHE_CTRL, ncache_ctrl & ~(1<<31));
-	printf("<mctr PHY reset>");
+	if (options->debug.mctr)
+		printf("<mctr PHY reset>");
 }
 
 void Numachip2::dram_init(void)
@@ -56,7 +57,6 @@ void Numachip2::dram_init(void)
 	int i;
 
 	printf("DRAM init: ");
-#if 0
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
@@ -64,12 +64,10 @@ void Numachip2::dram_init(void)
 	const uint32_t ranks_shift = (spd_eeprom.organization >> 3) & 0x7;
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
-#else
-	dram_total_shift = (read32(FLASH_REG0) == 0) ? 32 : 33;
-#endif
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
 
-	printf("%uGB DIMM", 1 << (dram_total_shift - 30));
+	printf("%uGB %s (%s) ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
+	       spd_eeprom.mpart[0] ? (char *)spd_eeprom.mpart : "unknown");
 
 	bool errors;
 
@@ -87,7 +85,8 @@ void Numachip2::dram_init(void)
 
 		// mctr PHY are not up; restart training
 		if (i == 0) {
-			printf("<mctr PHY not up>");
+			if (options->debug.mctr)
+				printf("<mctr PHY not up>");
 			errors = 1;
 			continue;
 		}
@@ -96,7 +95,8 @@ void Numachip2::dram_init(void)
 
 	} while (errors);
 
-	printf("<mctr PHY up>");
+	if (options->debug.mctr)
+		printf("<mctr PHY up>");
 
 	write32(MTAG_BASE + TAG_CTRL, 0);
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0);
@@ -104,7 +104,7 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 
 	// wait for memory init done
-	printf("<dram INIT ");
+	printf("<zeroing ");
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
 		cpu_relax();
 
