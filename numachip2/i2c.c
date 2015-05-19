@@ -39,8 +39,10 @@
 
 void Numachip2::i2c_master_init(void)
 {
-	const uint16_t prescale_cnt = 199; /* 199 = 100 kHz, 49 = 400 kHz, 19 = 1MHz */
-	write32(I2C_REG0, (1 << 23) | prescale_cnt);
+	const uint16_t prescale_cnt = (read32(FLASH_REG0) == 0) ? 99 : 49; /* For 100MHz coreclk: 199 = 100 kHz, 49 = 400 kHz, 19 = 1MHz
+									    * For 200MHz coreclk: 399 = 100 kHz, 99 = 400 kHz, 39 = 1MHz */
+	write16(I2C_REG0, prescale_cnt);
+	write8(I2C_REG0 + 2, 0x80); /* core_en */
 }
 
 uint8_t Numachip2::i2c_master_irqwait(void)
@@ -102,7 +104,7 @@ void Numachip2::i2c_master_seq_read(const uint8_t device_adr, const uint8_t byte
 		fatal("Got I2C NACK on byte address (%02X) : %04X %04X",
 		      byte_addr, read32(I2C_REG0), read32(I2C_REG1));
 
-	/* Write device addr + rw bit (0=read) in transmit register */
+	/* Write device addr + rw bit (1=read) in transmit register */
 	write8(I2C_REG0 + 3, (device_adr << 1) | 1);
 
 	/* Send repeated-start-condition + device addr + rw bit */
