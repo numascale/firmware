@@ -196,6 +196,8 @@ public:
 	void write64_split(const reg_t reg, const uint64_t val) const;
 	uint32_t read32(const reg_t reg) const;
 	void write32(const reg_t reg, const uint32_t val) const;
+	uint16_t read16(const reg_t reg) const;
+	void write16(const reg_t reg, const uint16_t val) const;
 	uint8_t read8(const reg_t reg) const;
 	void write8(const reg_t reg, const uint8_t val) const;
 	void apic_icr_write(const uint32_t low, const uint32_t apicid);

@@ -48,6 +48,18 @@ void Numachip2::write32(const reg_t reg, const uint32_t val) const
 	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
+uint16_t Numachip2::read16(const reg_t reg) const
+{
+	xassert(ht);
+	return lib::mcfg_read16(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
+void Numachip2::write16(const reg_t reg, const uint16_t val) const
+{
+	xassert(ht);
+	lib::mcfg_write16(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
 uint8_t Numachip2::read8(const reg_t reg) const
 {
 	xassert(ht);
