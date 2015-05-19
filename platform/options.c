@@ -131,6 +131,8 @@ void Options::parse_flags(const char *val, void *data)
 			flags->northbridge = 1;
 		else if (!strcmp(pos, "cores"))
 			flags->cores = 1;
+		else if (!strcmp(pos, "mctr"))
+			flags->mctr = 1;
 
 		pos = strtok(NULL, ",");
 	}
