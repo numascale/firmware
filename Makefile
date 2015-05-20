@@ -15,7 +15,7 @@ all: bootloader.c32
 
 .PHONY: upload
 upload: bootloader.c32
-	rsync -z bootloader.c32 ns:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
+	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
 
 .PHONY: reset
 reset:
