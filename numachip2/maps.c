@@ -38,12 +38,15 @@ void Numachip2::MmioMap::add(const int range, const uint64_t base, const uint64_
 
 	uint32_t a = ((base >> 16) << 8) | 3;
 	uint32_t b = ((limit >> 16) << 8) | dht;
+	uint32_t c = (base >> 40) | ((limit >> 40) << 16);
 
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(MMIO_MAP_BASE, a);
 	numachip.write32(MMIO_MAP_LIMIT, b);
+	numachip.write32(MMIO_MAP_HIGH, c);
 	xassert(numachip.read32(MMIO_MAP_BASE) == a);
 	xassert(numachip.read32(MMIO_MAP_LIMIT) == b);
+	xassert(numachip.read32(MMIO_MAP_HIGH) == c);
 }
 
 void Numachip2::MmioMap::del(const int range)
@@ -56,6 +59,7 @@ void Numachip2::MmioMap::del(const int range)
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(MMIO_MAP_BASE, 0);
 	numachip.write32(MMIO_MAP_LIMIT, 0);
+	numachip.write32(MMIO_MAP_HIGH, 0);
 }
 
 bool Numachip2::MmioMap::read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht)
@@ -63,11 +67,14 @@ bool Numachip2::MmioMap::read(const int range, uint64_t *base, uint64_t *limit, 
 	xassert(range < 8);
 
 	numachip.write32(MAP_INDEX, range);
-	uint32_t a = numachip.read32(MMIO_MAP_BASE);
-	uint32_t b = numachip.read32(MMIO_MAP_LIMIT);
+	const uint32_t a = numachip.read32(MMIO_MAP_BASE);
+	const uint32_t b = numachip.read32(MMIO_MAP_LIMIT);
+	const uint32_t c = numachip.read32(MMIO_MAP_HIGH);
 
 	*base = (uint64_t)(a & ~0xff) << (16 - 8);
+	*base |= (uint64_t)(c & 0xff) << 40;
 	*limit = ((uint64_t)(b & ~0xff) << (16 - 8)) | 0xffff;
+	*limit |= (uint64_t)((c >> 16) & 0xff) << 40;
 	*dht = b & 7;
 
 	/* Ensure read and write bits are consistent */

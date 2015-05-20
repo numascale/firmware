@@ -115,8 +115,7 @@ public:
 	static const reg_t DRAM_MAP_LIMIT    = 0x104c;
 	static const reg_t MMIO_MAP_BASE     = 0x1050;
 	static const reg_t MMIO_MAP_LIMIT    = 0x1054;
-	static const reg_t EXTMMIO_MAP_BASE  = 0x1058;
-	static const reg_t EXTMMIO_MAP_LIMIT = 0x105c;
+	static const reg_t MMIO_MAP_HIGH     = 0x1058;
 	static const reg_t DRAM_SHARED_BASE  = 0x1070;
 	static const reg_t DRAM_SHARED_LIMIT = 0x1074;
 	static const reg_t PIU_ATT_INDEX     = 0x1078;
