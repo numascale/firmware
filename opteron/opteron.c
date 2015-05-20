@@ -416,7 +416,7 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	// FIXME set DisOrderRdRsp
 
 	uint32_t val = read32(LINK_TRANS_CTRL);
-	val |= (1 << 25) | (1 << 23) | (1 << 18) | (1 << 17); // set CHtExtAddrEn, InstallStateS, ApicExtId, ApicExtBrdCst
+	val |= (1 << 25) | (1 << 18) | (1 << 17); // set CHtExtAddrEn, ApicExtId, ApicExtBrdCst
 	val &= ~(3 << 21); // disable downstream NP request limit "to avoid DMA Deadlock" (SR5690 Programming Requirements p5-5)
 	write32(LINK_TRANS_CTRL, val);
 
