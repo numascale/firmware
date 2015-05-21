@@ -52,8 +52,9 @@ void Numachip2::fabric_train(void)
 
 	bool errors;
 
+	fabric_reset();
+
 	do {
-		fabric_reset();
 
 		// wait until all links are up
 		for (i = training_period; i > 0; i--) {
