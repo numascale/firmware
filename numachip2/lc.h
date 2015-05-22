@@ -20,6 +20,8 @@
 #include "../library/base.h"
 #include "numachip.h"
 
+#define foreach_lc(x) for (LC *const*(x) = &lcs[0]; (x) < &lcs[nlcs]; (x)++)
+
 class LC
 {
 protected:

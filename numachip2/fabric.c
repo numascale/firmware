@@ -40,7 +40,7 @@ void Numachip2::fabric_check(void) const
 	if (val != 0)
 		warning("SIU on %03x has issues 0x%08x", sci, val);
 
-	for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+	foreach_lc(lc)
 		(*lc)->check();
 }
 
@@ -60,7 +60,7 @@ void Numachip2::fabric_train(void)
 		for (i = training_period; i > 0; i--) {
 			bool allup = 1;
 
-			for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+			foreach_lc(lc)
 				allup &= (*lc)->is_up();
 
 			// exit early if all up
@@ -73,7 +73,7 @@ void Numachip2::fabric_train(void)
 		if (i == 0) {
 			if (options->debug.fabric) {
 				printf("<links not up:");
-				for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+				foreach_lc(lc)
 					printf(" %"PRIx64, (*lc)->status());
 				printf(">");
 			}
@@ -81,21 +81,21 @@ void Numachip2::fabric_train(void)
 		}
 
 		// clear link errors
-		for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+		foreach_lc(lc)
 			(*lc)->clear();
 
 		// check for errors over period
 		for (i = stability_period; i; i--) {
 			errors = 0;
 
-			for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+			foreach_lc(lc)
 				errors |= ((*lc)->status() & 7) > 0;
 
 			// exit early if all up
 			if (errors) {
 				if (options->debug.fabric) {
 					printf("<errors:");
-					for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+					foreach_lc(lc)
 						printf(" %016" PRIx64, (*lc)->status());
 					printf(">");
 				}
@@ -108,7 +108,7 @@ void Numachip2::fabric_train(void)
 			break;
 	} while (errors);
 
-	for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+	foreach_lc(lc)
 		printf(" %u", (*lc)->index);
 	printf("\n");
 }
@@ -136,7 +136,7 @@ void Numachip2::fabric_routing(void)
 		printf("ROUTING: src=%03x, dst=%03x, port=%d\n", sci, config->nodes[node].sci, out);
 		xbar_route(config->nodes[node].sci, out);
 
-		for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+		foreach_lc(lc)
 			(*lc)->add_route(config->nodes[node].sci, out);
 	}
 
@@ -150,7 +150,7 @@ void Numachip2::fabric_routing(void)
 				write32(SIU_XBAR_TABLE + bit * SIU_XBAR_TABLE_SIZE + offset * 4, xbar_routes[(chunk<<4)+offset][bit]);
 	}
 
-	for (LC *const*lc = &lcs[0]; lc < &lcs[nlcs]; lc++)
+	foreach_lc(lc)
 		(*lc)->commit();
 
 	printf("\n");
