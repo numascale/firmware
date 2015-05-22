@@ -22,6 +22,7 @@
 #include "lc.h"
 #include "../bootloader.h"
 #include "../platform/config.h"
+#include "../library/utils.h"
 
 // returns 1 when link is up
 bool LC4::is_up(void)
@@ -40,8 +41,11 @@ uint64_t LC4::status(void)
 void LC4::check(void)
 {
 	uint64_t val = status();
-	if (val)
+	if (val) {
 		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+		// ratelimit
+		lib::udelay(1000000);
+	}
 }
 
 void LC4::clear(void)

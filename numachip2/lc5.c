@@ -21,7 +21,7 @@
 
 #include "lc.h"
 #include "../bootloader.h"
-
+#include "../library/utils.h"
 
 // returns 1 when link is up
 bool LC5::is_up(void)
@@ -41,8 +41,11 @@ void LC5::check(void)
 {
 	uint64_t val = status();
 
-	if (val & ~(1ULL<<31))
+	if (val & ~(1ULL<<31)) {
 		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+		// ratelimit
+		lib::udelay(1000000);
+	}
 
 	/* Clear errors W1TC */
 	numachip.write32(LINKSTAT + index * SIZE, val);
