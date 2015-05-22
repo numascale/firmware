@@ -126,8 +126,8 @@ public:
 	static void assert_checksum(const acpi_sdt *table, const int len);
 	static checked uint8_t checksum(const char *addr, const int len);
 	void check(void);
-	checked bool replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned int ptrsize);
-	void add_child(const acpi_sdt *replacement, acpi_sdt *parent, unsigned int ptrsize);
+	checked bool replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize);
+	void add_child(const acpi_sdt *replacement, acpi_sdt *parent, unsigned ptrsize);
 	checked acpi_sdt *find_root(const char *sig);
 	checked bool replace_root(const char *sig, const acpi_sdt *replacement);
 	checked acpi_sdt *find_sdt(const char *sig);

@@ -57,7 +57,7 @@ void Numachip2::fabric_train(void)
 	do {
 
 		// wait until all links are up
-		for (i = training_period; i > 0; i--) {
+		for (i = fabric_training_period; i > 0;) {
 			bool allup = 1;
 
 			foreach_lc(lc)

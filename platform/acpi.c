@@ -189,7 +189,7 @@ uint32_t ACPI::slack(acpi_sdt *parent)
 	return (uint32_t)next_table - (uint32_t)parent - parent->len;
 }
 
-bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned int ptrsize)
+bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize)
 {
 	uint64_t newp, childp;
 	acpi_sdt *table;
@@ -250,12 +250,12 @@ again:
 	fatal("ACPI tables immutable when replacing child at 0x%p", &parent->data[i]);
 }
 
-void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *parent, const unsigned int ptrsize)
+void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize)
 {
 	// if insufficient space, replace unimportant tables
 	if (slack(parent) < ptrsize) {
 		const char *expendable[] = {"FPDT", "EINJ", "TCPA", "BERT", "ERST", "HEST"};
-		for (unsigned int i = 0; i < (sizeof expendable / sizeof expendable[0]); i++) {
+		for (unsigned i = 0; i < (sizeof expendable / sizeof expendable[0]); i++) {
 			if (replace_child(expendable[i], replacement, parent, ptrsize)) {
 				printf("Replaced %s table\n", expendable[i]);
 				return;
@@ -587,7 +587,7 @@ ACPI::ACPI(void): bios_shadowed(0)
 		// systems where ACPI must be handed off early
 		const char *acpi_blacklist[] = {"H8QGL", NULL};
 
-		for (unsigned int i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
+		for (unsigned i = 0; i < (sizeof acpi_blacklist / sizeof acpi_blacklist[0]); i++) {
 			if (!strcmp(smbios.boardproduct, acpi_blacklist[i])) {
 				printf(" (ACPI workaround)");
 				options->handover_acpi = 1;

@@ -159,7 +159,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
 	};
 
-	int errors = 0;
+	unsigned errors = 0;
 	printf("Options:");
 	for (int arg = 1; arg < argc; arg++) {
 		/* Break into two strings where '=' found */
@@ -170,7 +170,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		}
 
 		bool handled = 0;
-		for (unsigned int i = 0; i < (sizeof(list) / sizeof(list[0])); i++) {
+		for (unsigned i = 0; i < (sizeof(list) / sizeof(list[0])); i++) {
 			if (!strcmp(argv[arg], list[i].label)) {
 				printf(" %s", argv[arg]);
 				if (val)

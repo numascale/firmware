@@ -436,8 +436,7 @@ static void setup_cores(void)
 	xassert(!(mtrr_var_mask & 7));
 
 	printf("Variable MTRRs:\n");
-
-	for (int i = 0; i < 8; i++) {
+	for (unsigned i = 0; i < 8; i++) {
 		mtrr_var_base[i] = lib::rdmsr(MSR_MTRR_PHYS_BASE0 + i * 2);
 		mtrr_var_mask[i] = lib::rdmsr(MSR_MTRR_PHYS_MASK0 + i * 2);
 
@@ -759,7 +758,12 @@ static void finished(void)
 	uint64_t msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
 
-	printf("Unification succeeded; executing syslinux label %s\n", options->next_label);
+	if (config->local_node->partition)
+		printf("Partition %u unification", config->local_node->partition);
+	else
+		printf("Observer setup");
+
+	printf(" succeeded; executing syslinux label %s\n", options->next_label);
 	os->exec(options->next_label);
 }
 

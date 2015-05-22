@@ -42,7 +42,7 @@ void OS::get_hostname(void)
 	memcpy(mac, ((pxe_bootp_t *)dhcpdata)->CAddr, sizeof(mac));
 
 	/* Skip standard fields, as hostname is an option */
-	unsigned int offset = 4 + offsetof(pxe_bootp_t, vendor.d);
+	unsigned offset = 4 + offsetof(pxe_bootp_t, vendor.d);
 
 	while (offset < dhcplen) {
 		int code = dhcpdata[offset];
