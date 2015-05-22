@@ -853,9 +853,10 @@ int main(const int argc, char *const argv[])
 		setup_gsm_early();
 
 	if (!options->singleton) {
-		local_node->numachip->fabric_train();
 		local_node->numachip->fabric_routing();
+		local_node->numachip->fabric_train();
 	}
+
 
 	if (!config->local_node->partition) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
