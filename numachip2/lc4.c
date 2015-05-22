@@ -42,7 +42,7 @@ void LC4::check(void)
 {
 	uint64_t val = status();
 	if (val) {
-		warning("Fabric link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+		warning("Fabric LC4 link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
 		// ratelimit
 		lib::udelay(1000000);
 	}
@@ -50,7 +50,7 @@ void LC4::check(void)
 
 void LC4::clear(void)
 {
-	// Clear link error bits, and error counter
+	// clear link error bits, and error counter
 	numachip.write32(ERROR_COUNT + index * SIZE, 0);
 	numachip.write32(ELOG0 + index * SIZE, 0);
 	numachip.write32(ELOG1 + index * SIZE, 0);

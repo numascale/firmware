@@ -66,7 +66,7 @@ void Numachip2::dram_init(void)
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
 
-	printf("%uGB %s (%s) ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
+	printf("%uGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
 	       spd_eeprom.mpart[0] ? (char *)spd_eeprom.mpart : "unknown");
 
 	bool errors;
@@ -104,12 +104,12 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 
 	// wait for memory init done
-	printf("<zeroing ");
+	printf("<zeroing");
 	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
 		cpu_relax();
 
 	write32(MTAG_BASE + TAG_CTRL, 0);
-	printf("done>");
+	printf(">");
 
 	switch (total) {
 	case 4ULL << 30:
