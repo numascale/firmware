@@ -34,15 +34,31 @@ bool LC4::is_up(void)
 
 uint64_t LC4::status(void)
 {
-	uint32_t val = numachip.read32(ERROR_COUNT + index * SIZE);
-	return (uint64_t) val;
+	uint64_t val = numachip.read32(ERROR_COUNT + index * SIZE);
+	val |= (uint64_t)numachip.read32(ELOG0 + index * SIZE) << 16;
+	val |= (uint64_t)numachip.read32(ELOG1 + index * SIZE) << 32;
+	return val;
 }
 
 void LC4::check(void)
 {
-	uint64_t val = status();
+	const uint64_t val = status();
 	if (val) {
 		warning("Fabric LC4 link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+		// ratelimit
+		lib::udelay(1000000);
+	}
+
+	clear();
+
+	// link up/down reporting
+	if ( link_up && !is_up()) {
+		warning("Fabric link %u is down!", index);
+		// ratelimit
+		lib::udelay(1000000);
+	}
+	if (!link_up && is_up()) {
+		warning("Fabric link %u is up!", index);
 		// ratelimit
 		lib::udelay(1000000);
 	}

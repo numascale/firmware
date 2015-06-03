@@ -61,8 +61,8 @@ class Numachip2 {
 	};
 
 	static const unsigned fabric_training_period = 500000;
-	static const unsigned dram_training_period = 500000;
 	static const unsigned stability_period = 500000;
+	static const unsigned dram_training_period = 500000;
 	static const unsigned i2c_timeout = 1000;
 	static const unsigned spi_timeout = 1000;
 	char card_type[16];

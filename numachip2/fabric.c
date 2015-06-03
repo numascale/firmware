@@ -47,14 +47,17 @@ void Numachip2::fabric_check(void) const
 // goal: read all phy status successfully 5M times; if any error encountered, reset and restart
 void Numachip2::fabric_train(void)
 {
-	int i;
-	printf("Fabric connected:");
+	int i = 0;
+	bool errors = 1;
 
-	bool errors;
+	printf("Fabric connected:");
 
 	fabric_reset();
 
 	do {
+		// clear link errors
+		foreach_lc(lc)
+			(*lc)->clear();
 
 		// wait until all links are up
 		for (i = fabric_training_period; i > 0;) {
@@ -69,15 +72,23 @@ void Numachip2::fabric_train(void)
 			cpu_relax();
 		}
 
-		// not all links are up; restart training
+		// not all links are up; restart training if we have errors
 		if (i == 0) {
 			if (options->debug.fabric) {
 				printf("<links not up:");
 				foreach_lc(lc)
-					printf(" %"PRIx64, (*lc)->status());
+					printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
 				printf(">");
 			}
+			errors = 1;
 			continue;
+		}
+
+		if (options->debug.fabric) {
+			printf("<up:");
+			foreach_lc(lc)
+				printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
+			printf(">");
 		}
 
 		// clear link errors
@@ -91,7 +102,7 @@ void Numachip2::fabric_train(void)
 			foreach_lc(lc)
 				errors |= ((*lc)->status() & 7) > 0;
 
-			// exit early if all up
+			// exit early if errors detected
 			if (errors) {
 				if (options->debug.fabric) {
 					printf("<errors:");
@@ -104,7 +115,7 @@ void Numachip2::fabric_train(void)
 		}
 
 		// no errors found, exit
-		if (!i)
+		if (i == 0)
 			break;
 	} while (errors);
 

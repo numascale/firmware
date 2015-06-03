@@ -32,7 +32,7 @@ bool LC5::is_up(void)
 
 uint64_t LC5::status(void)
 {
-	uint64_t val = numachip.read32(LINKSTAT + index * SIZE);
+	uint64_t val = numachip.read32(LINKSTAT + index * SIZE) & ~(1<<31); // mask out link_up bit
 	val |= (uint64_t)numachip.read32(EVENTSTAT + index * SIZE) << 32;
 	return val;
 }
@@ -41,7 +41,7 @@ void LC5::check(void)
 {
 	const uint64_t val = status();
 
-	if (val & ~(1ULL << 31)) {
+	if (val) {
 		warning("Fabric LC5 link %u on %03x has issues 0x%016" PRIx64 ":", index, numachip.sci, val);
 
 		if (val & (1ULL << 58)) printf(" Sequencer received an Ack/Nack that was not in the Retry Buffer\n");
@@ -72,21 +72,16 @@ void LC5::check(void)
 		lib::udelay(1000000);
 	}
 
-	// clear errors W1TC
-	numachip.write32(LINKSTAT + index * SIZE, val);
-	numachip.write32(EVENTSTAT + index * SIZE, val >> 32);
+	clear();
 
 	// link up/down reporting
-	if (link_up && !(val & (1ULL << 31))) {
-		warning("Fabric LC5 link %u down", index);
-		link_up = 0;
-
+	if ( link_up && !is_up()) {
+		warning("Fabric link %u is down!", index);
 		// ratelimit
 		lib::udelay(1000000);
-	} else if (!link_up && (val & (1ULL << 31))) {
-		warning("Fabric LC5 link %u up", index);
-		link_up = 1;
-
+	}
+	if (!link_up && is_up()) {
+		warning("Fabric link %u is up!", index);
 		// ratelimit
 		lib::udelay(1000000);
 	}
@@ -94,8 +89,9 @@ void LC5::check(void)
 
 void LC5::clear(void)
 {
-	// clear link error bits
+	// clear link error bits and all event bits
 	numachip.write32(LINKSTAT + index * SIZE, 7);
+	numachip.write32(EVENTSTAT + index * SIZE, 0xffffffff);
 }
 
 uint8_t LC5::route1(const sci_t src, const sci_t dst)
