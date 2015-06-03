@@ -52,15 +52,15 @@ void Numachip2::fabric_train(void)
 
 	printf("Fabric connected:");
 
-	fabric_reset();
-
 	do {
+		fabric_reset();
+
 		// clear link errors
 		foreach_lc(lc)
 			(*lc)->clear();
 
 		// wait until all links are up
-		for (i = fabric_training_period; i > 0;) {
+		for (i = fabric_training_period; i > 0; i--) {
 			bool allup = 1;
 
 			foreach_lc(lc)
