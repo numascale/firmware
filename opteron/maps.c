@@ -27,9 +27,20 @@ void Opteron::MmioMap10::remove(const unsigned range)
 	if (options->debug.maps)
 		printf("Deleting NB MMIO range %u on SCI%03x#%d\n", range, opteron.sci, opteron.ht);
 
-	xassert(range < 8);
-	opteron.write32(MMIO_MAP_BASE + range * 8, 0);
-	opteron.write32(MMIO_MAP_LIMIT + range * 8, 0);
+	xassert(range < ranges);
+
+	if (range < 8) {
+		opteron.write32(MMIO_MAP_BASE + range * 8, 0);
+		opteron.write32(MMIO_MAP_LIMIT + range * 8, 0);
+		return;
+	}
+
+	const unsigned extrange = range - 8;
+
+	opteron.write32(EXTMMIO_MAP_CTRL, (2 << 28) | extrange);
+	opteron.write32(EXTMMIO_MAP_DATA, 0);
+	opteron.write32(EXTMMIO_MAP_CTRL, (3 << 28) | extrange);
+	opteron.write32(EXTMMIO_MAP_DATA, 0);
 }
 
 void Opteron::MmioMap15::remove(const unsigned range)
@@ -275,10 +286,6 @@ void Opteron::MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t
 {
 	const unsigned range = unused();
 	add(range, base, limit, dest, link);
-}
-
-Opteron::DramMap::DramMap(Opteron &_opteron): opteron(_opteron)
-{
 }
 
 void Opteron::DramMap::remove(unsigned range)

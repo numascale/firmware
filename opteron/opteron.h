@@ -44,18 +44,17 @@ public:
 
 	class MmioMap10: public MmioMap {
 	public:
+		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
 		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
-		MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
 		void remove(const unsigned range);
 	};
 private:
 	class DramMap {
 		const Opteron &opteron;
-
 		unsigned unused(void);
 	public:
-		explicit DramMap(Opteron &_opteron);
+		DramMap(Opteron &_opteron): opteron(_opteron) {};
 		void remove(const unsigned range);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest) nonnull;
 		void print(const unsigned range);

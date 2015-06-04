@@ -431,6 +431,10 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 		// enable 128MB-granularity on extended MMIO maps
 		val = read32(EXT_LINK_TRANS_CTRL);
 		write32(EXT_LINK_TRANS_CTRL, (val & ~0x300) | 0x200);
+
+		// clear all extended MMIO maps
+		for (unsigned range = 8; range < mmiomap->ranges; range++)
+			mmiomap->remove(range);
 	}
 
 	// enable Addr64BitEn on IO links
