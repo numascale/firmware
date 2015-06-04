@@ -29,8 +29,7 @@ void Opteron::MmioMap10::remove(const unsigned range)
 
 	xassert(range < 8);
 	opteron.write32(MMIO_MAP_BASE + range * 8, 0);
-	opteron.write32(MMIO_MAP_BASE + range * 8, 0);
-	opteron.write32(MMIO_MAP_HIGH + range * 4, 0);
+	opteron.write32(MMIO_MAP_LIMIT + range * 8, 0);
 }
 
 void Opteron::MmioMap15::remove(const unsigned range)
