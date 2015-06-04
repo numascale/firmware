@@ -52,9 +52,9 @@ void Numachip2::fabric_train(void)
 
 	printf("Fabric connected:");
 
-	do {
-		fabric_reset();
+	fabric_reset();
 
+	do {
 		// clear link errors
 		foreach_lc(lc)
 			(*lc)->clear();
