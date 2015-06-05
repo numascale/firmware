@@ -207,6 +207,9 @@ static void setup_gsm(void)
 			if (config->nodes[n].partition)
 				continue;
 
+			if (options->debug.maps)
+				printf("SCI%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", config->nodes[n].sci, base, limit, dest);
+
 			// FIXME: use observer instance
 			xassert(limit > base);
 
@@ -220,6 +223,9 @@ static void setup_gsm(void)
 			for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
 				lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht,
 				  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
+
+			if (options->debug.maps)
+				printf("\n");
 		}
 	}
 	printf("\n");
