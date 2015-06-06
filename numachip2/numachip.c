@@ -101,13 +101,22 @@ ht_t Numachip2::probe(const sci_t sci)
 	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + val, SIU_NODEID >> 12, SIU_NODEID & 0xfff) & ~(1<<31); // mask out bit31 which is CRC enable bit
 	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
 
-	uint32_t control = lib::mcfg_read32(sci, 0, 24 + val, INFO >> 12, INFO & 0xfff);
-	assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
-	if (control == 1 << 29) {
-		printf("Found SCI%03x\n", sci);
-		// tell slave to proceed
-		lib::mcfg_write32(sci, 0, 24 + val, INFO >> 12, INFO & 0xfff, 3 << 29);
-		return val;
+	return val;
+}
+
+ht_t Numachip2::probe_slave(const sci_t sci)
+{
+	ht_t ht = probe(sci);
+
+	if (ht) {
+		uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, INFO >> 12, INFO & 0xfff);
+		assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
+		if (control == 1 << 29) {
+			printf("Found SCI%03x\n", sci);
+			// tell slave to proceed
+			lib::mcfg_write32(sci, 0, 24 + ht, INFO >> 12, INFO & 0xfff, 3 << 29);
+			return ht;
+		}
 	}
 
 	return 0;

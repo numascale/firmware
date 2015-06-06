@@ -207,25 +207,27 @@ static void setup_gsm(void)
 			if (config->nodes[n].partition)
 				continue;
 
-			if (options->debug.maps)
-				printf("SCI%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", config->nodes[n].sci, base, limit, dest);
+			// We must probe first to find NumaChip HT node (it might be different from others)
+			ht_t ht = Numachip2::probe(config->nodes[n].sci);
+			if (ht) {
+				if (options->debug.maps)
+					printf("\nSCI%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", config->nodes[n].sci, base, limit, dest);
 
-			// FIXME: use observer instance
-			xassert(limit > base);
+				// FIXME: use observer instance
+				xassert(limit > base);
 
-			const uint64_t mask = (1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
-			xassert((base & mask) == 0);
-			xassert((limit & mask) == mask);
+				const uint64_t mask = (1ULL << Numachip2::SIU_ATT_SHIFT) - 1;
+				xassert((base & mask) == 0);
+				xassert((limit & mask) == mask);
 
-			lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht, Numachip2::SIU_ATT_INDEX >> 12,
-			  Numachip2::SIU_ATT_INDEX & 0xfff, (1 << 31) | (base >> Numachip2::SIU_ATT_SHIFT));
+				lib::mcfg_write32(config->nodes[n].sci, 0, 24 + ht, Numachip2::SIU_ATT_INDEX >> 12,
+						  Numachip2::SIU_ATT_INDEX & 0xfff, (1 << 31) | (base >> Numachip2::SIU_ATT_SHIFT));
 
-			for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
-				lib::mcfg_write32(config->nodes[n].sci, 0, 24 + (*node)->numachip->ht,
-				  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
+				for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
+					lib::mcfg_write32(config->nodes[n].sci, 0, 24 + ht,
+							  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
 
-			if (options->debug.maps)
-				printf("\n");
+			}
 		}
 	}
 	printf("\n");
@@ -940,7 +942,7 @@ int main(const int argc, char *const argv[])
 			if (config->nodes[n].added || config->nodes[n].partition != config->local_node->partition)
 				continue;
 
-			ht_t ht = Numachip2::probe(config->nodes[n].sci);
+			ht_t ht = Numachip2::probe_slave(config->nodes[n].sci);
 			if (ht) {
 				nodes[pos++] = new Node(config->nodes[n].sci, ht);
 				config->nodes[n].added = 1;

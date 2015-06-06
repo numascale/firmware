@@ -201,6 +201,7 @@ public:
 	void write8(const reg_t reg, const uint8_t val) const;
 	void apic_icr_write(const uint32_t low, const uint32_t apicid);
 	static ht_t probe(const sci_t sci);
+	static ht_t probe_slave(const sci_t sci);
 	void late_init(void);
 	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
