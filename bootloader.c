@@ -80,7 +80,7 @@ static void scan(void)
 		(*node)->dram_end = dram_top - 1;
 
 		if (options->debug.maps)
-			printf("SCI%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=%"PRIx64"\n",
+			printf("SCI%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=0x%"PRIx64"\n",
 				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 }
