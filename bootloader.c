@@ -152,8 +152,7 @@ static void add(const Node &node)
 	// 14. redirect above last local DRAM address to NumaChip
 	if (&node < nodes[nnodes - 1])
 		for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++)
-			(*nb)->drammap.add(range, node.dram_end + 1, dram_top - 1, node.numachip->ht);
-	range++;
+			(*nb)->drammap.add(range + 1, node.dram_end + 1, dram_top - 1, node.numachip->ht);
 
 	// 15. point IO and config maps to Numachip
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
