@@ -794,6 +794,313 @@ void caches(const bool enable)
 
 }
 
+static void wait_status(void)
+{
+	printf("Waiting for");
+
+	for (unsigned n = 0; n < config->nnodes; n++) {
+		if (&config->nodes[n] == config->local_node) /* Self */
+			continue;
+
+		if (!config->nodes[n].seen)
+			printf(" SCI%03x/%s", config->nodes[n].sci, config->nodes[n].hostname);
+	}
+
+	printf("\n");
+}
+
+#define NODE_SYNC_STATES(state)			\
+	state(CMD_STARTUP)			\
+	state(RSP_SLAVE_READY)			\
+	state(CMD_RESET_FABRIC)			\
+	state(RSP_RESET_COMPLETE)		\
+	state(CMD_TRAIN_FABRIC)			\
+	state(RSP_PHY_TRAINED)			\
+	state(RSP_PHY_NOT_TRAINED)		\
+	state(CMD_VALIDATE_RINGS)		\
+	state(RSP_RINGS_OK)			\
+	state(RSP_RINGS_NOT_OK)			\
+	state(CMD_SETUP_FABRIC)			\
+	state(RSP_FABRIC_READY)			\
+	state(RSP_FABRIC_NOT_READY)		\
+	state(CMD_VALIDATE_FABRIC)		\
+	state(RSP_FABRIC_OK)			\
+	state(RSP_FABRIC_NOT_OK)		\
+	state(CMD_CONTINUE)			\
+	state(RSP_ERROR)			\
+	state(RSP_NONE)
+
+#define ENUM_DEF(state) state,
+#define ENUM_NAMES(state) #state,
+#define UDP_SIG 0xdeafcafa
+#define UDP_MAXLEN 256
+
+enum node_state { NODE_SYNC_STATES(ENUM_DEF) };
+
+static const char *node_state_name[] = { NODE_SYNC_STATES(ENUM_NAMES) };
+
+struct state_bcast {
+	uint32_t sig;
+	enum node_state state;
+	uint8_t mac[6];
+	uint8_t rsv[2];
+	uint32_t sci;
+	uint32_t tid;
+} __attribute__ ((packed));
+
+static bool handle_command(const enum node_state cstate, enum node_state *rstate)
+{
+	switch (cstate) {
+		case CMD_RESET_FABRIC:
+			local_node->numachip->fabric_reset();
+			*rstate = RSP_RESET_COMPLETE;
+			return 1;
+		case CMD_TRAIN_FABRIC:
+			local_node->numachip->fabric_train();
+			*rstate = RSP_PHY_TRAINED;
+			return 1;
+		case CMD_VALIDATE_RINGS:
+			/* Need anything here ?? */
+			*rstate = RSP_RINGS_OK;
+			return 1;
+		case CMD_SETUP_FABRIC:
+			local_node->numachip->fabric_routing();
+			*rstate = RSP_FABRIC_READY;
+			return 1;
+		case CMD_VALIDATE_FABRIC:
+			/* Need anything here ?? */
+			*rstate = RSP_FABRIC_OK;
+			return 1;
+		default:
+			return 0;
+	}
+	return 1;
+}
+
+static void wait_for_slaves(void)
+{
+	struct state_bcast cmd;
+	bool ready_pending = 1;
+	int count, backoff, last_stat;
+	bool do_restart = 0;
+	enum node_state waitfor, own_state;
+	uint32_t last_cmd = ~0;
+	char buf[UDP_MAXLEN];
+	struct state_bcast *rsp = (struct state_bcast *)buf;
+
+	os->udp_open();
+
+	cmd.sig = UDP_SIG;
+	cmd.state = CMD_STARTUP;
+	memcpy(cmd.mac, config->local_node->mac, 6);
+	cmd.sci = config->local_node->sci;
+	cmd.tid = 0; /* Must match initial rsp.tid for RSP_SLAVE_READY */
+	waitfor = RSP_SLAVE_READY;
+	printf("Waiting for %d nodes...\n", config->nnodes - 1);
+	count = 0;
+	backoff = 1;
+	last_stat = 0;
+
+	while (1) {
+		uint32_t ip = 0;
+		size_t len;
+
+		if (++count >= backoff) {
+			os->udp_write(&cmd, sizeof(cmd), 0xffffffff);
+
+			lib::udelay(100 * backoff);
+			last_stat += backoff;
+
+			if (backoff < 32)
+				backoff = backoff * 2;
+
+			count = 0;
+		}
+
+		if (cmd.state == CMD_CONTINUE)
+			break;
+
+		if (last_cmd != cmd.tid) {
+			/* Perform commands locally as well */
+			if (handle_command(cmd.state, &own_state))
+				do_restart = own_state != waitfor;
+
+			if (do_restart)
+				printf("Command did not complete successfully on master (reason %s), resetting...\n",
+				       node_state_name[own_state]);
+
+			config->local_node->seen = 1;
+			last_cmd = cmd.tid;
+		}
+
+		if (config->nnodes > 1) {
+			len = os->udp_read(rsp, UDP_MAXLEN, &ip);
+			if (!do_restart) {
+				if (last_stat > 64) {
+					last_stat = 0;
+					wait_status();
+				}
+
+				if (!len)
+					continue;
+			}
+		} else
+			len = 0;
+
+		if (len >= sizeof(rsp) && rsp->sig == UDP_SIG) {
+/*
+			printf("Got rsp packet from %d.%d.%d.%d (%02x:%02x:%02x:%02x:%02x:%02x) (state %s, sciid %03x, tid %d)\n",
+			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff,
+			       rsp->mac[0], rsp->mac[1], rsp->mac[2],
+			       rsp->mac[3], rsp->mac[4], rsp->mac[5],
+			       (rsp->state > RSP_NONE) ? "UNKNOWNN" : node_state_name[rsp->state], rsp->sci, rsp->tid);
+*/
+			for (unsigned n = 0; n < config->nnodes; n++) {
+				if (memcmp(&config->nodes[n].mac, rsp->mac, 6) == 0) {
+					if ((rsp->state == waitfor) && (rsp->tid == cmd.tid)) {
+						config->nodes[n].seen = 1;
+					} else if ((rsp->state == RSP_PHY_NOT_TRAINED) ||
+						   (rsp->state == RSP_RINGS_NOT_OK) ||
+						   (rsp->state == RSP_FABRIC_NOT_READY) ||
+						   (rsp->state == RSP_FABRIC_NOT_OK)) {
+						if (!config->nodes[n].seen) {
+							printf("SCI%03x/%s failed with %s; restarting synchronisation\n",
+							       rsp->sci, config->nodes[n].hostname, node_state_name[rsp->state]);
+							do_restart = 1;
+							config->nodes[n].seen = 1;
+						}
+					} else if (rsp->state == RSP_ERROR)
+						error_remote(rsp->sci, config->nodes[n].hostname, ip, (char *)rsp + sizeof(struct state_bcast));
+					break;
+				}
+			}
+		}
+
+		ready_pending = 0;
+
+		for (unsigned n = 0; n < config->nnodes; n++) {
+			if (&config->nodes[n] == config->local_node) /* Self */
+				continue;
+
+			if (!config->nodes[n].seen) {
+				ready_pending = 1;
+				break;
+			}
+		}
+
+		if (!ready_pending || do_restart) {
+			if (do_restart) {
+				cmd.state = CMD_RESET_FABRIC;
+				waitfor = RSP_RESET_COMPLETE;
+				do_restart = 0;
+			} else if (cmd.state == CMD_STARTUP) {
+				/* Skip over resetting fabric, as that's just if training fails */
+				cmd.state = CMD_TRAIN_FABRIC;
+				waitfor = RSP_PHY_TRAINED;
+			} else if (cmd.state == CMD_TRAIN_FABRIC) {
+				cmd.state = CMD_VALIDATE_RINGS;
+				waitfor = RSP_RINGS_OK;
+			} else if (cmd.state == CMD_RESET_FABRIC) {
+				/* When invoked, continue at fabric training */
+				cmd.state = CMD_TRAIN_FABRIC;
+				waitfor = RSP_PHY_TRAINED;
+			} else if (cmd.state == CMD_VALIDATE_RINGS) {
+				cmd.state = CMD_SETUP_FABRIC;
+				waitfor = RSP_FABRIC_READY;
+			} else if (cmd.state == CMD_SETUP_FABRIC) {
+				cmd.state = CMD_VALIDATE_FABRIC;
+				waitfor = RSP_FABRIC_OK;
+			} else if (cmd.state == CMD_VALIDATE_FABRIC) {
+				cmd.state = CMD_CONTINUE;
+				waitfor = RSP_NONE;
+			}
+
+			/* Clear seen flag */
+			for (unsigned n = 0; n < config->nnodes; n++)
+				config->nodes[n].seen = 0;
+
+			cmd.tid++;
+			count = 0;
+			backoff = 1;
+			printf("Issuing %s; expecting %s\n",
+			       node_state_name[cmd.state], node_state_name[waitfor]);
+		}
+	}
+}
+
+static void wait_for_master(void)
+{
+	struct state_bcast rsp, cmd;
+	int count, backoff;
+	int go_ahead = 0;
+	uint32_t last_cmd = ~0;
+	uint32_t ip;
+
+	os->udp_open();
+
+	rsp.sig = UDP_SIG;
+	rsp.state = RSP_SLAVE_READY;
+	memcpy(rsp.mac, config->local_node->mac, 6);
+	rsp.sci = config->local_node->sci;
+	rsp.tid = 0;
+
+	count = 0;
+	backoff = 1;
+
+	while (!go_ahead) {
+		if (++count >= backoff) {
+			local_node->check();
+			printf("Replying with %s\n", node_state_name[rsp.state]);
+			os->udp_write(&rsp, sizeof(rsp), 0xffffffff);
+			lib::udelay(100 * backoff);
+
+			if (backoff < 32)
+				backoff = backoff * 2;
+
+			count = 0;
+		}
+
+		/* In order to avoid jamming, broadcast own status at least
+		 * once every 2*cfg_nodes packet seen */
+		for (unsigned n = 0; n < 2 * config->nnodes; n++) {
+			int len = os->udp_read(&cmd, sizeof(cmd), &ip);
+
+			if (!len)
+				break;
+
+			if (len != sizeof(cmd) || cmd.sig != UDP_SIG)
+				continue;
+/*
+			printf("Got cmd packet from %d.%d.%d.%d (%02x:%02x:%02x:%02x:%02x:%02x) (state %s, sciid %03x, tid %d)\n",
+			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff,
+			       cmd.mac[0], cmd.mac[1], cmd.mac[2],
+			       cmd.mac[3], cmd.mac[4], cmd.mac[5],
+			       (cmd.state > RSP_NONE) ? "UNKNOWNN" : node_state_name[cmd.state], cmd.sci, cmd.tid);
+*/
+			if (memcmp(config->nodes[0].mac, cmd.mac, 6) == 0) {
+				if (cmd.tid == last_cmd) {
+					/* Ignoring seen command */
+					continue;
+				}
+
+				last_cmd = cmd.tid;
+				count = 0;
+				backoff = 1;
+
+				if (handle_command(cmd.state, &rsp.state)) {
+					rsp.tid = cmd.tid;
+				} else if (cmd.state == CMD_CONTINUE) {
+					printf("Master signalled go-ahead\n");
+					/* Belt and suspenders: slaves re-broadcast go-ahead command */
+					os->udp_write(&cmd, sizeof(cmd), 0xffffffff);
+					go_ahead = 1;
+					break;
+				}
+			}
+		}
+	}
+}
+
 int main(const int argc, char *const argv[])
 {
 	os = new OS(); // needed first for console access
@@ -860,10 +1167,12 @@ int main(const int argc, char *const argv[])
 		setup_gsm_early();
 
 	if (!options->singleton) {
-		local_node->numachip->fabric_routing();
-		local_node->numachip->fabric_train();
+		// Use first node in config as "builder", to synchronize all slaves/observers
+		if (config->local_node == &config->nodes[0])
+			wait_for_slaves();
+		else
+			wait_for_master();
 	}
-
 
 	if (!config->local_node->partition) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)

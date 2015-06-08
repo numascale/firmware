@@ -55,46 +55,54 @@
 #undef assert
 
 #define xassert(cond) do { if (!(cond)) {				\
-	printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
-	    #cond, __FUNCTION__, __FILE__, __LINE__);			\
-	printf(COL_DEFAULT);						\
-	halt();						\
-    } } while (0)
+			printf(COL_RED "Error: assertion '%s' failed in %s at %s:%d\n",	\
+			       #cond, __FUNCTION__, __FILE__, __LINE__); \
+			printf(COL_DEFAULT);				\
+			halt();						\
+		} } while (0)
 
-#define fatal(format, args...) do {				\
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT);						\
-	halt();										\
-   } while (0)
+#define fatal(format, args...) do {					\
+		printf(COL_RED "Error: ");				\
+		printf(format, ## args);				\
+		printf(COL_DEFAULT);					\
+		halt();							\
+	} while (0)
 
-#define warning(format, args...) do {			\
-	printf(COL_YELLOW "Warning: ");				\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT "\n");					\
-   } while (0)
+#define warning(format, args...) do {					\
+		printf(COL_YELLOW "Warning: ");				\
+		printf(format, ## args);				\
+		printf(COL_DEFAULT "\n");				\
+	} while (0)
 
-#define warning_once(format, args...) do {      \
-	static bool printed = 0;                    \
-	if (!printed) {                             \
-	printf(COL_YELLOW "Warning: ");             \
-	printf(format, ## args);                    \
-	printf(COL_DEFAULT "\n");                   \
-	printed = 1;                                \
-   }} while (0)
+#define warning_once(format, args...) do {		\
+		static bool printed = 0;		\
+		if (!printed) {				\
+			printf(COL_YELLOW "Warning: ");	\
+			printf(format, ## args);	\
+			printf(COL_DEFAULT "\n");	\
+			printed = 1;			\
+		}} while (0)
 
-#define error(format, args...) do {				\
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT "\n");					\
-   } while (0)
+#define error(format, args...) do {					\
+		printf(COL_RED "Error: ");				\
+		printf(format, ## args);				\
+		printf(COL_DEFAULT "\n");				\
+	} while (0)
 
-#define assertf(cond, format, args...) do { if (!(cond)) { \
-	printf(COL_RED "Error: ");					\
-	printf(format, ## args);					\
-	printf(COL_DEFAULT);						\
-	halt();										\
-    }} while(0)
+#define error_remote(sci, name, ip, msg) do {				\
+		if (sci != 0xffffffff)					\
+			printf(COL_RED "Error on SCI%03x/%s: %s" COL_DEFAULT "\n", sci, name, msg); \
+		else							\
+			printf(COL_RED "Error on %d.%d.%d.%d: %s" COL_DEFAULT "\n", \
+			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff, msg); \
+	} while (0)
+
+#define assertf(cond, format, args...) do { if (!(cond)) {		\
+			printf(COL_RED "Error: ");			\
+			printf(format, ## args);			\
+			printf(COL_DEFAULT);				\
+			halt();						\
+		}} while(0)
 
 typedef uint8_t link_t;
 typedef uint8_t ht_t;
