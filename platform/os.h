@@ -33,12 +33,17 @@ class OS
 	com32sys_t state;
 #endif
 	void get_hostname(void);
+	static const unsigned UDP_PORT_NO = 4711;
+
 public:
 	struct in_addr ip;
 	const char *hostname;
 	uint8_t mac[6];
 
 	OS(void);
+	void udp_open(void);
+	void udp_write(const void *buf, const size_t len, uint32_t to_ip);
+	int udp_read(void *buf, const size_t len, uint32_t *from_ip);
 	char *read_file(const char *filename, size_t *const len) nonnull;
 	void exec(const char *label) nonnull;
 	void memmap_start(void);

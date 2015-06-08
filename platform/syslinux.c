@@ -77,6 +77,77 @@ OS::OS(void): ent(0), hostname(NULL)
 	get_hostname();
 }
 
+static int pxeapi_call(int func, const uint8_t *buf)
+{
+	static com32sys_t inargs, outargs;
+	inargs.eax.w[0] = 0x0009; /* Call PXE Stack */
+	inargs.ebx.w[0] = func; /* PXE function number */
+	inargs.edi.w[0] = OFFS(buf);
+	inargs.es = SEG(buf);
+	__intcall(0x22, &inargs, &outargs);
+	return outargs.eax.w[0] == PXENV_EXIT_SUCCESS;
+}
+
+void OS::udp_open(void)
+{
+	t_PXENV_TFTP_CLOSE *tftp_close_param = (t_PXENV_TFTP_CLOSE *)lzalloc(sizeof(t_PXENV_TFTP_CLOSE));
+	xassert(tftp_close_param);
+	pxeapi_call(PXENV_TFTP_CLOSE, (uint8_t *)tftp_close_param);
+//	printf("TFTP close returns: %d\n", tftp_close_param->Status);
+	lfree(tftp_close_param);
+
+	t_PXENV_UDP_OPEN *pxe_open_param = (t_PXENV_UDP_OPEN *)lzalloc(sizeof(t_PXENV_UDP_OPEN));
+	xassert(pxe_open_param);
+	pxe_open_param->src_ip = os->ip.s_addr;
+	pxeapi_call(PXENV_UDP_OPEN, (uint8_t *)pxe_open_param);
+//	printf("PXE UDP open returns: %d\n", pxe_open_param->status);
+	lfree(pxe_open_param);
+}
+
+void OS::udp_write(const void *buf, const size_t len, uint32_t to_ip)
+{
+	t_PXENV_UDP_WRITE *pxe_write_param = (t_PXENV_UDP_WRITE *)lzalloc(sizeof(t_PXENV_UDP_WRITE) + len);
+	xassert(pxe_write_param);
+	char *buf_reloc = (char *)pxe_write_param + sizeof(*pxe_write_param);
+
+	pxe_write_param->ip = to_ip;
+	pxe_write_param->src_port = htons(UDP_PORT_NO);
+	pxe_write_param->dst_port = htons(UDP_PORT_NO);
+	pxe_write_param->buffer.seg = SEG(buf_reloc);
+	pxe_write_param->buffer.offs = OFFS(buf_reloc);
+	pxe_write_param->buffer_size = len;
+
+	memcpy(buf_reloc, buf, len);
+	pxeapi_call(PXENV_UDP_WRITE, (uint8_t *)pxe_write_param);
+	lfree(pxe_write_param);
+}
+
+int OS::udp_read(void *buf, const size_t len, uint32_t *from_ip)
+{
+	int ret = 0;
+
+	t_PXENV_UDP_READ *pxe_read_param = (t_PXENV_UDP_READ *)lzalloc(sizeof(t_PXENV_UDP_READ) + len);
+	xassert(pxe_read_param);
+	char *buf_reloc = (char *)pxe_read_param + sizeof(*pxe_read_param);
+
+	pxe_read_param->s_port = htons(UDP_PORT_NO);
+	pxe_read_param->d_port = htons(UDP_PORT_NO);
+	pxe_read_param->buffer.seg = SEG(buf_reloc);
+	pxe_read_param->buffer.offs = OFFS(buf_reloc);
+	pxe_read_param->buffer_size = len;
+	pxeapi_call(PXENV_UDP_READ, (uint8_t *)pxe_read_param);
+
+	if ((pxe_read_param->status == PXENV_STATUS_SUCCESS) &&
+	    (pxe_read_param->s_port == htons(UDP_PORT_NO))) {
+		memcpy(buf, buf_reloc, pxe_read_param->buffer_size);
+		*from_ip = pxe_read_param->src_ip;
+		ret = pxe_read_param->buffer_size;
+	}
+
+	lfree(pxe_read_param);
+	return ret;
+}
+
 char *OS::read_file(const char *filename, size_t *const len)
 {
 	char *buf;
