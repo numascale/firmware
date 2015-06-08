@@ -40,8 +40,9 @@ void Numachip2::fabric_check(void) const
 	if (val != 0)
 		warning("SIU on %03x has issues 0x%08x", sci, val);
 
-	foreach_lc(lc)
-		(*lc)->check();
+	if (fabric_trained)
+		foreach_lc(lc)
+			(*lc)->check();
 }
 
 // goal: read all phy status successfully 5M times; if any error encountered, reset and restart
@@ -122,6 +123,8 @@ void Numachip2::fabric_train(void)
 	foreach_lc(lc)
 		printf(" %u", (*lc)->index);
 	printf("\n");
+
+	fabric_trained = 1;
 }
 
 // on LC 'in', route packets to SCI 'dest' via LC 'out'

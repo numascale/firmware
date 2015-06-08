@@ -91,6 +91,7 @@ class Numachip2 {
 
 	void xbar_route(const sci_t sci, const uint8_t out);
 	void fabric_init(void);
+	bool fabric_trained;
 public:
 	static const uint64_t MCFG_BASE        = 0x3f0000000000;
 	static const uint64_t MCFG_LIM         = 0x3fffffffffff;
