@@ -85,7 +85,7 @@ ht_t Numachip2::probe(const sci_t sci)
 
 	// read timeout
 	if (vendev == 0xffffffff) {
-		printf("<%03x timeout>");
+		printf("<%03x timeout>", sci);
 		return 0;
 	}
 
