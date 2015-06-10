@@ -29,7 +29,10 @@ void Numachip2::pe_load_microcode(const bool lmpe)
 	unsigned mseq_ucode_length = sizeof(numachip2_mseq_ucode) / sizeof(numachip2_mseq_ucode[0]);
 	unsigned mseq_table_length = sizeof(numachip2_mseq_table) / sizeof(numachip2_mseq_table[0]);
 
-	printf("Loading microcode and jump table on %s\n", lmpe ? "LMPE" : "RMPE");
+	xassert(mseq_ucode_length <= 4096);
+	xassert(mseq_table_length <= 256);
+
+	printf("Loading microcode (%d) and jump table (%d) on %s\n", mseq_ucode_length, mseq_table_length, lmpe ? "LMPE" : "RMPE");
 
 	write32(lmpe ? LMPE_SEQ_INDEX : RMPE_SEQ_INDEX, (1<<31)); // Enable AutoInc and zero index
 	for (unsigned j = 0; j < mseq_ucode_length; j++)
