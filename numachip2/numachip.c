@@ -129,6 +129,7 @@ void Numachip2::late_init(void)
 
 	dram_init();
 	fabric_init();
+	pe_init();
 
 //	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout

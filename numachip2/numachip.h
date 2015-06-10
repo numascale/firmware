@@ -89,6 +89,11 @@ class Numachip2 {
 	void dram_reset(void);
 	void dram_init(void);
 
+	/* pe.c */
+	void pe_load_microcode(const bool lmpe);
+	void pe_init(void);
+
+	/* fabric.c */
 	void xbar_route(const sci_t sci, const uint8_t out);
 	void fabric_init(void);
 	bool fabric_trained;
@@ -154,7 +159,13 @@ public:
 	static const reg_t FABRIC_RECFG_DATA = 0x20f8;
 	static const reg_t FABRIC_RECFG_ADDR = 0x20fc;
 	static const reg_t RMPE_CTRL         = 0x2100;
+	static const reg_t RMPE_SEQ_INDEX    = 0x2130;
+	static const reg_t RMPE_WCS_ENTRY    = 0x2134;
+	static const reg_t RMPE_JUMP_ENTRY   = 0x2138;
 	static const reg_t LMPE_CTRL         = 0x2180;
+	static const reg_t LMPE_SEQ_INDEX    = 0x21b0;
+	static const reg_t LMPE_WCS_ENTRY    = 0x21b4;
+	static const reg_t LMPE_JUMP_ENTRY   = 0x21b8;
 	static const reg_t SIU_XBAR_TABLE    = 0x2200;
 	static const reg_t SIU_XBAR_CHUNK    = 0x22c0;
 	static const reg_t SIU_NODEID        = 0x22c4;
