@@ -37,8 +37,36 @@ void Numachip2::fabric_check(void) const
 {
 	uint32_t val = read32(SIU_EVENTSTAT);
 
-	if (val != 0)
+	if (val) {
 		warning("SIU on %03x has issues 0x%08x", sci, val);
+
+		if (val & (1ULL << 18)) printf(" RS master illegal packet\n");
+		if (val & (1ULL << 17)) printf(" CC master illegal packet\n");
+		if (val & (1ULL << 16)) printf(" MC master illegal packet\n");
+
+		if (val & (1ULL << 18)) printf(" RS slave packet dropped\n");
+		if (val & (1ULL << 17)) printf(" CC slave packet dropped\n");
+		if (val & (1ULL << 16)) printf(" MC slave packet dropped\n");
+
+		if (val & (1ULL << 14)) printf(" RS master list parity error\n");
+		if (val & (1ULL << 13)) printf(" CC master list parity error\n");
+		if (val & (1ULL << 12)) printf(" MC master list parity error\n");
+
+		if (val & (1ULL << 10)) printf(" RS slave buffer overflow\n");
+		if (val & (1ULL <<  9)) printf(" CC slave buffer overflow\n");
+		if (val & (1ULL <<  8)) printf(" MC slave buffer overflow\n");
+
+		if (val & (1ULL <<  6)) printf(" RS master buffer overflow\n");
+		if (val & (1ULL <<  5)) printf(" CC master buffer overflow\n");
+		if (val & (1ULL <<  4)) printf(" MC master buffer overflow\n");
+
+		if (val & (1ULL <<  2)) printf(" RS slave CRC error\n");
+		if (val & (1ULL <<  1)) printf(" CC slave CRC error\n");
+		if (val & (1ULL <<  0)) printf(" MC slave CRC error\n");
+
+		// clear
+		write32(SIU_EVENTSTAT, val);
+	}
 
 	if (fabric_trained)
 		foreach_lc(lc)
