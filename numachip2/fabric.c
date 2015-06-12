@@ -40,9 +40,9 @@ void Numachip2::fabric_check(void) const
 	if (val) {
 		warning("SIU on %03x has issues 0x%08x", sci, val);
 
-		if (val & (1ULL << 18)) printf(" RS master illegal packet\n");
-		if (val & (1ULL << 17)) printf(" CC master illegal packet\n");
-		if (val & (1ULL << 16)) printf(" MC master illegal packet\n");
+		if (val & (1ULL << 22)) printf(" RS master illegal packet\n");
+		if (val & (1ULL << 21)) printf(" CC master illegal packet\n");
+		if (val & (1ULL << 20)) printf(" MC master illegal packet\n");
 
 		if (val & (1ULL << 18)) printf(" RS slave packet dropped\n");
 		if (val & (1ULL << 17)) printf(" CC slave packet dropped\n");
