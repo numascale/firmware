@@ -137,6 +137,8 @@ public:
 	static const reg_t SPI_REG0          = 0x2048;
 	static const reg_t SPI_REG1          = 0x204c;
 	static const reg_t FLASH_REG0        = 0x2050;
+	static const reg_t FLASH_REG1        = 0x2054;
+	static const reg_t FLASH_REG2        = 0x2058;
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;
@@ -223,6 +225,7 @@ public:
 	void fabric_reset(void);
 	void dram_check(void) const;
 	void check(void) const;
+	void flash(const char *buf, const size_t len);
 };
 
 extern Numachip2 *numachip;

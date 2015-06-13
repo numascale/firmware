@@ -26,7 +26,7 @@ class Options {
 	static void parse_flags(const char *val, void *flags) nonnull;
 public:
 	const char *next_label, *observer_label;
-	const char *config_filename;
+	const char *config_filename, *flash;
 	bool ht_200mhz_only, ht_8bit_only, ht_selftest;
 	bool init_only;
 	bool boot_wait;

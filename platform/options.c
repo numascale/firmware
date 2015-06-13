@@ -158,6 +158,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
 		{"fastboot",        &Options::parse_bool,   &fastboot},        /* Skip slow phases */
 		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
+		{"flash",           &Options::parse_string, &flash},
 	};
 
 	unsigned errors = 0;

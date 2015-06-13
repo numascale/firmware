@@ -20,6 +20,9 @@
 
 #include "numachip.h"
 #include "../library/access.h"
+#include "../library/utils.h"
+#include "../platform/ipmi.h"
+#include "../platform/options.h"
 #include "../bootloader.h"
 
 const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
@@ -184,6 +187,15 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
 		assertf(temp <= 60, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+
+		if (options->flash) {
+			size_t len;
+			char *buf = os->read_file(options->flash, &len);
+			printf("Flashing %uMB image %s\n", len >> 20, options->flash);
+			flash(buf, len);
+			lib::wait_key("Press enter to powercycle");
+			ipmi->reset_cold();
+		}
 	} else
 		printf("Virtex");
 	printf("] assigned HT%u\n", ht);
