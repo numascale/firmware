@@ -90,10 +90,18 @@ uint8_t IPMI::read(uint8_t *res, const size_t len) const
 	return done;
 }
 
-void IPMI::reset_cold(void)
+void IPMI::reset_cold(void) const
 {
 	const uint8_t buf[] = {0, 2, 3}; // found by tracing
 	write(buf, sizeof(buf));
 	lib::udelay(3000000);
 	fatal("IPMI cold reset failure");
+}
+
+void IPMI::poweroff(void) const
+{
+	const uint8_t buf[] = {0, 6, 0x85, 0}; // IPMI spec v2 p250
+	write(buf, sizeof(buf));
+	lib::udelay(3000000);
+	fatal("IPMI poweroff failure");
 }

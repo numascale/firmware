@@ -49,15 +49,23 @@ void Numachip2::flash(const char *image, const size_t len)
 	const unsigned remainder = len % 256;
 	unsigned sectors = len / 65536;
 
+	write32(FLASH_REG3, 0xab88ef77);
+	write32(FLASH_REG0, 0x2);
+	while (1) {
+		if (!(read32(FLASH_REG0) & 0x1))
+			break;
+		cpu_relax();
+	}
+
 	if ((len % 65536) != 0)
 		sectors++;
 
 	printf("Erasing  0%%");
 	for (unsigned i = 0; i < sectors; i++) {
 		write32(FLASH_REG1, offset + i * 65536);
-		write32(Numachip2::FLASH_REG0, 0x7);
+		write32(FLASH_REG0, 0x7);
 		while (1) {
-			if (!(read32(Numachip2::FLASH_REG0) & 0x1))
+			if (!(read32(FLASH_REG0) & 0x1))
 				break;
 			cpu_relax();
 		}

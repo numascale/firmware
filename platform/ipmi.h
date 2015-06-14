@@ -42,7 +42,8 @@ class IPMI
 	uint8_t read(uint8_t *res, const size_t len) const;
 public:
 	IPMI(const uint16_t port_base);
-	void reset_cold(void);
+	void reset_cold(void) const;
+	void poweroff(void) const;
 };
 
 extern IPMI *ipmi;

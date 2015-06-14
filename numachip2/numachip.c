@@ -194,7 +194,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			printf("Flashing %uMB image %s\n", len >> 20, options->flash);
 			flash(buf, len);
 			lib::wait_key("Press enter to powercycle");
-			ipmi->reset_cold();
+			ipmi->poweroff();
 		}
 	} else
 		printf("Virtex");

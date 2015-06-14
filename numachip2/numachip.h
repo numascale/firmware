@@ -139,6 +139,7 @@ public:
 	static const reg_t FLASH_REG0        = 0x2050;
 	static const reg_t FLASH_REG1        = 0x2054;
 	static const reg_t FLASH_REG2        = 0x2058;
+	static const reg_t FLASH_REG3        = 0x205c;
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;
