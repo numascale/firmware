@@ -169,14 +169,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	uint32_t vendev = read32(VENDEV);
 	xassert(vendev == VENDEV_NC2);
 #endif
-#ifdef SPI_FUNCTIONAL
-	spi_master_read(0xffc0, sizeof(card_type), (uint8_t *)card_type);
-	spi_master_read(0xfffc, sizeof(uuid), (uint8_t *)&uuid);
-	printf("NumaChip2 type %s incorporated as HT%d, UUID %08X\n", card_type, ht, uuid);
-#else
+
 	printf("NumaChip2 [");
-	const bool ht3 = !!(read32(LINK_FREQ_REV) & 0xffc00000);
-	if (ht3) {
+	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000); // XXX: Should probably check a chip-rev reg instead...
+	if (is_stratixv) {
 		write32(IMG_PROP_TEMP, 1 << 31);
 		int temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
 
@@ -187,22 +183,20 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
 		assertf(temp <= 60, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
-
-		if (options->flash) {
-			size_t len;
-			char *buf = os->read_file(options->flash, &len);
-			printf("Flashing %uMB image %s\n", len >> 20, options->flash);
-			flash(buf, len);
-			lib::wait_key("Press enter to powercycle");
-			ipmi->poweroff();
-		}
-	} else {
+	} else
 		printf("Virtex");
-		assertf(!options->flash, "\nFlashing not supported on this platform");
-	}
 
 	printf("] assigned HT%u\n", ht);
-#endif
+
+	if (options->flash) { // flashing supported on Altera only
+		size_t len;
+		char *buf = os->read_file(options->flash, &len);
+		assertf(is_stratixv, "Flashing not supported on this platform");
+		printf("Flashing %uMB image %s\n", len >> 20, options->flash);
+		flash(buf, len);
+		lib::wait_key("Press enter to power off");
+		ipmi->poweroff();
+	}
 	// set local SIU SCI ID
 	write32(SIU_NODEID, sci);
 

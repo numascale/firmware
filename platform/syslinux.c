@@ -151,7 +151,6 @@ int OS::udp_read(void *buf, const size_t len, uint32_t *from_ip)
 char *OS::read_file(const char *filename, size_t *const len)
 {
 	char *buf;
-	printf("Config %s", filename);
 	int rv = loadfile(filename, (void **)&buf, len);
 	assertf(!rv && *len > 0, "Failed to open file");
 

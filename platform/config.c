@@ -226,6 +226,7 @@ struct Config::node *Config::find(const sci_t sci)
 Config::Config(const char *filename)
 {
 	size_t len;
+	printf("Config %s", filename);
 	const char *data = os->read_file(filename, &len);
 
 #ifdef DEBUG
