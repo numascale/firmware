@@ -196,8 +196,11 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			lib::wait_key("Press enter to powercycle");
 			ipmi->poweroff();
 		}
-	} else
+	} else {
 		printf("Virtex");
+		assertf(!options->flash, "\nFlashing not supported on this platform");
+	}
+
 	printf("] assigned HT%u\n", ht);
 #endif
 	// set local SIU SCI ID
