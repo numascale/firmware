@@ -189,9 +189,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	printf("] assigned HT%u\n", ht);
 
 	if (options->flash) { // flashing supported on Altera only
-		size_t len;
-		char *buf = os->read_file(options->flash, &len);
 		assertf(is_stratixv, "Flashing not supported on this platform");
+		size_t len = 0;
+		char *buf = os->read_file(options->flash, &len);
+		assertf(buf && len > 0, "Flashing requested but image not found (%s)", options->flash);
 		printf("Flashing %uMB image %s\n", len >> 20, options->flash);
 		flash(buf, len);
 		lib::wait_key("Press enter to power off");
