@@ -100,7 +100,7 @@ void IPMI::reset_cold(void) const
 
 void IPMI::poweroff(void) const
 {
-	const uint8_t buf[] = {0, 6, 0x85, 0}; // IPMI spec v2 p250
+	const uint8_t buf[] = {0, 2, 0}; // found by tracing
 	write(buf, sizeof(buf));
 	lib::udelay(3000000);
 	fatal("IPMI poweroff failure");
