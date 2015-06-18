@@ -94,7 +94,7 @@ void IPMI::reset_cold(void) const
 {
 	const uint8_t buf[] = {0, 2, 3}; // found by tracing
 	write(buf, sizeof(buf));
-	lib::udelay(3000000);
+	lib::udelay(6000000);
 	fatal("IPMI cold reset failure");
 }
 
@@ -102,6 +102,6 @@ void IPMI::poweroff(void) const
 {
 	const uint8_t buf[] = {0, 2, 0}; // found by tracing
 	write(buf, sizeof(buf));
-	lib::udelay(3000000);
+	lib::udelay(6000000);
 	fatal("IPMI poweroff failure");
 }
