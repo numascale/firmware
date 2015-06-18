@@ -21,6 +21,18 @@
 #define FLASH_PAGE_SIZE   256
 #define FLASH_SECTOR_SIZE 65536
 
+#define ASMI_CMD_READ_STATUS    1
+#define ASMI_CMD_SET_4BYTE_MODE 2
+#define ASMI_CMD_WRITE          3
+#define ASMI_CMD_PAGE_PROGRAM   4
+#define ASMI_CMD_READ           5
+#define ASMI_CMD_PROTECT        6
+#define ASMI_CMD_ERASE          7
+#define ASMI_CMD_READ_MEMSIZE   8
+#define ASMI_CMD_BULK_ERASE     9
+#define ASMI_CMD_RU_READ        10
+#define ASMI_CMD_RU_WRITE       11
+
 namespace
 {
 	void progress(const uint32_t a, const uint32_t b)
@@ -53,8 +65,12 @@ void Numachip2::flash(const char *image, const size_t len)
 	const unsigned remainder = len % FLASH_PAGE_SIZE;
 	unsigned sectors = len / FLASH_SECTOR_SIZE;
 
+	// Set magic value
 	write32(FLASH_REG3, 0xab88ef77);
-	write32(FLASH_REG0, 0x2);
+	(void)read32(FLASH_REG3);
+
+	// Set 4byte mode
+	write32(FLASH_REG0, ASMI_CMD_SET_4BYTE_MODE);
 	while (1) {
 		if (!(read32(FLASH_REG0) & 0x1))
 			break;
@@ -67,7 +83,7 @@ void Numachip2::flash(const char *image, const size_t len)
 	printf("Erasing  0%%");
 	for (unsigned i = 0; i < sectors; i++) {
 		write32(FLASH_REG1, offset + i * FLASH_SECTOR_SIZE);
-		write32(FLASH_REG0, 0x7);
+		write32(FLASH_REG0, ASMI_CMD_ERASE);
 		while (1) {
 			if (!(read32(FLASH_REG0) & 0x1))
 				break;
@@ -83,10 +99,10 @@ void Numachip2::flash(const char *image, const size_t len)
 		write32(FLASH_REG1, offset + p * FLASH_PAGE_SIZE);
 		for (unsigned i = 0; i < FLASH_PAGE_SIZE; i++) {
 			write32(FLASH_REG2, reverse_bits(image[pos++]));
-			write32(FLASH_REG0, 0x3);
+			write32(FLASH_REG0, ASMI_CMD_WRITE);
 		}
 
-		write32(FLASH_REG0, 0x4);
+		write32(FLASH_REG0, ASMI_CMD_PAGE_PROGRAM);
 		while (1) {
 			if (!(read32(FLASH_REG0) & 0x1))
 				break;
@@ -99,10 +115,10 @@ void Numachip2::flash(const char *image, const size_t len)
 	write32(FLASH_REG1, offset + pages * FLASH_PAGE_SIZE);
 	for (unsigned i = 0; i < remainder; i++) {
 		write32(FLASH_REG2, reverse_bits(image[pos++]));
-		write32(FLASH_REG0, 0x3);
+		write32(FLASH_REG0, ASMI_CMD_WRITE);
 	}
 
-	write32(FLASH_REG0, 0x4);
+	write32(FLASH_REG0, ASMI_CMD_PAGE_PROGRAM);
 	while (1) {
 		if (!(read32(FLASH_REG0) & 0x1))
 			break;
