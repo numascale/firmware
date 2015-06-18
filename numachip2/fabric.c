@@ -129,7 +129,7 @@ void Numachip2::fabric_train(void)
 			errors = 0;
 
 			foreach_lc(lc)
-				errors |= ((*lc)->status() & 7) > 0;
+				errors |= (*lc)->status() > 0;
 
 			// exit early if errors detected
 			if (errors) {

@@ -46,44 +46,26 @@ void LC4::check(void)
 	if (val) {
 		warning("Fabric LC4 link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
 
-		if (val & 0xFF)
-   		warning("Error count: %ld", (val & 0xFF));
+		if (val & 0xff)           printf("Error count: %d\n", (unsigned)(val & 0xff));
 
-		if ((val >> 16) & 0x0004)
-   		warning("ELOG0 - CRC error on upstream data");
-		if ((val >> 16) & 0x0008)
-   		warning("ELOG0 - Circulation count timeout error");
-		if ((val >> 16) & 0x0020)
-   		warning("ELOG0 - Echo slot set");
-		if ((val >> 16) & 0x0040)
-   		warning("ELOG0 - Unaligned error");
-		if ((val >> 16) & 0x0080)
-   		warning("ELOG0 - Illegal echo error");
-		if ((val >> 16) & 0x0200)
-   		warning("ELOG0 - Sequence error");
-		if ((val >> 16) & 0x0400)
-   		warning("ELOG0 - CC echo none detected");
-		if ((val >> 16) & 0x0800)
-   		warning("ELOG0 - MC echo none detected");
-		if ((val >> 16) & 0x1000)
-   		warning("ELOG0 - RS echo none detected");
-		if ((val >> 16) & 0x2000)
-   		warning("ELOG0 - Unexpected retry phase error");
-		if ((val >> 16) & 0x4000)
-   		warning("ELOG0 - Premature ac timeout");
-		if ((val >> 16) & 0x8000)
-   		warning("ELOG0 - Low-go timeout");
+		if ((val >> 16) & 0x0004) printf("ELOG0 - CRC error on upstream data\n");
+		if ((val >> 16) & 0x0008) printf("ELOG0 - Circulation count timeout error\n");
+		if ((val >> 16) & 0x0020) printf("ELOG0 - Echo slot set\n");
+		if ((val >> 16) & 0x0040) printf("ELOG0 - Unaligned error\n");
+		if ((val >> 16) & 0x0080) printf("ELOG0 - Illegal echo error\n");
+		if ((val >> 16) & 0x0200) printf("ELOG0 - Sequence error\n");
+		if ((val >> 16) & 0x0400) printf("ELOG0 - CC echo none detected\n");
+		if ((val >> 16) & 0x0800) printf("ELOG0 - MC echo none detected\n");
+		if ((val >> 16) & 0x1000) printf("ELOG0 - RS echo none detected\n");
+		if ((val >> 16) & 0x2000) printf("ELOG0 - Unexpected retry phase error\n");
+		if ((val >> 16) & 0x4000) printf("ELOG0 - Premature ac timeout\n");
+		if ((val >> 16) & 0x8000) printf("ELOG0 - Low-go timeout\n");
 
-		if ((val >> 32) & 0x0001)
-   		warning("ELOG1 - Idle packet error");
-		if ((val >> 32) & 0x0002)
-   		warning("ELOG1 - Receive fifo overflow error");
-		if ((val >> 32) & 0x0004)
-   		warning("ELOG1 - Receive fifo underrun error");
-		if ((val >> 32) & 0x0020)
-   		warning("ELOG1 - RX tranceiver error");
-		if ((val >> 32) & 0x0F00)
-   		warning("ELOG1 - RX buffer error from transceiver : ", ((val >> 48) & 0xF));
+		if ((val >> 32) & 0x0001) printf("ELOG1 - Idle packet error\n");
+		if ((val >> 32) & 0x0002) printf("ELOG1 - Receive fifo overflow error\n");
+		if ((val >> 32) & 0x0004) printf("ELOG1 - Receive fifo underrun error\n");
+		if ((val >> 32) & 0x0020) printf("ELOG1 - RX tranceiver error\n");
+		if ((val >> 32) & 0x0f00) printf("ELOG1 - RX buffer error from transceiver : %x", (unsigned)((val >> 48) & 0xf));
 
 		// ratelimit
 		lib::udelay(1000000);
