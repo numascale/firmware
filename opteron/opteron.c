@@ -242,7 +242,7 @@ void Opteron::prepare(void)
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
 
 	// disable core WDT
-	if (options->debug.northbridge) {
+	if (options->debug.nowdt) {
 		lib::wrmsr(MSR_CPUWDT, 0);
 		push_msr(MSR_CPUWDT, 0);
 	}
@@ -350,6 +350,9 @@ void Opteron::init(void)
 
 	if (options->debug.northbridge)
 		disable_syncflood();
+
+	if (options->debug.nowdt)
+		disable_nbwdt();
 
 	// if slave, subtract and disable MMIO hole
 	if (!local) {

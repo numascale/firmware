@@ -127,6 +127,8 @@ void Options::parse_flags(const char *val, void *data)
 			flags->remote_io = 1;
 		else if (!strcmp(pos, "e820"))
 			flags->e820 = 1;
+		else if (!strcmp(pos, "nowdt"))
+			flags->nowdt = 1;
 		else if (!strcmp(pos, "northbridge"))
 			flags->northbridge = 1;
 		else if (!strcmp(pos, "cores"))
