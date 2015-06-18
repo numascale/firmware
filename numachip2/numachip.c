@@ -183,6 +183,11 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
 		assertf(temp <= 60, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+
+		if (read32(FLASH_REG0) >> 28 != 0xa) {
+			warning("Non-application image detected, forcing init-only option!");
+			options->init_only = 1;
+		}
 	} else
 		printf("Virtex");
 
