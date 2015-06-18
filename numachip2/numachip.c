@@ -195,7 +195,6 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		assertf(buf && len > 0, "Flashing requested but image not found (%s)", options->flash);
 		printf("Flashing %uMB image %s\n", len >> 20, options->flash);
 		flash(buf, len);
-		lib::wait_key("Press enter to power off");
 		ipmi->poweroff();
 	}
 	// set local SIU SCI ID
