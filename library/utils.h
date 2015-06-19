@@ -43,6 +43,16 @@ namespace lib
 		return u * 2685821657736338717LL;
 	}
 
+	static inline uint32_t hash32(uint32_t a) {
+		a = (a+0x7ed55d16) + (a<<12);
+		a = (a^0xc761c23c) ^ (a>>19);
+		a = (a+0x165667b1) + (a<<5);
+		a = (a+0xd3a2646c) ^ (a<<9);
+		a = (a+0xfd7046c5) + (a<<3);
+		a = (a^0xb55a4f09) ^ (a>>16);
+		return a;
+	}
+
 	// allocate memory at top near ACPI area to avoid conflicts
 	static inline void *zalloc_top(const size_t size)
 	{
