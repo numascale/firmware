@@ -181,17 +181,15 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			*(uint32_t *)(buildtime + i * 4) = rom_read(i + IMG_PROP_STRING);
 		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8);
-		assertf(temp <= 60, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x] assigned HT%u\n", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8, ht);
+		assertf(temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 
 		if (read32(FLASH_REG0) >> 28 != 0xa) {
 			warning("Non-application image detected, forcing init-only option!");
 			options->init_only = 1;
 		}
 	} else
-		printf("Virtex");
-
-	printf("] assigned HT%u\n", ht);
+		printf("Virtex assigned HT%u\n", ht);
 
 	if (options->flash) { // flashing supported on Altera only
 		assertf(is_stratixv, "Flashing not supported on this platform");
