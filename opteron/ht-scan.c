@@ -111,12 +111,12 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	printf("Checking HT width/freq.");
 
-	/* Optimize width (16b) */
 	printf("+");
 	val = lib::cht_read32(nc, Numachip2::LINK_CTRL);
 	printf(".");
 
-	if (!options->ht_8bit_only && ((val >> 16) == 0x11)) {
+	/* Optimize width (16b), if option to disable this is not set */
+	if (!options->ht_slowmode && ((val >> 16) == 0x11)) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			lib::cht_write32(nc, Numachip2::LINK_CTRL, (val & 0x00ffffff) | 0x11000000);
@@ -145,7 +145,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	}
 
 	/* Optimize link frequency, if option to disable this is not set */
-	if (!options->ht_200mhz_only) {
+	if (!options->ht_slowmode) {
 		uint8_t max_supported = 0;
 
 		printf("+");
@@ -301,7 +301,6 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		/* Increase fabric size */
 		val = lib::cht_read32(i, HT_NODE_ID);
 		lib::cht_write32(i, HT_NODE_ID, val + (1 << 4));
-//		printf("%d", i);
 	}
 
 	printf("*");
@@ -460,10 +459,6 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		/* Ramp up link speed and width before adding to coherent fabric */
 		ht_optimize_link(nc, neigh, link);
-
-		// HOTFIX: On some images DRAM_SHARED_BASE/LIMIT is not reset by warm/cold reset so we do it here
-		lib::cht_write32(nc, Numachip2::DRAM_SHARED_BASE, 0);
-		lib::cht_write32(nc, Numachip2::DRAM_SHARED_LIMIT, 0);
 
 		/* Add NC to coherent fabric */
 		ht_reconfig(neigh, link, nnodes);

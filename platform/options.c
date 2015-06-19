@@ -141,15 +141,14 @@ void Options::parse_flags(const char *val, void *data)
 }
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
-  ht_200mhz_only(0), ht_8bit_only(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0), fastboot(0), tracing(0)
+  ht_slowmode(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0), fastboot(0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
 	static const struct optargs list[] = {
 		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
-		{"observer-label",	&Options::parse_string, &observer_label},  /* Next PXELINUX label to boot after loader for observers */
-		{"ht.8bit-only",    &Options::parse_bool,   &ht_8bit_only},
-		{"ht.200mhz-only",  &Options::parse_bool,   &ht_200mhz_only},  /* Disable increase in speed from 200MHz to 800Mhz for HT link to ASIC based NC */
+		{"observer-label",  &Options::parse_string, &observer_label},  /* Next PXELINUX label to boot after loader for observers */
+		{"ht.slowmode",     &Options::parse_bool,   &ht_slowmode},     /* Enforce 200MHz 8-bit HT link */
 		{"ht.selftest",     &Options::parse_bool,   &ht_selftest},
 		{"init-only",       &Options::parse_bool,   &init_only},
 		{"wait",            &Options::parse_bool,   &boot_wait},

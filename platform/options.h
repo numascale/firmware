@@ -27,7 +27,7 @@ class Options {
 public:
 	const char *next_label, *observer_label;
 	const char *config_filename, *flash;
-	bool ht_200mhz_only, ht_8bit_only, ht_selftest;
+	bool ht_slowmode, ht_selftest;
 	bool init_only;
 	bool boot_wait;
 	bool handover_acpi;
