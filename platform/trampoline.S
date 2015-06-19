@@ -117,7 +117,7 @@ cache_enable:
 	jmp	1b
 
 cache_disable:
-        // detect cpu family
+	// detect cpu family
 	mov	$1, %eax
 	xor	%ecx,%ecx
 	cpuid
@@ -155,8 +155,8 @@ test:
 	wrmsr
 
 	// setup FS
-	movl $TEST_BASE_HIGH, %edx
-	movl $TEST_BASE_LOW, %eax
+	movl	$TEST_BASE_HIGH, %edx
+	movl	$TEST_BASE_LOW, %eax
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
 
@@ -168,10 +168,10 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	andl $(TEST_SIZE - 1) & ~3, %eax // size and align
+	andl	$(TEST_SIZE - 1) & ~3, %eax // size and align
 
 	// generate 64-bit load using FS
-	xorl $0xffffffff, %fs:(%eax)
+	xorl	$0xffffffff, %fs:(%eax)
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
