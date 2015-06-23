@@ -1,3 +1,4 @@
+/* -*- Mode: Asm; indent-tabs-mode:t ; -*- */
 /*
  * Copyright (C) 2008-2014 Numascale AS, support@numascale.com
  *
@@ -22,6 +23,7 @@
 #define RELOCATED(sym) ((sym) - asm_relocate_start)
 #define STATUS(val) movl $val, %cs:RELOCATED(vector)
 #define SEM_POST() lock decw %cs:RELOCATED(pending)
+#define INC_ERROR() lock incl %cs:RELOCATED(errors)
 
 	.text
 	.code16
@@ -171,7 +173,39 @@ test:
 	andl	$(TEST_SIZE - 1) & ~3, %eax // size and align
 
 	// generate 64-bit load using FS
+	movl	%fs:(%eax), %edi
 	xorl	$0xffffffff, %fs:(%eax)
+
+	// Check data
+	shr	$2, %eax
+
+	// hash32 function
+	mov	%eax,%edx
+	shl	$0xc,%edx
+	lea	0x7ed55d16(%edx,%eax,1),%eax
+	mov	%eax,%edx
+	shr	$0x13,%edx
+	xor	$0xc761c23c,%eax
+	xor	%edx,%eax
+	imul	$0x21,%eax,%edx
+	lea	0x165667b1(%edx),%eax
+	shl	$0x9,%eax
+	sub	$0x160733e3,%edx
+	xor	%edx,%eax
+	lea	-0x28fb93b(%eax),%edx
+	lea	(%edx,%eax,8),%eax
+	mov	%eax,%edx
+	shr	$0x10,%edx
+	xor	$0xb55a4f09,%eax
+	xor	%edx,%eax
+	// end hash32 function
+
+	cmpl	%edi, %eax
+	je	2f
+	xorl	$0xffffffff, %edi
+	cmpl	%edi, %eax
+	je	2f
+	INC_ERROR() // increment error counter
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
@@ -190,14 +224,16 @@ test:
 	wrmsr
 
 	SEM_POST()
-2:	cli
+3:	cli
 	hlt
-	jmp	2b
+	jmp	3b
 
 	.balign 64
 EXPORT(vector)
 	.long 0
 EXPORT(pending)
+	.long 0
+EXPORT(errors)
 	.long 0
 EXPORT(old_int15_vec)
 	.long 0

@@ -34,7 +34,7 @@
 #define CORE_SPINS        10000000
 #define TEST_BASE_HIGH 0x1 // 4GB base
 #define TEST_BASE_LOW  0x88000
-#define TEST_SIZE      (1 << 10)
+#define TEST_SIZE      (1 << 12)
 
 #ifndef __ASSEMBLER__
 #define IMPORT_RELOCATED(sym) extern volatile uint8_t sym ## _relocate
@@ -50,6 +50,7 @@ IMPORT_RELOCATED(entry);
 IMPORT_RELOCATED(msrs);
 IMPORT_RELOCATED(vector);
 IMPORT_RELOCATED(pending);
+IMPORT_RELOCATED(errors);
 IMPORT_RELOCATED(apic_local);
 IMPORT_RELOCATED(old_int15_vec);
 IMPORT_RELOCATED(new_e820_len);
@@ -66,20 +67,20 @@ static inline void trampoline_sem_init(const uint16_t val)
 	*REL16(pending) = val;
 }
 
+static inline uint16_t trampoline_sem_getvalue(void)
+{
+	return *REL16(pending);
+}
+
 static inline bool trampoline_sem_wait(void)
 {
 	unsigned spin = 0;
-	while (*REL16(pending)) {
+	while (trampoline_sem_getvalue()) {
 		cpu_relax();
 		if (spin++ >= CORE_SPINS)
 			return 1;
 	}
 	return 0;
-}
-
-static inline uint16_t trampoline_sem_getvalue(void)
-{
-	return *REL16(pending);
 }
 
 static inline void push_msr(const uint32_t num, const uint64_t val)

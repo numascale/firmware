@@ -494,7 +494,7 @@ static void setup_cores(void)
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
-		lib::mem_write32(((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4, lib::hash64(i));
+		lib::mem_write32(((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4, lib::hash32(i));
 }
 
 static void test_verify(void)
@@ -502,7 +502,7 @@ static void test_verify(void)
 	unsigned errors = 0;
 
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
-		uint32_t corr = lib::hash64(i);
+		uint32_t corr = lib::hash32(i);
 		uint64_t addr = ((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4;
 		uint32_t val = lib::mem_read32(addr);
 
@@ -515,7 +515,10 @@ static void test_verify(void)
 	}
 
 	check();
-	assertf(!errors, "%u errors detected", errors);
+	if (errors || *REL32(errors)) {
+		tracing_stop();
+		fatal("%u errors detected during test", errors+*REL32(errors));
+	}
 }
 
 static void test_cores(void)
@@ -530,6 +533,7 @@ static void test_cores(void)
 	lib::critical_enter();
 
 	for (unsigned loop = 0; loop < 15; loop++) {
+		*REL32(errors) = 0; // clear error counter
 		trampoline_sem_init(cores);
 		tracing_start();
 
@@ -545,7 +549,7 @@ static void test_cores(void)
 			fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 		}
 
-		lib::udelay(1000000);
+		lib::udelay(100000);
 
 		// initiate finish, order here is important re-initialize the semaphore first
 		trampoline_sem_init(cores);
@@ -556,8 +560,8 @@ static void test_cores(void)
 			fatal("%u cores failed to finish test", trampoline_sem_getvalue());
 		}
 
-		tracing_stop();
 		test_verify();
+		tracing_stop();
 		printf(" %u", loop);
 	}
 	lib::critical_leave();
@@ -770,8 +774,8 @@ static void finished(const char *label)
 	else
 		printf("Observer setup");
 
-	printf(" succeeded; executing syslinux label %s\n", options->next_label);
-	os->exec(options->next_label);
+	printf(" succeeded; executing syslinux label %s\n", label);
+	os->exec(label);
 }
 
 void caches(const bool enable)
