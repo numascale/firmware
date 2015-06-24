@@ -456,8 +456,10 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 	val = read32(MCTL_EXT_CONF_LOW);
 	write32(MCTL_EXT_CONF_LOW, val & ~(7 << 8)); /* CohPrefPrbLimit=000b */
 
-	// traffic distribution for directed probes is incompatible
-	xassert(!(read32(COH_LINK_TRAF_DIST) & 1));
+	// In case Traffic distribution is enabled on 2 socket systems, we
+	// need to disable it for Directed Probes. Ref email to AMD dated 4/28/2010
+	val = read32(COH_LINK_TRAF_DIST);
+	write32(COH_LINK_TRAF_DIST, val & ~0x1);
 	// make sure coherent link pair traffic distribution is disabled
 	xassert(!read32(COH_LINK_PAIR_DIST));
 
