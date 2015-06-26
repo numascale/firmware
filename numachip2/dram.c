@@ -57,6 +57,7 @@ void Numachip2::dram_init(void)
 	int i;
 
 	printf("DRAM init: ");
+#if 0
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
@@ -64,6 +65,9 @@ void Numachip2::dram_init(void)
 	const uint32_t ranks_shift = (spd_eeprom.organization >> 3) & 0x7;
 	const uint32_t devices_shift = 4 - (spd_eeprom.organization & 0x7);
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
+#else
+	dram_total_shift = 33; // Hard-coded 8GB DIMM
+#endif
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
 
 	printf("%uGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
