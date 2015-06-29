@@ -532,7 +532,7 @@ static void test_cores(void)
 	test_prepare();
 	lib::critical_enter();
 
-	for (unsigned loop = 0; loop < 15; loop++) {
+	for (unsigned loop = 0; loop < 20; loop++) {
 		*REL32(errors) = 0; // clear error counter
 		trampoline_sem_init(cores);
 		tracing_start();
@@ -549,7 +549,7 @@ static void test_cores(void)
 			fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 		}
 
-		lib::udelay(100000);
+		lib::udelay(1000000);
 
 		// initiate finish, order here is important re-initialize the semaphore first
 		trampoline_sem_init(cores);
