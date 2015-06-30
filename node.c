@@ -65,6 +65,37 @@ void Node::tracing_stop(void)
 		opterons[n]->tracing_stop();
 }
 
+void Node::trim_dram_maps(void)
+{
+	// Trim nodes if over supported or requested memory config */
+//	int64_t over = max((int64_t)(dram_size - max_mem_per_server), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
+	int64_t over = (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1));
+	if (over <= 0)
+		return;
+
+	printf("Trimming %03x maps by %"PRIu64"MB\n", sci, over >> 20);
+
+	while (over > 0) {
+		uint64_t max = 0;
+
+		// Find largest HT node
+		for (ht_t n = 0; n < nopterons; n++)
+			if (opterons[n]->dram_size > max)
+				max = opterons[n]->dram_size;
+
+		// Reduce largest HT node by 16MB
+		for (Opteron *const *nb = &opterons[0]; nb < &opterons[nopterons]; nb++) {
+			if ((*nb)->dram_size == max) {
+				(*nb)->dram_size -= (1ULL << 24);
+				dram_size -= (1ULL << 24);
+				over -= (1ULL << 24);
+				break;
+			}
+		}
+	}
+}
+
+
 // instantiated for remote nodes
 Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_LOCAL), sci(_sci), nopterons(ht)
 {

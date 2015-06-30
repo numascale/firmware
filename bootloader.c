@@ -69,6 +69,8 @@ static void scan(void)
 
 	// setup local DRAM windows
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		// trim nodes that are over sized and not according to granularity
+		(*node)->trim_dram_maps();
 		(*node)->dram_base = dram_top;
 
 		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
@@ -280,40 +282,62 @@ static void setup_info(void)
 
 static void remap(void)
 {
-	// 1. setup local NumaChip DRAM ranges
+	// 1. reprogram local opteron ranges in case of trimming
+	for (ht_t i = 0; i < local_node->nopterons; i++) {
+		const uint64_t base  = local_node->opterons[i]->dram_base;
+		const uint64_t limit = local_node->opterons[i]->dram_base + local_node->opterons[i]->dram_size - 1;
+
+		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
+			for (unsigned range = 0; range < 8; range++) {
+				uint64_t orig_base, orig_limit;
+				ht_t dst;
+
+				if ((*nb)->drammap.read(range, &orig_base, &orig_limit, &dst) && dst == i) {
+					(*nb)->drammap.add(range, base, limit, i);
+					break;
+				}
+			}
+		}
+
+		// reprogram local range
+		local_node->opterons[i]->write32(Opteron::DRAM_BASE, base >> 27);
+		local_node->opterons[i]->write32(Opteron::DRAM_LIMIT, limit >> 27);
+	}
+
+	// 2. setup local NumaChip DRAM ranges
 	unsigned range = 0;
 	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 		local_node->numachip->drammap.add(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 
-	// 2. route higher access to NumaChip
+	// 3. route higher access to NumaChip
 	if (nnodes > 1)
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
 
-	// 3. setup NumaChip DRAM registers
+	// 4. setup NumaChip DRAM registers
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_BASE, local_node->dram_base >> 24);
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (local_node->dram_end - 1) >> 24);
 
-	// 4. setup DRAM ATT routing
+	// 5. setup DRAM ATT routing
 	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Node *const *dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++)
 			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
 
-	// 5. set top of memory
+	// 6. set top of memory
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
 	push_msr(MSR_TOPMEM2, dram_top);
 
 	uint64_t topmem = lib::rdmsr(MSR_TOPMEM);
 	push_msr(MSR_TOPMEM, topmem);
 
-	// 6. add NumaChip MMIO32 ranges
+	// 7. add NumaChip MMIO32 ranges
 	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
 	local_node->numachip->mmiomap.add(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
 
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
 		add(**node);
 
-	// update e820 map
+	// 8. update e820 map
 	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			// master always first in array
@@ -332,7 +356,7 @@ static void remap(void)
 		}
 	}
 
-	// setup IOH limits
+	// 9. setup IOH limits
 #ifdef FIXME /* hangs on remote node */
 	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->iohub->limits(dram_top - 1);
