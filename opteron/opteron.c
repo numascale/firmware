@@ -262,6 +262,10 @@ void Opteron::dram_scrub_disable(void)
 	lib::udelay(40); // allow outstanding scrub requests to finish
 
 	clear32(SCRUB_ADDR_LOW, 1);
+
+	// disable DRAM stutter scrub
+	uint32_t val = read32(CLK_CTRL_0);
+	write32(CLK_CTRL_0, val & ~(1 << 15));
 }
 
 void Opteron::dram_scrub_enable(void)
@@ -278,6 +282,10 @@ void Opteron::dram_scrub_enable(void)
 
 	write32(SCRUB_RATE_CTRL, scrub);
 	set32(SCRUB_ADDR_LOW, 1);
+
+	// enable DRAM stutter scrub
+	uint32_t val = read32(CLK_CTRL_0);
+	write32(CLK_CTRL_0, val | (1 << 15));
 }
 
 void Opteron::optimise_linkbuffers(void)

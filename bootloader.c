@@ -348,9 +348,6 @@ static void remap(void)
 				(*nb)->trace_base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
 				(*nb)->trace_limit = (*nb)->trace_base + options->tracing - 1;
 
-				// disable DRAM stutter scrub
-				uint32_t val = (*nb)->read32(Opteron::CLK_CTRL_0);
-				(*nb)->write32(Opteron::CLK_CTRL_0, val & ~(1 << 15));
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 			}
 		}
