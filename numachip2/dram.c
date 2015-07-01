@@ -125,6 +125,7 @@ void Numachip2::dram_init(void)
 		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
 		write32(MTAG_BASE + TAG_MCTR_MASK, 0xfff);
 		write32(NCACHE_CTRL, (0 << 3)); // 1 GByte nCache
+		options->memlimit = 64ULL << 30; // Max 64G per node
 		break;
 	case 8ULL << 30:
 		// 0-2048MB nCache; 2048-2304MB CTag; 2304-4096MB unused; 4096-8192MB MTag
@@ -135,6 +136,7 @@ void Numachip2::dram_init(void)
 		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x2000);
 		write32(MTAG_BASE + TAG_MCTR_MASK, 0x1fff);
 		write32(NCACHE_CTRL, (1 << 3)); // 2 GByte nCache
+		options->memlimit = 128ULL << 30; // Max 128G per node
 		break;
 	default:
 		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);

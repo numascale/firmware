@@ -18,6 +18,7 @@
 #include "node.h"
 #include "library/access.h"
 #include "library/utils.h"
+#include "platform/options.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -68,8 +69,8 @@ void Node::tracing_stop(void)
 void Node::trim_dram_maps(void)
 {
 	// Trim nodes if over supported or requested memory config */
-//	int64_t over = max((int64_t)(dram_size - max_mem_per_server), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
-	int64_t over = (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1));
+//	int64_t over = max((int64_t)(dram_size - options->memlimit), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
+	int64_t over = (int64_t)(dram_size - options->memlimit);
 	if (over <= 0)
 		return;
 
