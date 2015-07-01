@@ -207,6 +207,7 @@ public:
 	void tracing_arm(void);
 	void tracing_start(void);
 	void tracing_stop(void);
+	void tracing_disable(void);
 	void discover(void);
 };
 

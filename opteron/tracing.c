@@ -56,3 +56,10 @@ void Opteron::tracing_stop(void)
 	val = read32(TRACE_BUF_CTRL);
 	write32(TRACE_BUF_CTRL, val & ~1);
 }
+
+void Opteron::tracing_disable(void)
+{
+	write32(TRACE_BUF_BASELIM, 0);
+	write32(TRACE_BUF_ADDR_HIGH, 0);
+	write32(TRACE_BUF_ADDR, 0);
+}
