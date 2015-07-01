@@ -109,16 +109,17 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 	}
 }
 
-void SR56x0::limits(uint64_t limit)
+void SR56x0::limits(const uint64_t limit)
 {
 	printf("Setting limits on %03x IOH to 0x%"PRIx64, sci, limit);
 	xassert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
 
 	// limit to HyperTransport range
-	limit = min(Opteron::HT_BASE, limit);
-	htiu_write(HTIU_TOM2LO, (limit & 0xff800000) | 1);
-	htiu_write(HTIU_TOM2HI, limit >> 32);
+	uint64_t l_limit = min(Opteron::HT_BASE, limit);
+	htiu_write(HTIU_TOM2LO, (l_limit & 0xff800000) | 1);
+	htiu_write(HTIU_TOM2HI, l_limit >> 32);
 
+	// if more than 1TByte we need to set TOM3 correctly
 	if (limit > 1ULL << 40)
 		nbmiscind_write(MISC_TOM3, ((limit << 22) - 1) | (1 << 31));
 	else
