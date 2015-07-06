@@ -73,7 +73,7 @@ OS::OS(void): ent(0), hostname(NULL)
 {
 	/* Ensure console drains before opening */
 	lib::udelay(100000);
-	console_ansi_std();
+	openconsole(&dev_rawcon_r, &dev_stdcon_w);
 	get_hostname();
 }
 
