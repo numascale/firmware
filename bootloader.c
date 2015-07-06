@@ -1295,6 +1295,7 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
-	test_cores();
+	if (!options->fastboot)
+		test_cores();
 	finished(options->next_label);
 }
