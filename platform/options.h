@@ -19,11 +19,11 @@
 
 class Options {
 	/* Static needed so we can pass the function address */
-	static void parse_string(const char *val, void *stringp) nonnull;
-	static void parse_bool(const char *val, void *voidp) nonnull;
-	static void parse_int(const char *val, void *intp) nonnull;
-	static void parse_int64(const char *val, void *intp) nonnull;
-	static void parse_flags(const char *val, void *flags) nonnull;
+	static void parse_string(const char *val, void *stringp);
+	static void parse_bool(const char *val, void *voidp);
+	static void parse_int(const char *val, void *intp);
+	static void parse_int64(const char *val, void *intp);
+	static void parse_flags(const char *val, void *flags);
 public:
 	const char *next_label, *observer_label;
 	const char *config_filename, *flash;
