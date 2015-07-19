@@ -72,15 +72,16 @@ static inline uint16_t trampoline_sem_getvalue(void)
 	return *REL16(pending);
 }
 
-static inline bool trampoline_sem_wait(void)
+static bool trampoline_sem_wait(void)
 {
-	unsigned spin = 0;
-	while (trampoline_sem_getvalue()) {
+	for (unsigned spin = 0; spin < CORE_SPINS; spin++) {
+		if (*REL16(pending))
+			return 0;
+
 		cpu_relax();
-		if (spin++ >= CORE_SPINS)
-			return 1;
 	}
-	return 0;
+
+	return 1;
 }
 
 static inline void push_msr(const uint32_t num, const uint64_t val)
