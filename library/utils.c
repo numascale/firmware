@@ -53,7 +53,8 @@ namespace lib
 
 		do {
 			fread(&ch, 1, 1, stdin);
-		} while (ch != 0x0a); // enter
+			cpu_relax();
+		} while (ch != 0x0a && ch != 0x0d); // enter
 	}
 
 	void udelay(const uint32_t usecs)
