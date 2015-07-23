@@ -24,13 +24,11 @@
 
 void Numachip2::dram_check(void) const
 {
-#ifdef BROKEN
 	uint32_t val = read32(NCACHE_CTRL);
 	if (val & (1 << 7))
 		warning("Correctable ECC issue occurred on Numachip at %03x", sci);
 
 	assertf(!(val & (1 << 8)), "Uncorrectable ECC issue occurred on Numachip at %03x", sci);
-#endif
 }
 
 void Numachip2::dram_reset(void)
