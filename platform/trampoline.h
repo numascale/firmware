@@ -72,7 +72,7 @@ static inline uint16_t trampoline_sem_getvalue(void)
 	return *REL16(pending);
 }
 
-static bool trampoline_sem_wait(void)
+static inline bool trampoline_sem_wait(void)
 {
 	for (unsigned spin = 0; spin < CORE_SPINS; spin++) {
 		if (*REL16(pending))
