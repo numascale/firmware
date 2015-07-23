@@ -36,3 +36,4 @@
 #define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
 
 void caches(const bool enable);
+void check(void);

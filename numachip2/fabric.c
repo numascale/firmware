@@ -29,8 +29,17 @@ void Numachip2::fabric_reset(void)
 	if (options->debug.fabric)
 		printf("<reset>");
 
-	write32(HSS_PLLCTL, 0x3f);
-	write32(HSS_PLLCTL, 0);
+	// ensure all links are in reset
+	uint32_t mask = 0x3f;
+	write32(HSS_PLLCTL, mask);
+
+	// bring configured links out of reset
+	for (unsigned i = 0; i < 3; i++)
+		if (config->size[i])
+			mask &= ~(3 << (i * 2));
+
+	printf("mask now 0x%x\n", mask);
+	write32(HSS_PLLCTL, mask);
 }
 
 void Numachip2::fabric_check(void) const

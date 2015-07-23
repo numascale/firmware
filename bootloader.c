@@ -56,7 +56,7 @@ char *asm_relocated;
 static uint64_t dram_top;
 static unsigned nnodes;
 
-static void check(void)
+void check(void)
 {
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->check();

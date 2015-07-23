@@ -347,6 +347,8 @@ void E820::test(void)
 	uint64_t base, length, type;
 	os->memmap_start();
 
+	uint64_t last = 0;
+
 	for (test_state phase = Seed; phase <= Rezero; phase = test_state(phase + 1)) {
 		bool left;
 		test_errors = 0;
@@ -360,8 +362,14 @@ void E820::test(void)
 
 			if (options->debug.e820)
 				printf("\n");
-		} while (left);
 
+			// check every ~4s
+			uint64_t now = lib::rdtscll();
+			if (now - last > 1e10) {
+				check();
+				last = now;
+			}
+		} while (left);
 	}
 
 	printf("\n");
