@@ -75,7 +75,7 @@ static inline uint16_t trampoline_sem_getvalue(void)
 static inline bool trampoline_sem_wait(void)
 {
 	for (unsigned spin = 0; spin < CORE_SPINS; spin++) {
-		if (*REL16(pending))
+		if (*REL16(pending) == 0)
 			return 0;
 
 		cpu_relax();
