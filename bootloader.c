@@ -1165,6 +1165,9 @@ int main(const int argc, char *const argv[])
 
 	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
 
+	// ensure Numachip2 MMIO range is reserved for all cases
+	e820->add(Numachip2::LOC_BASE, Numachip2::LOC_LIM - Numachip2::LOC_BASE + 1, E820::RESERVED);
+
 	if (options->init_only) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
