@@ -31,7 +31,7 @@
 
 #define E820_MAP_MAX 4096
 #define MSR_MAX 32
-#define CORE_SPINS        10000000
+#define CORE_SPINS        100000000
 #define TEST_BASE_HIGH 0x1 // 4GB base
 #define TEST_BASE_LOW  0x88000
 #define TEST_SIZE      (1 << 12)
