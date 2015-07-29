@@ -109,6 +109,9 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	cht_print(neigh, link);
 
+	if (options->flash || options->ht_slowmode)
+		return;
+
 	printf("Checking HT width/freq.");
 
 	printf("+");
@@ -116,7 +119,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	printf(".");
 
 	/* Optimize width (16b), if option to disable this is not set */
-	if (!options->ht_slowmode && ((val >> 16) == 0x11)) {
+	if ((val >> 16) == 0x11) {
 		if ((val >> 24) != 0x11) {
 			printf("<NC width>");
 			lib::cht_write32(nc, Numachip2::LINK_CTRL, (val & 0x00ffffff) | 0x11000000);
@@ -145,100 +148,98 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	}
 
 	/* Optimize link frequency, if option to disable this is not set */
-	if (!options->ht_slowmode) {
-		uint8_t max_supported = 0;
+	uint8_t max_supported = 0;
 
-		printf("+");
-		val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV);
-		printf(".");
+	printf("+");
+	val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV);
+	printf(".");
 
-		// find maximum supported frequency
-		for (int i = 0; i < 16; i++)
-			if (val >> (16 + i) & 1)
-				max_supported = i;
+	// find maximum supported frequency
+	for (int i = 0; i < 16; i++)
+		if (val >> (16 + i) & 1)
+			max_supported = i;
 
-		if (((val >> 8) & 0xf) != max_supported) {
-			printf("<NC freq=%d>", max_supported);
-			lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
-			reboot = 1;
-		}
+	if (((val >> 8) & 0xf) != max_supported) {
+		printf("<NC freq=%d>", max_supported);
+		lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
+		reboot = 1;
+	}
 
-		printf(".");
-		val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
-		uint32_t val2 = lib::cht_read32(neigh, LINK_FREQ_EXT + link * 0x20);
-		uint8_t freq = ((val >> 8) & 0xf) | ((val2 & 1) << 4);
-		printf(".");
+	printf(".");
+	val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
+	uint32_t val2 = lib::cht_read32(neigh, LINK_FREQ_EXT + link * 0x20);
+	uint8_t freq = ((val >> 8) & 0xf) | ((val2 & 1) << 4);
+	printf(".");
 
-		if (freq != max_supported) {
-			printf("<CPU freq=%d>", max_supported);
-			lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | ((max_supported & 0xf) << 8));
-			lib::cht_write32(neigh, LINK_FREQ_EXT + link * 0x20, (val & ~1) | (max_supported >> 4));
+	if (freq != max_supported) {
+		printf("<CPU freq=%d>", max_supported);
+		lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | ((max_supported & 0xf) << 8));
+		lib::cht_write32(neigh, LINK_FREQ_EXT + link * 0x20, (val & ~1) | (max_supported >> 4));
 
-			// update as per BKDG Fam15h p513 for HT3 frequencies
-			if (family >= 0x15 && max_supported >= 7) {
-				const uint32_t link_prod_info = lib::cht_read32(neigh, LINK_PROD_INFO);
-				if (link_prod_info || !proc_lessthan_b0(neigh)) {
-					// start from 1.2GHz, ends at 3.2GHz
-					const uint8_t DllProcessFreqCtlIndex2a[] = {0xa, 0xa, 0x7, 0x7, 0x5, 0x5, 0x4, 0x3, 0xff, 0xff, 0x3, 0x2, 0x2};
-					const uint8_t DllProcessFreqCtlIndex2b[] = {0, 0, 4, 4, 8, 8, 12, 16, 0xff, 0xff, 20, 24, 28};
+		// update as per BKDG Fam15h p513 for HT3 frequencies
+		if (family >= 0x15 && max_supported >= 7) {
+			const uint32_t link_prod_info = lib::cht_read32(neigh, LINK_PROD_INFO);
+			if (link_prod_info || !proc_lessthan_b0(neigh)) {
+				// start from 1.2GHz, ends at 3.2GHz
+				const uint8_t DllProcessFreqCtlIndex2a[] = {0xa, 0xa, 0x7, 0x7, 0x5, 0x5, 0x4, 0x3, 0xff, 0xff, 0x3, 0x2, 0x2};
+				const uint8_t DllProcessFreqCtlIndex2b[] = {0, 0, 4, 4, 8, 8, 12, 16, 0xff, 0xff, 20, 24, 28};
 
-					uint32_t temp = link_prod_info ? ((link_prod_info >> DllProcessFreqCtlIndex2b[max_supported - 7]) & 0xf)
-					  : DllProcessFreqCtlIndex2a[max_supported - 7];
-					xassert(temp != 0xff);
+				uint32_t temp = link_prod_info ? ((link_prod_info >> DllProcessFreqCtlIndex2b[max_supported - 7]) & 0xf)
+				  : DllProcessFreqCtlIndex2a[max_supported - 7];
+				xassert(temp != 0xff);
 
-					val = phy_read32(neigh, link, PHY_RX_PROC_CTRL_CADIN0, 1);
-					bool sign = (val >> 13) & 1; // FuseProcDllProcessComp[2]
-					uint8_t offset = (val >> 11) & 3; // FuseProcDllProcessComp[1:0]
-					uint32_t tempdata = phy_read32(neigh, link, PHY_RX_DLL_CTRL5_CADIN0, 1);
-					tempdata |= 1 << 12; // DllProcessFreqCtlOverride
-					uint32_t adjtemp;
+				val = phy_read32(neigh, link, PHY_RX_PROC_CTRL_CADIN0, 1);
+				bool sign = (val >> 13) & 1; // FuseProcDllProcessComp[2]
+				uint8_t offset = (val >> 11) & 3; // FuseProcDllProcessComp[1:0]
+				uint32_t tempdata = phy_read32(neigh, link, PHY_RX_DLL_CTRL5_CADIN0, 1);
+				tempdata |= 1 << 12; // DllProcessFreqCtlOverride
+				uint32_t adjtemp;
 
-					if (sign) {
-						if (temp < offset)
-							adjtemp = 0;
-						else
-							adjtemp = temp - offset;
-					} else {
-						if ((temp + offset) > 0xf)
-							adjtemp = 0xf;
-						else
-							adjtemp = temp + offset;
-					}
-
-					tempdata &= ~ 0xf;
-					tempdata |= adjtemp; // DllProcessFreqCtlIndex2
-
-					phy_write32(neigh, link, PHY_RX_DLL_CTRL5_16, 1, tempdata); // Broadcast 16-bit
+				if (sign) {
+					if (temp < offset)
+						adjtemp = 0;
+					else
+						adjtemp = temp - offset;
+				} else {
+					if ((temp + offset) > 0xf)
+						adjtemp = 0xf;
+					else
+						adjtemp = temp + offset;
 				}
-			}
 
-			reboot = 1;
+				tempdata &= ~ 0xf;
+				tempdata |= adjtemp; // DllProcessFreqCtlIndex2
+
+				phy_write32(neigh, link, PHY_RX_DLL_CTRL5_16, 1, tempdata); // Broadcast 16-bit
+			}
 		}
 
-		/* If HT3, enable scrambling and retry mode */
-		if (max_supported >= 7) {
-			printf("*");
-			val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
-			printf(".");
-			if ((val & 8) == 0) {
-				printf("<scrambling>");
-				lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 8);
-				reboot = 1;
-			}
-			printf("*");
-			val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
-			printf(".");
-			if ((val & 1) == 0) {
-				printf("<retry>");
-				lib::cht_write32(neigh, LINK_RETRY + link * 4, val | 1);
-				reboot = 1;
-			}
+		reboot = 1;
+	}
+
+	/* If HT3, enable scrambling and retry mode */
+	if (max_supported >= 7) {
+		printf("*");
+		val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
+		printf(".");
+		if ((val & 8) == 0) {
+			printf("<scrambling>");
+			lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 8);
+			reboot = 1;
+		}
+		printf("*");
+		val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
+		printf(".");
+		if ((val & 1) == 0) {
+			printf("<retry>");
+			lib::cht_write32(neigh, LINK_RETRY + link * 4, val | 1);
+			reboot = 1;
 		}
 	}
 
 	printf("\n");
 
-	if (!options->fastboot && reboot) {
+	if (reboot) {
 		printf(BANNER "Warm-booting to make new link settings effective...\n");
 		platform_reset_warm();
 	}
