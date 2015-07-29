@@ -201,6 +201,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		printf("Powering off");
 		ipmi->poweroff();
 	}
+
 	// set local SIU SCI ID
 	write32(SIU_NODEID, sci);
 

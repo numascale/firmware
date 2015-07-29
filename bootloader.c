@@ -1194,7 +1194,7 @@ int main(const int argc, char *const argv[])
 	if (options->tracing)
 		setup_gsm_early();
 
-	if (!options->singleton) {
+	if (!options->singleton && config->nnodes > 1) {
 		// Use first node in config as "builder", to synchronize all slaves/observers
 		if (config->local_node == &config->nodes[0])
 			wait_for_slaves();
