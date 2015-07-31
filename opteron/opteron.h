@@ -89,6 +89,7 @@ public:
 	static const reg_t LINK_TYPE           = 0x0098;
 	static const reg_t LINK_FREQ_EXT       = 0x009c;
 	static const reg_t LINK_RETRY          = 0x0130;
+	static const reg_t LINK_RETRY_CTRL     = 0x0150;
 	static const reg_t COH_LINK_TRAF_DIST  = 0x0164;
 	static const reg_t EXT_LINK_TRANS_CTRL = 0x0168;
 	static const reg_t LINK_GLO_CTRL_EXT   = 0x016c;

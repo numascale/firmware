@@ -445,15 +445,6 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		val = lib::cht_read32(nc, Numachip2::VENDEV);
 		assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
 
-		if (options->ht_selftest) {
-			printf("HT selftest");
-			for (int i = 0; i < 500000; i++) {
-				val = lib::cht_read32(nc, Numachip2::VENDEV);
-				assertf(val == vendev, "Unrouted coherent device %08x is not NumaChip2\n", val);
-			}
-			printf("\n");
-		}
-
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 
 		printf("NumaChip2 rev %d found on HT%u.%u\n", rev, neigh, link);
@@ -464,7 +455,30 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		/* Add NC to coherent fabric */
 		ht_reconfig(neigh, link, nnodes);
 	}
+#ifdef ERRATA
+	/* If link retry enabled, check behaviour */
+	val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
+	if (val & 1) {
+		printf("Testing HT error-retry");
+		for (unsigned i = 0; i < 100000; i++) {
+			if ((i % 64) == 0)
+				lib::cht_write32(neigh, LINK_RETRY + link * 4, val | 2);
 
+			uint32_t val2 = lib::cht_read32(nc, Numachip2::VENDEV);
+			assertf(val2 == vendev, "HT data corruption detected");
+		}
+
+		lib::udelay(10000);
+
+		/* Ensure retries have occurred */
+		uint32_t val2 = lib::cht_read32(neigh, LINK_RETRY + link * 4);
+		assertf(val2 & 0xffff0000, "HT failed to retry %08x", val2);
+
+		/* Clear retry count */
+		lib::cht_write32(neigh, LINK_RETRY + link * 4, val);
+		printf("\n");
+	}
+#endif
 	val = lib::cht_read32(0, HT_NODE_ID);
 	lib::cht_write32(nc, Numachip2::HT_NODE_ID,
 		   (((val >> 12) & 7) << 24) | /* LkNode */
