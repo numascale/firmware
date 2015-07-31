@@ -49,14 +49,14 @@ void Opteron::check(void)
 	for (unsigned link = 0; link < 4; link++) {
 		uint32_t val = read32(LINK_CTRL + link * 0x20);
 		if (val & 0x300)
-			warning("HT link %u CRC error", link);
+			warning("HT%u link %u CRC error", ht, link);
 
 		if (val & 0x10)
-			warning("HT link %u failure", link);
+			warning("HT%u link %u failure", ht, link);
 
 		val = read32(LINK_RETRY + link * 4);
 		if (val & 0xffff1c00)
-			warning("HT link %u errors: %08x", link, val);
+			warning("HT%u link %u errors: %08x", ht, link, val);
 	}
 
 	uint64_t s = read64(MC_NB_STAT);
