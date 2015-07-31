@@ -53,6 +53,10 @@ void Opteron::check(void)
 
 		if (val & 0x10)
 			warning("HT link %u failure", link);
+
+		val = read32(LINK_RETRY + link * 4);
+		if (val & 0xffff1c00)
+			warning("HT link %u errors: %08x", link, val);
 	}
 
 	uint64_t s = read64(MC_NB_STAT);
