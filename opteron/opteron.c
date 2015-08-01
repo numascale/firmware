@@ -55,8 +55,18 @@ void Opteron::check(void)
 			warning("HT%u link %u failure", ht, link);
 
 		val = read32(LINK_RETRY + link * 4);
-		if (val & 0xffff1c00)
-			warning("HT%u link %u errors: %08x", ht, link, val);
+		if (val & 0xffff1f00) {
+			printf(COL_RED "HT%u link %u: %u retries", ht, link, val >> 16);
+			if (val & (1 << 11))
+				printf(" DataCorruptOut");
+			if (val & (1 << 11))
+				printf(" InitFail");
+			if (val & (1 << 10))
+				printf(" StompedPktDet");
+			if (val & (1 << 9))
+				printf(" RetryCountRollover");
+			printf(COL_DEFAULT "\n");
+		}
 	}
 
 	uint64_t s = read64(MC_NB_STAT);
