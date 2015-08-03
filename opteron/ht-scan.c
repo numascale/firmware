@@ -171,8 +171,8 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 		phy_write32(neigh, link, 0xc4, 0, (1 << 7) | (0x3d << 10));
 		phy_write32(neigh, link, 0xd4, 0, (1 << 7) | (0x3d << 10));
 #endif
-		// set HT phy Post1 -1.9dB deemphasis to compensate for attenuation
-		phy_write32(neigh, link, 0x700c, 1, 24 << 16);
+		// set HT phy Post1 -2.5dB deemphasis to compensate for attenuation
+		phy_write32(neigh, link, 0x700c, 1, 32 << 16);
 
 		// increase HT phy FIFO pointer distance for HT3
 		// FIXME: consider optimising for lower latency if no NB P-state transitions
