@@ -38,7 +38,6 @@ void Numachip2::fabric_reset(void)
 		if (config->size[i])
 			mask &= ~(3 << (i * 2));
 
-	printf("mask now 0x%x\n", mask);
 	write32(HSS_PLLCTL, mask);
 }
 
