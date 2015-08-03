@@ -45,7 +45,7 @@ void Opteron::platform_reset_warm(void)
 
 uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct)
 {
-	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (direct << 29));
+	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, (direct << 29) | reg);
 
 	while (1) {
 		uint32_t stat = lib::cht_read32(ht, LINK_PHY_OFFSET + link * 8);
@@ -57,8 +57,8 @@ uint32_t Opteron::phy_read32(const ht_t ht, const link_t link, const uint16_t re
 
 void Opteron::phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val)
 {
-	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, reg | (1 << 30) | (direct << 29));
 	lib::cht_write32(ht, LINK_PHY_DATA + link * 8, val);
+	lib::cht_write32(ht, LINK_PHY_OFFSET + link * 8, (1 << 30) | (direct << 29) | reg);
 
 	while (1) {
 		uint32_t stat = lib::cht_read32(ht, LINK_PHY_OFFSET + link * 8);
@@ -85,6 +85,20 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 
 	if (ron < 11 || rtt >> 15)
 		warning("Ron %u is different than expected value of 11", ron);
+
+	val = 38 << 16; // Post1 -3dB deemphasis
+//	phy_write32(neigh, link, PHY_TX_DEEMPH + 5 * 8, 1, val);
+
+//	for (unsigned i = 0; i < 20; i++) {
+//		val = phy_read32(neigh, link, PHY_TX_DEEMPH + i * 8, 1);
+//		printf("phy%04X=%08x\n", PHY_TX_DEEMPH + i * 8, val);
+//	}
+
+	// verify phy value
+	for (unsigned i = 0; i < 19; i++)
+		// skip
+		if (i != 17)
+			printf("phy%04X=%08x\n", 0x400f + i * 0x80, phy_read32(neigh, link, 0x400f + i * 0x80, 1));
 }
 
 static bool proc_lessthan_b0(const ht_t ht)
@@ -210,8 +224,11 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 				tempdata &= ~ 0xf;
 				tempdata |= adjtemp; // DllProcessFreqCtlIndex2
 
+	//			for (unsigned i = 0; i < 18; i++)
+//					phy_write32(neigh, link, 0x400f + i * 0x80, 1, tempdata);
 				phy_write32(neigh, link, PHY_RX_DLL_CTRL5_16, 1, tempdata); // Broadcast 16-bit
 			}
+
 		}
 
 		reboot = 1;
