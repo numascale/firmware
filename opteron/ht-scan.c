@@ -109,6 +109,12 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	cht_print(neigh, link);
 
+	// disable additional CRC insertion, as it causes HT failure on Numachip2
+	for (unsigned nb = 0; nb < nc; nb++) {
+		val = lib::cht_read32(nb, LINK_RETRY_CTRL);
+		lib::cht_write32(nb, LINK_RETRY_CTRL, val &= ~(7 << 9));
+	}
+
 	if (options->flash || options->ht_slowmode)
 		return;
 
@@ -162,30 +168,18 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	if (((val >> 8) & 0xf) != max_supported) {
 		printf("<NC freq=%d>", max_supported);
 		lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
-#ifdef UNNEEDED
-		// 90deg phase shift on transmit clock lines
-		phy_write32(neigh, link, 0x6884, 1, 1);
-		phy_write32(neigh, link, 0x6984, 1, 1);
 
-		// enable HT phy DC Equalisation and Decision Feedback Restore
-		phy_write32(neigh, link, 0xc4, 0, (1 << 7) | (0x3d << 10));
-		phy_write32(neigh, link, 0xd4, 0, (1 << 7) | (0x3d << 10));
-#endif
 		// set HT phy Post1 -2.5dB deemphasis to compensate for attenuation
 		phy_write32(neigh, link, 0x700c, 1, 32 << 16);
 
 		// increase HT phy FIFO pointer distance for HT3
-		// FIXME: consider optimising for lower latency if no NB P-state transitions
 		phy_write32(neigh, link, 0xcf, 0, (0xa << 8) | (2 << 4) | 0xa);
 		phy_write32(neigh, link, 0xdf, 0, (0xa << 8) | (2 << 4) | 0xa);
-
-		val = lib::cht_read32(neigh, LINK_GLO_CTRL_EXT);
-		lib::cht_write32(neigh, LINK_GLO_CTRL_EXT, val | (0x3a << 17));
-
+#ifdef UNNEEDED
 		// enable phy Loop Filter Counter and set limits
 		phy_write32(neigh, link, 0xc1, 0, 0x8040280);
 		phy_write32(neigh, link, 0xd1, 0, 0x8040280);
-
+#endif
 		reboot = 1;
 	}
 
@@ -467,7 +461,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		}
 
 		/* If link retry enabled, check behaviour */
-		uint32_t val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
+		val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
 		if (val & 1) {
 			printf("Testing HT error-retry");
 			for (unsigned i = 0; i < 1000000; i++) {
