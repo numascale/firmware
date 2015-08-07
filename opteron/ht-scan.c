@@ -301,7 +301,12 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		/* Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0 */
 		for (ht_t ht = 0; ht <= nnodes; ht++) {
 			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
-			lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 12));
+			val &= ~(1 << 12);
+#ifdef MEASURE
+			val &= ~(3 << 21); // no downstream IO non-posted request limit
+			val |= 1 << 7; // read responses are allowed to pass posted writes
+#endif
+			lib::cht_write32(ht, LINK_TRANS_CTRL, val);
 			val = lib::cht_read32(ht, L3_CTRL);
 			lib::cht_write32(ht, L3_CTRL, val & ~(1 << 27));
 		}

@@ -209,8 +209,11 @@ void Opteron::prepare(void)
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 	push_msr(MSR_HWCR, msr);
 
-	// enable CF8 extended configuration cycles
-	msr = lib::rdmsr(MSR_NB_CFG) | (1ULL << 46);
+	msr = lib::rdmsr(MSR_NB_CFG);
+	msr |= 1ULL << 46; // enable CF8 extended configuration cycles
+#ifdef MEASURE
+	msr |= 1ULL << 50; // allow natural ordering for IO read responses
+#endif
 	lib::wrmsr(MSR_NB_CFG, msr);
 	push_msr(MSR_NB_CFG, msr);
 
