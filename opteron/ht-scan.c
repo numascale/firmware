@@ -85,6 +85,8 @@ void Opteron::cht_print(const ht_t neigh, const link_t link)
 
 	if (ron < 11 || rtt >> 15)
 		warning("Ron %u is different than expected value of 11", ron);
+
+	printf("BUFFERS %08x %08x\n", lib::cht_read32(neigh, LINK_BASE_BUF_CNT + link * 0x20), lib::cht_read32(neigh, LINK_ISOC_BUF_CNT + link * 0x20));
 }
 
 static bool proc_lessthan_b0(const ht_t ht)
@@ -100,6 +102,29 @@ static bool proc_lessthan_b0(const ht_t ht)
 	return 0;
 }
 
+void Opteron::optimise_linkbuffers(const ht_t ht, const int link)
+{
+	const int IsocRspData = 0, IsocNpReqData = 0, IsocRspCmd = 0, IsocPReq = 0, IsocNpReqCmd = 0;
+	const int RspData = 1, NpReqData = 2, ProbeCmd = 2, RspCmd = 2, PReq = 2, NpReqCmd = 2;
+
+	/* Ensure constraints are met */
+	uint32_t FreeCmd = 32 - NpReqCmd - PReq - RspCmd - ProbeCmd - IsocNpReqCmd - IsocPReq - IsocRspCmd;
+	uint32_t FreeData = 8 - NpReqData - RspData - PReq - IsocPReq - IsocNpReqData - IsocRspData;
+	xassert((ProbeCmd + RspCmd + PReq + NpReqCmd + IsocRspCmd + IsocPReq + IsocNpReqCmd) <= 24);
+
+	uint32_t val = NpReqCmd | (PReq << 5) | (RspCmd << 8) | (ProbeCmd << 12) |
+	  (NpReqData << 16) | (RspData << 18) | (FreeCmd << 20) | (FreeData << 25);
+printf("BASE %08x ->", lib::cht_read32(ht, LINK_BASE_BUF_CNT + link * 0x20));
+	lib::cht_write32(ht, LINK_BASE_BUF_CNT + link * 0x20, val | (1 << 31));
+printf("%08x\n", lib::cht_read32(ht, LINK_BASE_BUF_CNT + link * 0x20));
+
+	val = (IsocNpReqCmd << 16) | (IsocPReq << 19) | (IsocRspCmd << 22) |
+	  (IsocNpReqData << 25) | (IsocRspData << 27);
+printf("ISOC %08x ->", lib::cht_read32(ht, LINK_ISOC_BUF_CNT + link * 0x20));
+	lib::cht_write32(ht, LINK_ISOC_BUF_CNT + link * 0x20, val);
+printf("%08x\n", lib::cht_read32(ht, LINK_ISOC_BUF_CNT + link * 0x20));
+}
+
 void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link)
 {
 	bool reboot = 0;
@@ -110,10 +135,8 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	cht_print(neigh, link);
 
 	// disable additional CRC insertion, as it causes HT failure on Numachip2
-	for (unsigned nb = 0; nb < nc; nb++) {
-		val = lib::cht_read32(nb, LINK_RETRY_CTRL);
-		lib::cht_write32(nb, LINK_RETRY_CTRL, val &= ~(7 << 9));
-	}
+	val = lib::cht_read32(neigh, LINK_RETRY_CTRL);
+	lib::cht_write32(neigh, LINK_RETRY_CTRL, val &= ~(7 << 9));
 
 	if (options->flash || options->ht_slowmode)
 		return;
@@ -180,6 +203,9 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 		phy_write32(neigh, link, 0xc1, 0, 0x8040280);
 		phy_write32(neigh, link, 0xd1, 0, 0x8040280);
 #endif
+
+		optimise_linkbuffers(neigh, link);
+
 		reboot = 1;
 	}
 
