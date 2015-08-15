@@ -22,6 +22,7 @@
 #include "numachip.h"
 #include "../bootloader.h"
 #include "../library/access.h"
+#include "../library/utils.h"
 
 #define SPI_INSTR_WRSR  0x01
 #define SPI_INSTR_WRITE 0x02
@@ -58,28 +59,27 @@ void Numachip2::spi_master_enable(void)
          4'b1010: clkcnt <=  12'h3ff; // 2048
          4'b1011: clkcnt <=  12'h7ff; // 4096
 */
-	const uint8_t espr = 4;
+	const uint8_t espr = 6;
 
 	/* Set extended control register first */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4b, (espr & 0xc) >> 2);
+	write8(SPI_REG0 + 1, (espr & 0xc) >> 2);
 
 	/* Set clock prescaler, chip enable etc. */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x48, SPI_MASTER_CR_SPE | (espr & 0x3));
+	write8(SPI_REG0, SPI_MASTER_CR_SPE | (espr & 0x3));
 }
 
 void Numachip2::spi_master_disable(void)
 {
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x48, 0);
+	write16(SPI_REG0, 0);
 }
 
 uint8_t Numachip2::spi_master_read_fifo(void)
 {
 	// wait for read-fifo non-empty
 	for (unsigned i = spi_timeout; i; i--) {
-		uint8_t val = lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x49);
+		uint8_t val = read8(SPI_REG0 + 2);
 		if (!(val & SPI_MASTER_SR_RFEMPTY))
-			return lib::mcfg_read8(sci, 0, 24 + ht, 2, 0x4a);
-
+			return read8(SPI_REG1);
 		cpu_relax();
 	};
 
@@ -88,27 +88,112 @@ uint8_t Numachip2::spi_master_read_fifo(void)
 
 void Numachip2::spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data)
 {
+	xassert(len > 0);
+
 	/* Enable SPI Core */
 	spi_master_enable();
 
 	/* Write SPI Read instruction to the transmit fifo */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, SPI_INSTR_READ);
+	write8(SPI_REG1, SPI_INSTR_READ);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte1 (most significant 8 bit) to the transmit fifo */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, (addr >> 8) & 0xff);
+	write8(SPI_REG1, (addr >> 8) & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Write SPI Read address byte2 (least significant 8 bit) to the transmit fifo */
-	lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, addr & 0xff);
+	write8(SPI_REG1, addr & 0xff);
 	(void)spi_master_read_fifo(); /* Dummy read */
 
 	/* Read SPI data */
 	for (unsigned i = 0; i < len; i++) {
-		lib::mcfg_write8(sci, 0, 24 + ht, 2, 0x4a, 0); /* Dummy write */
+		write8(SPI_REG1, 0); /* Dummy write */
 		data[i] = spi_master_read_fifo();
 	}
 
 	/* Disable SPI Core */
 	spi_master_disable();
+}
+
+void Numachip2::spi_master_write(const uint16_t addr, const unsigned len, uint8_t *data)
+{
+	/* Can only transfer 128 bytes (1 page) at a time and not cross page boundaries */
+	xassert(len > 0 && len <= 128);
+	xassert((addr & ~0x7f) == ((addr + len) & ~0x7f));
+
+	/* Enable SPI Core */
+	spi_master_enable();
+
+	/* Save SPCR value for later */
+	uint8_t spcr = read8(SPI_REG0);
+
+	/* Send Write Enable instruction to the transmit fifo */
+	write8(SPI_REG1, SPI_INSTR_WREN);
+	(void)spi_master_read_fifo(); /* Dummy read */
+
+	/* De-assert Chip Enable */
+	write8(SPI_REG0, spcr & ~SPI_MASTER_CR_SPE);
+
+	/* Assert Chip Enable */
+	write8(SPI_REG0, spcr | SPI_MASTER_CR_SPE);
+
+	/* Write Read Status Register instruction to the transmit fifo */
+	write8(SPI_REG1, SPI_INSTR_RDSR);
+	(void)spi_master_read_fifo(); /* Dummy read */
+
+	write8(SPI_REG1, 0); /* Dummy write */
+	uint8_t val = spi_master_read_fifo();
+
+	/* De-assert Chip Enable */
+	write8(SPI_REG0, spcr & ~SPI_MASTER_CR_SPE);
+
+	assertf(val & 2, "Write Enable Latch did not get set %x", val);
+
+	/* Assert Chip Enable */
+	write8(SPI_REG0, spcr | SPI_MASTER_CR_SPE);
+
+	/* Write SPI Write instruction to the transmit fifo */
+	write8(SPI_REG1, SPI_INSTR_WRITE);
+	(void)spi_master_read_fifo(); /* Dummy read */
+
+	/* Write SPI Write address byte1 (most significant 8 bit) to the transmit fifo */
+	write8(SPI_REG1, (addr >> 8) & 0xff);
+	(void)spi_master_read_fifo(); /* Dummy read */
+
+	/* Write SPI Write address byte2 (least significant 8 bit) to the transmit fifo */
+	write8(SPI_REG1, addr & 0xff);
+	(void)spi_master_read_fifo(); /* Dummy read */
+
+	/* Write SPI data */
+	for (unsigned i = 0; i < len; i++) {
+		write8(SPI_REG1, data[i]);
+		(void)spi_master_read_fifo(); /* Dummy read */
+	}
+
+	/* De-assert Chip-Enable to initiate EEPROM write operation */
+	write8(SPI_REG0, spcr & ~SPI_MASTER_CR_SPE);
+
+	/* Wait until EEPROM signals Write Completion in the Status Register */
+	for (unsigned i = spi_timeout; i; i--) {
+		/* Assert Chip Enable */
+		write8(SPI_REG0, spcr | SPI_MASTER_CR_SPE);
+
+		/* Write Read Status Register instruction to the transmit fifo */
+		write8(SPI_REG1, SPI_INSTR_RDSR);
+		(void)spi_master_read_fifo(); /* Dummy read */
+
+		write8(SPI_REG1, 0); /* Dummy write */
+		val = spi_master_read_fifo();
+
+		if (!(val & 1)) { /* Check Write In Progress bit */
+			/* Disable SPI Core */
+			spi_master_disable();
+			return;
+		}
+
+		/* De-assert Chip Enable */
+		write8(SPI_REG0, spcr & ~SPI_MASTER_CR_SPE);
+	}
+
+	fatal("WRITE instruction did not complete");
 }

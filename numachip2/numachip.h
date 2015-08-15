@@ -84,6 +84,7 @@ class Numachip2 {
 	void spi_master_disable(void);
 	uint8_t spi_master_read_fifo(void);
 	void spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data) nonnull;
+	void spi_master_write(const uint16_t addr, const unsigned len, uint8_t *data) nonnull;
 
 	/* dram.c */
 	void dram_reset(void);
