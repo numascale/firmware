@@ -42,21 +42,21 @@ void Opteron::check(void)
 		if (!(val & (1ULL << 63)))
 			continue;
 
-		printf("SCI%03x#%u: MSR%08x=0x%"PRIx64"\n", sci, ht, msr, val);
+		printf("%03x#%u MSR%08x=0x%"PRIx64"\n", sci, ht, msr, val);
 		lib::wrmsr(msr, 0);
 	}
 #endif
 	for (unsigned link = 0; link < 4; link++) {
 		uint32_t val = read32(LINK_CTRL + link * 0x20);
 		if (val & 0x300)
-			warning("HT%u link %u CRC error", ht, link);
+			warning("%03x#%u link %u CRC error", sci, ht, link);
 
 		if (val & 0x10)
-			warning("HT%u link %u failure", ht, link);
+			warning("%03x#%u link %u failure", sci, ht, link);
 
 		val = read32(LINK_RETRY + link * 4);
 		if (val & 0xffff1f00) {
-			printf(COL_RED "HT%u link %u: %u retries", ht, link, val >> 16);
+			printf(COL_RED "%03x#%u link %u: %u retries", sci, ht, link, val >> 16);
 			if (val & (1 << 11))
 				printf(" DataCorruptOut");
 			if (val & (1 << 11))
@@ -80,7 +80,7 @@ void Opteron::check(void)
 		  "L3 Cache Data Error", "L3 Cache Tag Error", "L3 Cache LRU Error",
 		  "Probe Filter Error", "Compute Unit Data Error"};
 
-		warning("%s on SCI%03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
+		warning("%s on %03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
 		printf("- ErrorCode=0x%"PRIx64" ErrorCodeExt=0x%"PRIx64" Syndrome=0x%"PRIx64"\n",
 		  s & 0xffff, (s >> 16) & 0xf, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
 		printf("- Link=%"PRIu64" Scrub=%"PRIu64" SubLink=%"PRIu64" McaStatSubCache=%"PRIu64"\n",
