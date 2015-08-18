@@ -204,9 +204,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			memset(&hdr, 0, sizeof(hdr));
 
 			// drop file extension
-			char *suffix = strrchr(hdr.name, '.');
+			char *suffix = strrchr(options->flash, '.');
 			if (suffix)
 				*suffix = '\0';
+
 			strncpy(hdr.name, options->flash, sizeof(hdr.name));
 			hdr.checksum = checksum;
 			spi_write(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
