@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "numachip.h"
+#include "spi.h"
 #include "../library/access.h"
 #include "../library/utils.h"
 #include "../platform/ipmi.h"
@@ -172,20 +173,17 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 	printf("NumaChip2 [");
 	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000); // XXX: Should probably check a chip-rev reg instead...
+	struct spi_header hdr;
 	if (is_stratixv) {
+		spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+
 		write32(IMG_PROP_TEMP, 1 << 31);
 		int temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
-
-		char buildtime[17];
-		for (unsigned i = 0; i < (sizeof(buildtime) - 1) / sizeof(uint32_t); i++)
-			*(uint32_t *)(buildtime + i * 4) = rom_read(i + IMG_PROP_STRING);
-		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
-
-		printf("Stratix, %dC, flags 0x%x, built %s, hash %07x] assigned HT%u\n", temp, rom_read(IMG_PROP_FLAGS), buildtime, rom_read(IMG_PROP_HASH) >> 8, ht);
+		printf("%dC, %s, cksum %u] assigned HT%u\n", temp, hdr.name, hdr.checksum, ht);
 		assertf(temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 
 		if (read32(FLASH_REG0) >> 28 != 0xa) {
-			warning("Non-application image detected, forcing init-only option!");
+			warning("Non-application image detected; forcing init-only option");
 			options->init_only = 1;
 		}
 	} else
@@ -195,11 +193,28 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		assertf(is_stratixv, "Flashing not supported on this platform");
 		size_t len = 0;
 		char *buf = os->read_file(options->flash, &len);
-		assertf(buf && len > 0, "Flashing requested but image not found (%s)", options->flash);
-		printf("Flashing %uMB image %s\n", len >> 20, options->flash);
-		flash(buf, len);
-		printf("Powering off");
-		ipmi->poweroff();
+		assertf(buf && len > 0, "Image %s not found", options->flash);
+
+		uint32_t checksum = lib::checksum((unsigned char *)buf, len);
+		if (hdr.checksum != checksum) {
+			printf("Flashing %uMB image %s with checksum %u\n", len >> 20, options->flash, checksum);
+			flash(buf, len);
+
+			// store filename for printing
+			memset(&hdr, 0, sizeof(hdr));
+
+			// drop file extension
+			char *suffix = strrchr(hdr.name, '.');
+			if (suffix)
+				*suffix = '\0';
+			strncpy(hdr.name, options->flash, sizeof(hdr.name));
+			hdr.checksum = checksum;
+			spi_write(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+
+			printf("Power cycling");
+			ipmi->powercycle();
+		} else
+			warning("Image already loaded");
 	}
 
 	// set local SIU SCI ID

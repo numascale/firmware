@@ -17,8 +17,7 @@
 
 #pragma once
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
+#include <stdint.h>
 
 /* Byte 2 Fundamental Memory Types */
 #define SPD_MEMTYPE_FPM         0x01

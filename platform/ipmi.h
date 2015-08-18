@@ -44,6 +44,7 @@ public:
 	IPMI(const uint16_t port_base);
 	void reset_cold(void) const;
 	void poweroff(void) const;
+	void powercycle(void) const;
 };
 
 extern IPMI *ipmi;

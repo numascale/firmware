@@ -105,3 +105,11 @@ void IPMI::poweroff(void) const
 	lib::udelay(6000000);
 	fatal("IPMI poweroff failure");
 }
+
+void IPMI::powercycle(void) const
+{
+	const uint8_t buf[] = {0, 2, 2}; // found by tracing
+	write(buf, sizeof(buf));
+	lib::udelay(6000000);
+	fatal("IPMI poweroff failure");
+}
