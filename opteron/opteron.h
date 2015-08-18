@@ -70,7 +70,7 @@ private:
 	static void platform_reset_warm(void);
 	static void cht_print(const ht_t neigh, const link_t link);
 	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
-	void optimise_linkbuffers(void);
+	void optimise_linkbuffers(const ht_t ht, const int link);
 public:
 	static const uint32_t VENDEV_MCP55     = 0x036910de;
 	static const uint32_t VENDEV_FAM10H    = 0x12001022;
