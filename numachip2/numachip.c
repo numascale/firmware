@@ -181,11 +181,6 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		int temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
 		printf("%dC, %s, cksum %u] assigned HT%u\n", temp, hdr.name, hdr.checksum, ht);
 		assertf(temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
-
-		if (read32(FLASH_REG0) >> 28 != 0xa) {
-			warning("Non-application image detected; forcing init-only option");
-			options->init_only = 1;
-		}
 	} else
 		printf("Virtex assigned HT%u\n", ht);
 
@@ -216,6 +211,11 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			ipmi->powercycle();
 		} else
 			warning("Image already loaded");
+	}
+
+	if (read32(FLASH_REG0) >> 28 != 0xa) {
+		warning("Non-application image detected; forcing init-only option");
+		options->init_only = 1;
 	}
 
 	// set local SIU SCI ID
