@@ -132,7 +132,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	val = lib::cht_read32(neigh, LINK_RETRY_CTRL);
 	lib::cht_write32(neigh, LINK_RETRY_CTRL, val &= ~(7 << 9));
 
-	if (options->flash || options->ht_slowmode)
+	if (options->ht_slowmode)
 		return;
 
 	printf("Checking HT width/freq.");
