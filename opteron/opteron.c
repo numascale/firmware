@@ -341,15 +341,14 @@ void Opteron::init(void)
 		trace_base = dram_base + dram_size - options->tracing;
 		trace_limit = trace_base + options->tracing - 1;
 		tracing_arm();
-	} else {
+	} else
 		tracing_disable();
-	}
 
 	// enable reporting of WatchDog error through MCA
 	val = read32(MC_NB_CTRL);
 	write32(MC_NB_CTRL, val | (1 << 12));
 
-	// Upon WDT, use address field for other decoding
+	// upon WDT, use address field for other decoding
 //	clear32(MC_NB_CONF_EXT, 1 << 24);
 
 	if (options->debug.northbridge)
@@ -363,7 +362,7 @@ void Opteron::init(void)
 	if (family < 0x15) {
 		val = read32(LINK_TRANS_CTRL);
 		if (val & 0x20)
-			cores++; /* Cpu1En */
+			cores++; // Cpu1En
 
 		val = read32(EXT_LINK_TRANS_CTRL);
 		for (int i = 0; i <= 3; i++)

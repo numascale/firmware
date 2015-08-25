@@ -68,7 +68,7 @@ void Node::tracing_stop(void)
 
 void Node::trim_dram_maps(void)
 {
-	// Trim nodes if over supported or requested memory config */
+	// trim nodes if over supported or requested memory config
 //	int64_t over = max((int64_t)(dram_size - options->memlimit), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
 	int64_t over = (int64_t)(dram_size - options->memlimit);
 	if (over <= 0)
@@ -79,23 +79,22 @@ void Node::trim_dram_maps(void)
 	while (over > 0) {
 		uint64_t max = 0;
 
-		// Find largest HT node
+		// find largest HT node
 		for (ht_t n = 0; n < nopterons; n++)
 			if (opterons[n]->dram_size > max)
 				max = opterons[n]->dram_size;
 
-		// Reduce largest HT node by 16MB
+		// reduce largest HT node by 16MB
 		for (Opteron *const *nb = &opterons[0]; nb < &opterons[nopterons]; nb++) {
 			if ((*nb)->dram_size == max) {
-				(*nb)->dram_size -= (1ULL << 24);
-				dram_size -= (1ULL << 24);
-				over -= (1ULL << 24);
+				(*nb)->dram_size -= 1ULL << 24;
+				dram_size -= 1ULL << 24;
+				over -= 1ULL << 24;
 				break;
 			}
 		}
 	}
 }
-
 
 // instantiated for remote nodes
 Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_LOCAL), sci(_sci), nopterons(ht)
@@ -116,7 +115,7 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 	uint32_t val = lib::cht_read32(0, Opteron::HT_NODE_ID);
 	nopterons = ((val >> 4) & 7) + 1;
 
-	// Check if last node is NC2 or not
+	// check if last node is NC2 or not
 	val = lib::cht_read32(nopterons-1, Opteron::VENDEV);
 	if (val == Numachip2::VENDEV_NC2)
 		nopterons--;
@@ -136,7 +135,7 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 	numachip = new Numachip2(sci, nc, local, master);
 	xassert(nopterons == nc);
 
-	// Add MMIO range for local CSR space
+	// add MMIO range for local CSR space
 	for (Opteron *const *nb = &opterons[0]; nb < &opterons[nopterons]; nb++) {
 		uint64_t base, limit;
 		ht_t dest;
@@ -144,7 +143,7 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 		bool lock;
 		unsigned range;
 
-		// Modify overlapping entries
+		// modify overlapping entries
 		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
 			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
 				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
@@ -154,14 +153,14 @@ Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sc
 			}
 		}
 
-		// Find highest available MMIO map entry
+		// find highest available MMIO map entry
 		for (range = 7; range > 0; range--)
 			if (!(*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock))
 				break;
 
 		xassert(range > 0);
 
-		// Add local mapping
+		// add local mapping
 		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, numachip->ht, 0);
 	}
 

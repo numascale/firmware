@@ -355,13 +355,12 @@ void E820::test(void)
 
 		do {
 			left = os->memmap_entry(&base, &length, &type);
-			if (options->debug.e820)
-				printf("\n%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
-			if (type == RAM)
-				test_range(base, base + length, phase);
 
 			if (options->debug.e820)
-				printf("\n");
+				printf("\n%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
+
+			if (type == RAM)
+				test_range(base, base + length, phase);
 
 			// check every ~4s
 			uint64_t now = lib::rdtscll();
