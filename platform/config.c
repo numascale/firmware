@@ -220,7 +220,7 @@ struct Config::node *Config::find(const sci_t sci)
 		if (nodes[n].sci == sci)
 			return &nodes[n];
 
-	fatal("Failed to find SCI%03x in configuration", sci);
+	fatal("Failed to find %03x in configuration", sci);
 }
 
 Config::Config(const char *filename)
@@ -253,7 +253,7 @@ Config::Config(const char *filename)
 			if (nodes[i].uuid != 0xffffffff)
 				printf("UUID %08X, ", nodes[i].uuid);
 
-			printf("SCI%03x, ", nodes[i].sci);
+			printf("%03x, ", nodes[i].sci);
 			if (nodes[i].partition)
 				printf("partition %u\n", nodes[i].partition);
 			else
@@ -316,5 +316,5 @@ Config::Config(const char *filename)
 		printf("; partition %u", local_node->partition);
 	else
 		printf("; observer");
-	printf("; SCI%03x; %s\n", local_node->sci, local_node->master ? "master" : "slave");
+	printf("; %03x; %s\n", local_node->sci, local_node->master ? "master" : "slave");
 }

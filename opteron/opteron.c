@@ -103,19 +103,19 @@ void Opteron::check(void)
 
 	uint32_t v = read32(MC_NB_DRAM);
 	if (v & 0xff) { // looks like bits 7:0 only are usable
-		warning("DRAM machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		warning("DRAM machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_DRAM, 0);
 	}
 
 	v = read32(MC_NB_LINK);
 	if (v & 0xfff) {
-		warning("HT Link machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		warning("HT Link machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_LINK, 0);
 	}
 
 	v = read32(MC_NB_L3C);
 	if (v & 0xfff) {
-		warning("L3 Cache machine check 0x%08x on SCI%03x#%u", v, sci, ht);
+		warning("L3 Cache machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_L3C, 0);
 	}
 }
@@ -462,10 +462,10 @@ Opteron::Opteron(const sci_t _sci, const ht_t _ht, const bool _local):
 		write32(reg, 0);
 
 	if (options->debug.maps) {
-		printf("DRAM ranges on SCI%03x#%d:\n", sci, ht);
+		printf("DRAM ranges on %03x#%d:\n", sci, ht);
 		for (unsigned range = 0; range < 8; range++)
 			drammap.print(range);
-		printf("MMIO ranges on SCI%03x#%d:\n", sci, ht);
+		printf("MMIO ranges on %03x#%d:\n", sci, ht);
 		for (unsigned range = 0; range < mmiomap->ranges; range++)
 			mmiomap->print(range);
 	}

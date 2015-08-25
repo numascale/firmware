@@ -95,15 +95,15 @@ ht_t Numachip2::probe(const sci_t sci)
 
 	if (vendev != Opteron::VENDEV_FAM10H &&
 	    vendev != Opteron::VENDEV_FAM15H)
-		fatal("Expected Opteron at SCI%03x but found 0x%08x", sci, vendev);
+		fatal("Expected Opteron at %03x but found 0x%08x", sci, vendev);
 
 	uint8_t val = (lib::mcfg_read32(sci, 0, 24 + 0, Opteron::HT_NODE_ID >> 12, Opteron::HT_NODE_ID & 0xfff) >> 4) & 7;
 
 	vendev = lib::mcfg_read32(sci, 0, 24 + val, VENDEV >> 12, VENDEV & 0xfff);
-	assertf(vendev == VENDEV_NC2, "Expected Numachip2 at SCI%03x#%d but found 0x%08x", sci, val, vendev);
+	assertf(vendev == VENDEV_NC2, "Expected Numachip2 at %03x#%d but found 0x%08x", sci, val, vendev);
 
 	uint32_t remote_sci = lib::mcfg_read32(sci, 0, 24 + val, SIU_NODEID >> 12, SIU_NODEID & 0xfff) & ~(1<<31); // mask out bit31 which is CRC enable bit
-	assertf(remote_sci == sci, "Reading from SCI%03x gives SCI%03x\n", sci, remote_sci);
+	assertf(remote_sci == sci, "Reading from %03x gives %03x\n", sci, remote_sci);
 
 	return val;
 }
@@ -114,9 +114,9 @@ ht_t Numachip2::probe_slave(const sci_t sci)
 
 	if (ht) {
 		uint32_t control = lib::mcfg_read32(sci, 0, 24 + ht, INFO >> 12, INFO & 0xfff);
-		assertf(!(control & ~(1 << 29)), "Unexpected control value on SCI%03x of 0x%08x", sci, control);
+		assertf(!(control & ~(1 << 29)), "Unexpected control value on %03x of 0x%08x", sci, control);
 		if (control == 1 << 29) {
-			printf("Found SCI%03x\n", sci);
+			printf("Found %03x\n", sci);
 			// tell slave to proceed
 			lib::mcfg_write32(sci, 0, 24 + ht, INFO >> 12, INFO & 0xfff, 3 << 29);
 			return ht;

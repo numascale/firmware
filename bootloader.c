@@ -82,7 +82,7 @@ static void scan(void)
 		(*node)->dram_end = dram_top - 1;
 
 		if (options->debug.maps)
-			printf("SCI%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=0x%"PRIx64"\n",
+			printf("%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=0x%"PRIx64"\n",
 				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 }
@@ -212,7 +212,7 @@ static void setup_gsm(void)
 			ht_t ht = Numachip2::probe(config->nodes[n].sci);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\nSCI%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to SCI%03x", config->nodes[n].sci, base, limit, dest);
+					printf("\n%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", config->nodes[n].sci, base, limit, dest);
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -828,7 +828,7 @@ static void wait_status(void)
 			continue;
 
 		if (!config->nodes[n].seen)
-			printf(" SCI%03x/%s", config->nodes[n].sci, config->nodes[n].hostname);
+			printf(" %03x/%s", config->nodes[n].sci, config->nodes[n].hostname);
 	}
 
 	printf("\n");
@@ -989,7 +989,7 @@ static void wait_for_slaves(void)
 						   (rsp->state == RSP_FABRIC_NOT_READY) ||
 						   (rsp->state == RSP_FABRIC_NOT_OK)) {
 						if (!config->nodes[n].seen) {
-							printf("SCI%03x/%s failed with %s; restarting synchronisation\n",
+							printf("%03x/%s failed with %s; restarting synchronisation\n",
 							       rsp->sci, config->nodes[n].hostname, node_state_name[rsp->state]);
 							do_restart = 1;
 							config->nodes[n].seen = 1;
@@ -1221,7 +1221,7 @@ int main(const int argc, char *const argv[])
 		// read from master after mapped
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 
-		printf("Waiting for SCI%03x/%s", config->master->sci, config->master->hostname);
+		printf("Waiting for %03x/%s", config->master->sci, config->master->hostname);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
 		// wait for 'ready'
@@ -1246,8 +1246,8 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "\nThis server SCI%03x/%s is part of a %u-server NumaConnect2 system\n"
-		       "Refer to the console on SCI%03x/%s", config->local_node->sci, config->local_node->hostname,
+		printf(BANNER "\nThis server %03x/%s is part of a %u-server NumaConnect2 system\n"
+		       "Refer to the console on %03x/%s", config->local_node->sci, config->local_node->hostname,
 		       nnodes, config->master->sci, config->master->hostname);
 
 		caches(0);

@@ -306,7 +306,7 @@ namespace lib
 	{
 		uint8_t ret;
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
+			printf("MCFG:%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		xassert(reg < 0xfff);
 
 		ret = mem_read8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
@@ -319,7 +319,7 @@ namespace lib
 	{
 		uint16_t ret;
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
+			printf("MCFG:%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		xassert(!(reg & 1) && reg < 0xfff);
 
 		ret = mem_read16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
@@ -332,7 +332,7 @@ namespace lib
 	{
 		uint32_t ret;
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
+			printf("MCFG:%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		xassert(!(reg & 3) && reg < 0xfff);
 
 		ret = mem_read32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
@@ -346,7 +346,7 @@ namespace lib
 	{
 		uint64_t ret;
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
+			printf("MCFG:%03x:%02x:%02x.%x %03x -> ", sci, bus, dev, func, reg);
 		xassert(!(reg & 7) && reg < 0xfff);
 
 		ret = mem_read64(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg));
@@ -358,7 +358,7 @@ namespace lib
 	void mcfg_write8(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint8_t val)
 	{
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
+			printf("MCFG:%03x:%02x:%02x.%x %03x <- %02x", sci, bus, dev, func, reg, val);
 		xassert(reg < 0xfff);
 
 		mem_write8(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
@@ -369,7 +369,7 @@ namespace lib
 	void mcfg_write16(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint16_t val)
 	{
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
+			printf("MCFG:%03x:%02x:%02x.%x %03x <- %04x", sci, bus, dev, func, reg, val);
 		xassert(!(reg & 1) && reg < 0xfff);
 
 		mem_write16(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
@@ -380,7 +380,7 @@ namespace lib
 	void mcfg_write32(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint32_t val)
 	{
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
+			printf("MCFG:%03x:%02x:%02x.%x %03x <- %08x", sci, bus, dev, func, reg, val);
 		xassert(!(reg & 3) && reg < 0xfff);
 
 		mem_write32(mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg), val);
@@ -391,7 +391,7 @@ namespace lib
 	void mcfg_write64_split(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t func, const uint16_t reg, const uint64_t val)
 	{
 		if (options->debug.access & 1)
-			printf("MCFG:SCI%03x:%02x:%02x.%x %03x <- %016"PRIx64, sci, bus, dev, func, reg, val);
+			printf("MCFG:%03x:%02x:%02x.%x %03x <- %016"PRIx64, sci, bus, dev, func, reg, val);
 		xassert(!(reg & 7) && reg < 0xfff);
 
 		const uint64_t addr = mcfg_base(sci) | PCI_MMIO_CONF(bus, dev, func, reg);
