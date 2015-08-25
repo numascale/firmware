@@ -324,6 +324,18 @@ void Opteron::init(void)
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
 	dram_size = dram_limit - dram_base + 1;
 
+	// if slave, subtract and disable MMIO hole
+	if (!local) {
+		val = read32(DRAM_HOLE);
+		if (val & 1) {
+			dram_size -= (val & 0xff00) << (23 - 7);
+			write32(DRAM_HOLE, val & ~0xff81);
+		}
+	}
+
+	// round down DRAM size to 2GB to prevent holes with <2GB alignment for kernel
+	dram_size &= ~((2ULL << 30) - 1);
+
 	// set up buffer for HT tracing
 	if (options->tracing) {
 		trace_base = dram_base + dram_size - options->tracing;
@@ -345,15 +357,6 @@ void Opteron::init(void)
 
 	if (options->debug.nowdt)
 		disable_nbwdt();
-
-	// if slave, subtract and disable MMIO hole
-	if (!local) {
-		val = read32(DRAM_HOLE);
-		if (val & 1) {
-			dram_size -= (val & 0xff00) << (23 - 7);
-			write32(DRAM_HOLE, val & ~0xff81);
-		}
-	}
 
 	// detect number of cores
 	cores = 1;
