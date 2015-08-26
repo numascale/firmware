@@ -181,16 +181,16 @@ void Numachip2::fabric_routing(void)
 	// default route is to link 7 to trap unexpected behaviour
 	memset(xbar_routes, 0xff, sizeof(xbar_routes));
 
+	printf("Routing:");
 	for (unsigned node = 0; node < config->nnodes; node++) {
 		uint8_t out = lcs[0]->route1(sci, config->nodes[node].sci);
-		printf("ROUTING: src=%03x, dst=%03x, port=%d\n", sci, config->nodes[node].sci, out);
+		printf(" %03x:%u->%03x", sci, out, config->nodes[node].sci);
 		xbar_route(config->nodes[node].sci, out);
 
 		foreach_lc(lc)
 			(*lc)->add_route(config->nodes[node].sci, out);
 	}
-
-	printf("Writing routes (%d chunks)", chunk_lim + 1);
+	printf("\n");
 
 	// SIU routing table
 	for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
@@ -202,8 +202,6 @@ void Numachip2::fabric_routing(void)
 
 	foreach_lc(lc)
 		(*lc)->commit();
-
-	printf("\n");
 }
 
 void Numachip2::fabric_init(void)
