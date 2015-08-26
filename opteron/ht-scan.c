@@ -124,9 +124,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	bool reboot = 0;
 	uint32_t val;
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
-	printf("Found %s link to NC on HT%u.%u\n", ganged ? "ganged" : "unganged", neigh, link);
-
-	cht_print(neigh, link);
+	printf("HT %sganged @ ", ganged ? "" : "un");
 
 	// disable additional CRC insertion, as it causes HT failure on Numachip2
 	val = lib::cht_read32(neigh, LINK_RETRY_CTRL);
@@ -135,47 +133,9 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	if (options->ht_slowmode)
 		return;
 
-	printf("Checking HT width/freq.");
-
-	printf("+");
-	val = lib::cht_read32(nc, Numachip2::LINK_CTRL);
-	printf(".");
-
-	/* Optimize width (16b), if option to disable this is not set */
-	if ((val >> 16) == 0x11) {
-		if ((val >> 24) != 0x11) {
-			printf("<NC width>");
-			lib::cht_write32(nc, Numachip2::LINK_CTRL, (val & 0x00ffffff) | 0x11000000);
-			reboot = 1;
-		}
-
-		/* Gang link when appropriate, as the BIOS may not */
-		printf("*");
-		val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
-		printf(".");
-		if ((val & 1) == 0) {
-			printf("<ganging>");
-			lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 1);
-			reboot = 1;
-		}
-
-		printf(".");
-		val = lib::cht_read32(neigh, LINK_CTRL + link * 0x20);
-		printf(".");
-
-		if ((val >> 24) != 0x11) {
-			printf("<CPU width>");
-			lib::cht_write32(neigh, LINK_CTRL + link * 0x20, (val & 0x00ffffff) | 0x11000000);
-			reboot = 1;
-		}
-	}
-
 	/* Optimize link frequency, if option to disable this is not set */
 	uint8_t max_supported = 0;
-
-	printf("+");
 	val = lib::cht_read32(nc, Numachip2::LINK_FREQ_REV);
-	printf(".");
 
 	// find maximum supported frequency
 	for (int i = 0; i < 16; i++)
@@ -183,7 +143,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 			max_supported = i;
 
 	if (((val >> 8) & 0xf) != max_supported) {
-		printf("<NC freq=%d>", max_supported);
+		printf("200MHz");
 		lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
 
 		// set HT phy Post1 -2.5dB deemphasis to compensate for attenuation
@@ -199,16 +159,39 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 #endif
 
 		reboot = 1;
-	}
+	} else
+		printf("1600MHz");
 
-	printf(".");
+	/* Optimize width (16b), if option to disable this is not set */
+	val = lib::cht_read32(nc, Numachip2::LINK_CTRL);
+	if ((val >> 16) == 0x11) {
+		printf("/8b");
+
+		if ((val >> 24) != 0x11) {
+			lib::cht_write32(nc, Numachip2::LINK_CTRL, (val & 0x00ffffff) | 0x11000000);
+			reboot = 1;
+		}
+
+		/* Gang link when appropriate, as the BIOS may not */
+		val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
+		if ((val & 1) == 0) {
+			lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 1);
+			reboot = 1;
+		}
+
+		val = lib::cht_read32(neigh, LINK_CTRL + link * 0x20);
+		if ((val >> 24) != 0x11) {
+			lib::cht_write32(neigh, LINK_CTRL + link * 0x20, (val & 0x00ffffff) | 0x11000000);
+			reboot = 1;
+		}
+	} else
+		printf("/16b");
+
 	val = lib::cht_read32(neigh, LINK_FREQ_REV + link * 0x20);
 	uint32_t val2 = lib::cht_read32(neigh, LINK_FREQ_EXT + link * 0x20);
 	uint8_t freq = ((val >> 8) & 0xf) | ((val2 & 1) << 4);
-	printf(".");
 
 	if (freq != max_supported) {
-		printf("<CPU freq=%d>", max_supported);
 		lib::cht_write32(neigh, LINK_FREQ_REV + link * 0x20, (val & ~0xf00) | ((max_supported & 0xf) << 8));
 		lib::cht_write32(neigh, LINK_FREQ_EXT + link * 0x20, (val & ~1) | (max_supported >> 4));
 
@@ -255,19 +238,14 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 
 	/* If HT3, enable scrambling and retry mode */
 	if (max_supported >= 7) {
-		printf("*");
 		val = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4);
-		printf(".");
 		if ((val & 8) == 0) {
-			printf("<scrambling>");
 			lib::cht_write32(neigh, LINK_EXT_CTRL + link * 4, val | 8);
 			reboot = 1;
 		}
-		printf("*");
+
 		val = lib::cht_read32(neigh, LINK_RETRY + link * 4);
-		printf(".");
 		if ((val & 1) == 0) {
-			printf("<retry>");
 			lib::cht_write32(neigh, LINK_RETRY + link * 4, val | 1);
 			reboot = 1;
 		}
