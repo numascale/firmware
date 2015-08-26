@@ -428,7 +428,7 @@ static void boot_core(const uint32_t apicid, const uint32_t vector)
 
 static void setup_cores_observer(void)
 {
-	printf("APICs:");
+	printf("APICs");
 
 	for (unsigned n = 1; n < acpi->napics; n++) {
 		trampoline_sem_init(1);
@@ -481,7 +481,7 @@ static void setup_cores(void)
 	lib::critical_enter();
 
 	// setup cores
-	printf("APICs:");
+	printf("APICs");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		// set correct MCFG base per node
 		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
@@ -489,7 +489,6 @@ static void setup_cores(void)
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
 			(*node)->apics[n] = ((uint32_t)(*node)->sci << 8) | acpi->apics[n];
-			printf(" 0x%05x", (*node)->apics[n]);
 
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
