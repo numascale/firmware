@@ -53,6 +53,12 @@ void Node::check(void)
 		numachip->check();
 }
 
+void Node::tracing_arm(void)
+{
+	for (ht_t n = 0; n < nopterons; n++)
+		opterons[n]->tracing_arm();
+}
+
 void Node::tracing_start(void)
 {
 	asm volatile("wbinvd");

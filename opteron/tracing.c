@@ -42,8 +42,6 @@ void Opteron::tracing_start(void)
 	write32(TRACE_STOP, 1 | (1 << 29)/* | (1 << 4) | (1 << 8) | (1 << 12) | (1 << 16)*/);
 	write32(TRACE_CAPTURE, (1 << 31) | (1 << 14) | (0x3f << 24) | (0x3f << 16));
 
-	tracing_arm();
-
 	write32(TRACE_START, 1 << 31);
 }
 

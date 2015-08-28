@@ -378,6 +378,15 @@ static void copy_inherit(void)
 	}
 }
 
+static void tracing_arm(void)
+{
+	if (!options->tracing)
+		return;
+
+	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+		(*node)->tracing_arm();
+}
+
 static void tracing_start(void)
 {
 	if (!options->tracing)
@@ -1297,6 +1306,7 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
+	tracing_arm();
 	if (!options->fastboot)
 		test_cores();
 	finished(options->next_label);
