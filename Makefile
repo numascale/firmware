@@ -17,10 +17,6 @@ all: bootloader.c32
 upload: bootloader.c32
 	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
 
-.PHONY: reset
-reset:
-	ssh ns /net/numastore/storage/software/local-linux-x86/numascale/bin/ipmi loop333536-ipmi chassis power cycle
-
 .PHONY: check
 check:
 	cppcheck --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
