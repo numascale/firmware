@@ -33,7 +33,7 @@
 
 void ACPI::shadow_bios(void)
 {
-	printf("Shadowing BIOS...");
+	printf("Shadowing BIOS");
 	int *area = (int *)malloc(SHADOW_LEN);
 	xassert(area);
 	memcpy(area, (void *)SHADOW_BASE, SHADOW_LEN);
@@ -50,7 +50,7 @@ void ACPI::shadow_bios(void)
 	lib::wrmsr(MSR_SYSCFG, val | (1 << 18));
 	memcpy((void *)SHADOW_BASE, area, SHADOW_LEN);
 	free(area);
-	printf("done\n");
+	printf("\n");
 	bios_shadowed = 1;
 }
 

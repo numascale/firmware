@@ -283,82 +283,55 @@ static void completion_timeout(const sci_t sci, const int bus, const int dev, co
 
 static void stop_ohci(const sci_t sci, const int bus, const int dev, const int fn)
 {
-	uint32_t val, bar0;
-	printf("OHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
-	bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
-	if ((bar0 == 0xffffffff) || (bar0 == 0)) {
-		printf("BAR not configured\n");
+	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
+	if ((bar0 == 0xffffffff) || (bar0 == 0))
 		return;
+
+	uint32_t val = lib::mem_read32(bar0 + HcControl);
+	if (!(val & OHCI_CTRL_IR))
+		return;
+
+	// interrupt routing enabled, we must request change of ownership
+
+	/* This timeout is arbitrary.  we make it long, so systems
+	 * depending on usb keyboards may be usable even if the
+	 * BIOS/SMM code seems pretty broken
+	 */
+	uint32_t temp = 100;	/* Arbitrary: five seconds */
+	lib::mem_write32(bar0 + HcInterruptEnable, OHCI_INTR_OC); /* Enable OwnershipChange interrupt */
+	lib::mem_write32(bar0 + HcCommandStatus, OHCI_OCR); /* Request OwnershipChange */
+
+	while (lib::mem_read32(bar0 + HcControl) & OHCI_CTRL_IR) {
+		lib::udelay(100);
+
+		if (--temp == 0)
+			fatal("OHCI controller @ %02x:%02x.%x handover timed out", bus, dev, fn);
 	}
 
+	// shutdown
+	lib::mem_write32(bar0 + HcInterruptDisable, OHCI_INTR_MIE);
 	val = lib::mem_read32(bar0 + HcControl);
-	if (val & OHCI_CTRL_IR) { /* Interrupt routing enabled, we must request change of ownership */
-		uint32_t temp;
-		/* This timeout is arbitrary.  we make it long, so systems
-		 * depending on usb keyboards may be usable even if the
-		 * BIOS/SMM code seems pretty broken
-		 */
-		temp = 100;	/* Arbitrary: five seconds */
-		lib::mem_write32(bar0 + HcInterruptEnable, OHCI_INTR_OC); /* Enable OwnershipChange interrupt */
-		lib::mem_write32(bar0 + HcCommandStatus, OHCI_OCR); /* Request OwnershipChange */
-
-		while (lib::mem_read32(bar0 + HcControl) & OHCI_CTRL_IR) {
-			lib::udelay(100);
-
-			if (--temp == 0) {
-				printf("legacy handover timed out\n");
-				return;
-			}
-		}
-
-		/* Shutdown */
-		lib::mem_write32(bar0 + HcInterruptDisable, OHCI_INTR_MIE);
-		val = lib::mem_read32(bar0 + HcControl);
-		val &= OHCI_CTRL_RWC;
-		lib::mem_write32(bar0 + HcControl, val);
-		/* Flush the writes */
-		val = lib::mem_read32(bar0 + HcControl);
-		printf("legacy handover succeeded\n");
-	} else {
-		printf("legacy support not enabled\n");
-	}
-
-	val = lib::mem_read32(bar0 + HcRevision);
-
-	if (val & (1 << 8)) { /* Legacy emulation is supported */
-		val = lib::mem_read32(bar0 + HceControl);
-
-		if (val & (1 << 0)) {
-			printf("legacy support enabled\n");
-		}
-	}
+	val &= OHCI_CTRL_RWC;
+	lib::mem_write32(bar0 + HcControl, val);
+	// flush the writes
+	val = lib::mem_read32(bar0 + HcControl);
 }
 
 static void stop_ehci(const uint16_t sci, const int bus, const int dev, const int fn)
 {
-	printf("EHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
 	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
-
-	if (bar0 == 0) {
-		printf("BAR not configured\n");
+	if (bar0 == 0)
 		return;
-	}
 
 	/* Get EHCI Extended Capabilities Pointer */
 	uint32_t ecp = (lib::mem_read32(bar0 + 0x8) >> 8) & 0xff;
-
-	if (ecp == 0) {
-		printf("extended capabilities absent\n");
+	if (ecp == 0)
 		return;
-	}
 
 	/* Check legacy support register shows BIOS ownership */
 	uint32_t legsup = lib::mcfg_read32(sci, bus, dev, fn, ecp);
-
-	if ((legsup & 0x10100ff) != 0x0010001) {
-		printf("legacy support not enabled\n");
+	if ((legsup & 0x10100ff) != 0x0010001)
 		return;
-	}
 
 	/* Set OS owned semaphore */
 	legsup |= 1 << 24;
@@ -369,13 +342,11 @@ static void stop_ehci(const uint16_t sci, const int bus, const int dev, const in
 		lib::udelay(100);
 		legsup = lib::mcfg_read32(sci, bus, dev, fn, ecp);
 
-		if ((legsup & (1 << 16)) == 0) {
-			printf("legacy handover succeeded\n");
+		if ((legsup & (1 << 16)) == 0)
 			return;
-		}
 	} while (--limit);
 
-	printf("legacy handover timed out\n");
+	fatal("EHCI controller @ %02x:%02x.%x handover timed out", bus, dev, fn);
 }
 
 static void stop_xhci(const uint16_t sci, const int bus, const int dev, const int fn)

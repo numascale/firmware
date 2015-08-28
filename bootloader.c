@@ -1226,10 +1226,14 @@ int main(const int argc, char *const argv[])
 
 	// slaves
 	if (!config->local_node->master) {
-		// read from master after mapped
-		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
+		os->cleanup();
+		if (!options->handover_acpi) // handover performed earlier
+			acpi->handover();
+		handover_legacy(local_node->sci);
 
+		// read from master after mapped
 		printf("Waiting for %03x/%s", config->master->sci, config->master->hostname);
+		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
 		// wait for 'ready'
@@ -1239,11 +1243,6 @@ int main(const int argc, char *const argv[])
 		}
 
 		printf("\n");
-		os->cleanup();
-		if (!options->handover_acpi) // handover performed earlier
-			acpi->handover();
-		handover_legacy(local_node->sci);
-
 		local_node->iohub->smi_disable();
 		pci_disable_all(local_node->sci);
 
@@ -1254,7 +1253,7 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "\nThis server %03x/%s is part of a %u-server NumaConnect2 system\n"
+		printf(BANNER "This server %03x/%s is part of a %u-server NumaConnect2 system\n"
 		       "Refer to the console on %03x/%s", config->local_node->sci, config->local_node->hostname,
 		       nnodes, config->master->sci, config->master->hostname);
 

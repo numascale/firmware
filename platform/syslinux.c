@@ -191,7 +191,7 @@ void OS::cleanup(void)
 	static com32sys_t rm;
 	rm.eax.w[0] = 0x000C;
 	rm.edx.w[0] = 0x0000;
-	printf("Unloading bootloader stack...");
+	printf("Unloading bootloader stack");
 	__intcall(0x22, &rm, NULL);
-	printf("done\n");
+	printf("\n");
 }
