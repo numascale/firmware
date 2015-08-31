@@ -25,7 +25,6 @@
 IPMI::IPMI(const uint16_t port_base):
 	port_data(port_base), port_cmdstat(port_base + 1)
 {
-	printf("IPMI KCS interface detected at 0x%x\n", port_data);
 }
 
 void IPMI::write(const uint8_t *cmd, const size_t len) const
