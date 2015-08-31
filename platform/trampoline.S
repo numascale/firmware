@@ -159,7 +159,7 @@ test:
 	// setup FS
 	movl	$TEST_BASE_HIGH, %edx
 	movl	$TEST_BASE_LOW, %eax
-	mov	$MSR_FS_BASE, %ecx
+	mov		$MSR_FS_BASE, %ecx
 	wrmsr
 
 	mov	$1, %ebx // seed
@@ -170,42 +170,16 @@ test:
 	add	$12345, %eax
 	mov	%eax, %ebx
 
-	andl	$(TEST_SIZE - 1) & ~3, %eax // size and align
+	andl    $~((1 << 27) - 1), %eax // use granularity of 128MB, align load
+	andl    $(1 << (38 - 32)) - 1, %edx // limit upper bits to 256GB
+	add     $1, %edx // ensure starts from 4GB
+	mov $4, %edx
 
 	// generate 64-bit load using FS
-	movl	%fs:(%eax), %edi
-	xorl	$0xffffffff, %fs:(%eax)
-
-	// Check data
-	shr	$2, %eax
-
-	// hash32 function
-	mov	%eax,%edx
-	shl	$0xc,%edx
-	lea	0x7ed55d16(%edx,%eax,1),%eax
-	mov	%eax,%edx
-	shr	$0x13,%edx
-	xor	$0xc761c23c,%eax
-	xor	%edx,%eax
-	imul	$0x21,%eax,%edx
-	lea	0x165667b1(%edx),%eax
-	shl	$0x9,%eax
-	sub	$0x160733e3,%edx
-	xor	%edx,%eax
-	lea	-0x28fb93b(%eax),%edx
-	lea	(%edx,%eax,8),%eax
-	mov	%eax,%edx
-	shr	$0x10,%edx
-	xor	$0xb55a4f09,%eax
-	xor	%edx,%eax
-	// end hash32 function
-
-	cmpl	%edi, %eax
-	je	2f
-	xorl	$0xffffffff, %edi
-	cmpl	%edi, %eax
-	je	2f
-	INC_ERROR() // increment error counter
+	mov		$MSR_FS_BASE, %ecx
+	wrmsr
+	movl	%fs:(0), %edi
+	xorl	$0xffffffff, %fs:(0)
 
 2:	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
