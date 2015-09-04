@@ -184,6 +184,12 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	} else
 		printf("Virtex assigned HT%u\n", ht);
 
+	printf("Testing CSR response");
+	for (unsigned i = 0x0000; i < 0x4000; i += 4)
+//		printf("0x%x=0x%08x\n", i, read32(i));
+		read32(i);
+	printf("\n");
+
 	if (options->flash) { // flashing supported on Altera only
 		assertf(is_stratixv, "Flashing not supported on this platform");
 		size_t len = 0;
