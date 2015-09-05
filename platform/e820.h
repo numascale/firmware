@@ -37,7 +37,6 @@ private:
 	static const char *names[10];
 	static const uint64_t PATTERN = 0xa0a1a2a3a4a5a6a7ULL;
 
-	struct e820entry *position(const uint64_t base);
 	void insert(struct e820entry *pos) nonnull;
 	void remove(struct e820entry *start, struct e820entry *end) nonnull;
 	bool overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, const uint64_t b2) const;
@@ -51,6 +50,7 @@ public:
 	static const uint64_t NVS = 4;
 	static const uint64_t UNUSABLE = 5;
 
+	struct e820entry *position(const uint64_t base);
 	E820(void);
 	void dump(void);
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);

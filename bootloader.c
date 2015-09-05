@@ -337,11 +337,15 @@ static void remap(void)
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
 		add(**node);
 
+	// trim e820 map to first node, as DRAM top may have been trimmed
+	struct e820entry *top = e820->position(nodes[0]->dram_end);
+	top->length = nodes[0]->dram_end + 1 - top->base;
+
 	// 8. update e820 map
 	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			// master always first in array
-			if (!(node == &nodes[0]))
+			if (node != &nodes[0])
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 
 			if (options->tracing) {
