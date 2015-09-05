@@ -24,28 +24,16 @@
 
 void Numachip2::dram_check(void) const
 {
-	uint32_t val = read32(NCACHE_CTRL);
-	if (val & (1 << 7))
+	uint32_t val = read32(MCTR_ECC_STATUS);
+	if (val & (1 << 0))
 		warning("Correctable ECC issue occurred on Numachip at %03x", sci);
 
-	assertf(!(val & (1 << 8)), "Uncorrectable ECC issue occurred on Numachip at %03x", sci);
+	assertf(!(val & (1 << 1)), "Uncorrectable ECC issue occurred on Numachip at %03x", sci);
 }
 
 void Numachip2::dram_reset(void)
 {
-	uint32_t mtag_ctrl = read32(MTAG_BASE + TAG_CTRL);
-	uint32_t ctag_ctrl = read32(CTAG_BASE + TAG_CTRL);
-	uint32_t ncache_ctrl = read32(NCACHE_CTRL);
-
-	// assert soft-reset from all three users of MCTR
-	write32(MTAG_BASE + TAG_CTRL, mtag_ctrl | (1<<31));
-	write32(CTAG_BASE + TAG_CTRL, ctag_ctrl | (1<<31));
-	write32(NCACHE_CTRL, ncache_ctrl | (1<<31));
-
-	// release soft-reset from all three users of MCTR
-	write32(MTAG_BASE + TAG_CTRL, mtag_ctrl & ~(1<<31));
-	write32(CTAG_BASE + TAG_CTRL, ctag_ctrl & ~(1<<31));
-	write32(NCACHE_CTRL, ncache_ctrl & ~(1<<31));
+	write32(MCTR_PHY_STATUS, 1);
 	if (options->debug.mctr)
 		printf("<mctr PHY reset>");
 }
@@ -55,7 +43,7 @@ void Numachip2::dram_init(void)
 	int i;
 
 	printf("DRAM init: ");
-#if 0
+#if 1
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
@@ -71,14 +59,15 @@ void Numachip2::dram_init(void)
 	printf("%uGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
 	       spd_eeprom.mpart[0] ? (char *)spd_eeprom.mpart : "unknown");
 
+	// make sure Function3 MCTR CSR is available (it's not on older images)
+	assertf(read32(0x3000) == 0x07031b47, "MCTR CSR Block not available");
+
 	bool errors;
 
 	do {
-		dram_reset();
-
 		// wait for phy init done; shared among all ports
 		for (i = dram_training_period; i > 0; i--) {
-			bool allup = read32(MTAG_BASE + TAG_CTRL) & (1 << 6);
+			bool allup = read32(MCTR_PHY_STATUS) & (1 << 24);
 			// exit early if all up
 			if (allup)
 				break;
@@ -90,6 +79,7 @@ void Numachip2::dram_init(void)
 			if (options->debug.mctr)
 				printf("<mctr PHY not up>");
 			errors = 1;
+			dram_reset();
 			continue;
 		}
 
@@ -140,12 +130,7 @@ void Numachip2::dram_init(void)
 		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
 	}
 
-#ifdef BROKEN
-	uint32_t val = read32(MTAG_BASE + TAG_CTRL);
-	assertf(!(val & (1 << 8)), "Uncorrectable ECC errors detected on NumaConnect DIMM");
-	if (val & (1 << 7))
-		warning("Correctable ECC errors detected on NumaConnect DIMM");
-#endif
+	dram_check();
 
 #ifdef BROKEN
 	const uint64_t hosttotal = e820->memlimit();

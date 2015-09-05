@@ -177,6 +177,9 @@ public:
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_EVENTSTAT     = 0x2308;
 	static const reg_t SIU_XBAR_TABLE_SIZE = 0x40;
+	static const reg_t MCTR_PHY_STATUS   = 0x3810;
+	static const reg_t MCTR_ECC_CONTROL  = 0x3CC0;
+	static const reg_t MCTR_ECC_STATUS   = 0x3CC4;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
