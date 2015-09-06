@@ -97,10 +97,8 @@ void Numachip2::dram_init(void)
 
 	// wait for memory init done
 	printf("<zeroing");
-	while (!(read32(MTAG_BASE + TAG_CTRL) & (1 << 1)))
+	while (read32(MTAG_BASE + TAG_CTRL) & 1)
 		cpu_relax();
-
-	write32(MTAG_BASE + TAG_CTRL, 0);
 	printf(">");
 
 	switch (total) {
