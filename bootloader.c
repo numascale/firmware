@@ -1142,6 +1142,16 @@ static void wait_for_master(void)
 	}
 }
 
+static void test_map(void)
+{
+	const uint64_t stride = 1ULL << 20;
+
+	printf("Testing memory map");
+	for (uint64_t pos = 0; pos < dram_top + stride * 16; pos += stride)
+		lib::mem_read32(pos);
+	printf("\n");
+}
+
 int main(const int argc, char *const argv[])
 {
 	os = new OS(); // needed first for console access
@@ -1316,5 +1326,6 @@ int main(const int argc, char *const argv[])
 	tracing_arm();
 	if (!options->fastboot)
 		test_cores();
+	test_map();
 	finished(options->next_label);
 }
