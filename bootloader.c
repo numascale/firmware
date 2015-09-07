@@ -91,14 +91,11 @@ static void add(const Node &node)
 {
 	unsigned range;
 
-	uint64_t vga_base = Opteron::MMIO_VGA_BASE & ~((1 << Numachip2::MMIO32_ATT_SHIFT) - 1);
-	uint64_t vga_limit = Opteron::MMIO_VGA_LIMIT | ((1 << Numachip2::MMIO32_ATT_SHIFT) - 1);
-
 	// 7. setup MMIO32 ATT to master
-	node.numachip->mmioatt.range(vga_base, vga_limit, local_node->sci);
-	node.numachip->mmioatt.range(lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->sci);
+	// forward everything for now, even regions that map to dram (in case of non-coherent accesses to dram)
+	node.numachip->mmioatt.range(0, 0xffffffff, local_node->sci);
 
-	// 8. forward VGA and MMIO32 regions to master
+	// 8. set Opteron maps to forward VGA and MMIO32 regions to NumaChip (which then forwards according to MMIO32 ATT)
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		range = 0;
 		(*nb)->mmiomap->add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
