@@ -17,6 +17,7 @@
 
 #include "../library/access.h"
 #include "opteron.h"
+#include "../bootloader.h"
 #include "sr56x0.h"
 
 #define __STDC_FORMAT_MACROS
@@ -111,7 +112,8 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 
 void SR56x0::limits(const uint64_t limit)
 {
-	printf("Setting limits on %03x IOH to 0x%"PRIx64, sci, limit);
+	if (options->debug.maps)
+		printf("Setting limits on %03x IOH to 0x%"PRIx64, sci, limit);
 	xassert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
 
 	// limit to HyperTransport range

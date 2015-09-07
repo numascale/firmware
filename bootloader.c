@@ -787,12 +787,9 @@ static void clear_dram(void)
 	if (options->tracing)
 		return;
 
-	printf("Enabling scrubbers");
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_scrub_enable();
-
-	printf("\n");
 }
 
 static void finished(const char *label)

@@ -135,6 +135,8 @@ void Options::parse_flags(const char *val, void *data)
 			flags->cores = 1;
 		else if (!strcmp(pos, "mctr"))
 			flags->mctr = 1;
+		else
+			fatal("Unknown debug flag '%s'", pos);
 
 		pos = strtok(NULL, ",");
 	}

@@ -209,7 +209,8 @@ void Numachip2::fabric_init(void)
 	uint32_t val = read32(HSS_PLLCTL);
 	bool is_lc4 = (val >> 16) == 0x0704;
 
-	printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
+	if (local)
+		printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
 	for (unsigned index = 0; index < 6; index++) {
 		if (!config->size[index / 2])
 			continue;

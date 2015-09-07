@@ -509,7 +509,6 @@ void ACPI::check(void)
 
 void ACPI::handover(void)
 {
-	printf("ACPI handover");
 	acpi_sdt *fadt = find_sdt("FACP");
 	xassert(fadt);
 
