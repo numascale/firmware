@@ -64,7 +64,6 @@ void check(void)
 
 static void scan(void)
 {
-	printf("Map scan:\n");
 	dram_top = 0;
 
 	// setup local DRAM windows
@@ -668,22 +667,44 @@ static void acpi_tables(void)
 	srat.append((const char *)&reserved2, sizeof(reserved2));
 
 	uint32_t domain = 0;
+
+	struct acpi_mem_affinity ment;
+	ment.type = 1;
+	ment.length = 40;
+	ment.reserved1 = 0;
+	ment.proximity = domain;
+	ment.reserved2 = 0;
+	ment.flags = 1;
+	ment.reserved3[0] = 0;
+	ment.reserved3[1] = 0;
+
+	// add memory below VGA MMIO area
+	ment.base = 0;
+	ment.lengthlo = 0xa0000 - ment.base;
+	ment.lengthhi = 0;
+	srat.append((const char *)&ment, sizeof(ment));
+
+	// add memory before MMIO32 area
+	ment.base = 0x100000;
+	ment.lengthlo = lib::rdmsr(MSR_TOPMEM) - ment.base;
+	ment.lengthhi = 0;
+	srat.append((const char *)&ment, sizeof(ment));
+
 	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
 		unsigned n = 0;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
-			struct acpi_mem_affinity ment;
-			ment.type = 1;
-			ment.length = 40;
 			ment.proximity = domain;
-			ment.reserved1 = 0;
-			ment.base = (*nb)->dram_base;
+			ment.base =(*nb)->dram_base;
 			ment.lengthlo = (uint32_t)(*nb)->dram_size;
 			ment.lengthhi = (uint32_t)((*nb)->dram_size >> 32);
-			ment.reserved2 = 0;
-			ment.flags = 1;
-			ment.reserved3[0] = 0;
-			ment.reserved3[1] = 0;
+
+			// if this is the entry covering the MMIO hole, raise
+			if (ment.base < (4ULL << 30)) {
+				ment.base = 4ULL << 30;
+				ment.lengthhi -= 1;
+			}
+
 			srat.append((const char *)&ment, sizeof(ment));
 
 			for (unsigned m = 0; m < (*nb)->cores; m++) {
