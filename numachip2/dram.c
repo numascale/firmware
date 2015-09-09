@@ -43,7 +43,7 @@ void Numachip2::dram_init(void)
 	int i;
 
 	printf("DRAM init: ");
-#if 1
+#if 0
 	i2c_master_seq_read(0x50, 0x00, sizeof(spd_eeprom), (uint8_t *)&spd_eeprom);
 	ddr3_spd_check(&spd_eeprom);
 
