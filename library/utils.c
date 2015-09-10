@@ -93,9 +93,9 @@ namespace lib
 		unsigned i = 0;
 
 		while (i < len) {
-			for (int j = 0; j < 8 && (i + j) < len; j++)
+			for (int j = 0; j < 16 && (i + j) < len; j++)
 				printf(" %02x", addr2[i + j]);
-			i += 8;
+			i += 16;
 			printf("\n");
 		}
 	}
