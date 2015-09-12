@@ -581,8 +581,6 @@ void ACPI::get_cores(void)
 
 ACPI::ACPI(void): bios_shadowed(0)
 {
-	bool mmio_fix = 0;
-
 	// skip if already set
 	if (!options->handover_acpi) {
 		// systems where ACPI must be handed off early
@@ -592,7 +590,6 @@ ACPI::ACPI(void): bios_shadowed(0)
 			if (!strcmp(smbios.boardproduct, acpi_blacklist[i])) {
 				printf(" (ACPI workaround)");
 				options->handover_acpi = 1;
-				mmio_fix = 1;
 				break;
 			}
 		}
@@ -614,22 +611,6 @@ ACPI::ACPI(void): bios_shadowed(0)
 
 	if (options->debug.acpi)
 		printf("RSDT at %p; XSDT at %p\n", rsdt, xsdt);
-
-	if (mmio_fix) {
-		acpi_sdt *oemb = find_sdt("OEMB");
-		xassert(oemb);
-
-		// correct top of MMIO32 area causing BAR reallocation
-		uint32_t *addr = (uint32_t *)0x3fe9407b;
-		if (*addr == 0x9fff0000) {
-			*addr += 0x10000;
-
-			oemb->checksum = 0;
-			oemb->checksum = checksum((const char *)oemb, oemb->len);
-
-			printf(" (MMIO window workaround)");
-		}
-	}
 
 	printf("\n");
 

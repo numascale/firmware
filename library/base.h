@@ -61,7 +61,7 @@
 		} } while (0)
 
 #define fatal(format, args...) do {					\
-		printf(COL_RED "Error: " format COL_DEFAULT, ## args);				\
+		printf(COL_RED "/nError: " format COL_DEFAULT, ## args);				\
 		halt();							\
 	} while (0)
 

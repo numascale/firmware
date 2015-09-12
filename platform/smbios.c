@@ -73,7 +73,7 @@ SMBIOS::SMBIOS(void)
 			if (data[4] == 1) { /* KCS */
 				uint16_t addr;
 				memcpy(&addr, data + 8, sizeof(uint16_t));
-				addr &= 0xFFFE;
+				addr &= 0xfffe;
 				ipmi = new IPMI(addr);
 			}
 		}
@@ -92,12 +92,18 @@ SMBIOS::SMBIOS(void)
 	xassert(boardmanuf);
 	xassert(boardproduct);
 
-	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver, biosdate);
+	// trim BIOS version string
+	char biosver2[8];
+	strncpy(biosver2, biosver, sizeof(biosver2));
+	for (unsigned i = sizeof(biosver2) - 1; i; i--)
+		if (biosver2[i] == ' ')
+			biosver2[i] = '\0';
+		else
+			break;
+
+	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver2, biosdate);
 
 	// constraints
-	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL") &&
-	    strcmp(biosver, "DS3.5a    ") && strcmp(biosver, "3.5b      ")) {
-		printf("\n");
-		fatal("Please flash BIOS DS3.5a or 3.5b for correct behaviour");
-	}
+	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL") && strcmp(biosdate, "09/11/2015"))
+		fatal("Please flash H8QGL BIOS DS3.5 911 for correct behaviour");
 }
