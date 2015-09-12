@@ -75,8 +75,7 @@ void Node::tracing_stop(void)
 void Node::trim_dram_maps(void)
 {
 	// trim nodes if over supported or requested memory config
-//	int64_t over = max((int64_t)(dram_size - options->memlimit), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
-	int64_t over = (int64_t)(dram_size - options->memlimit);
+	int64_t over = max((int64_t)(dram_size - options->memlimit), (int64_t)(dram_size & ((1ULL << Numachip2::SIU_ATT_SHIFT) - 1)));
 	if (over <= 0)
 		return;
 
