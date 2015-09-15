@@ -344,7 +344,7 @@ static void remap(void)
 			if (node != &nodes[0])
 				e820->add((*nb)->dram_base, (*nb)->dram_size, E820::RAM);
 
-			if (options->tracing) {
+			if (options->tracing/* && node == &nodes[0] && nb == &(*node)->opterons[0]*/) {
 				(*nb)->trace_base = (*nb)->dram_base + (*nb)->dram_size - options->tracing;
 				(*nb)->trace_limit = (*nb)->trace_base + options->tracing - 1;
 

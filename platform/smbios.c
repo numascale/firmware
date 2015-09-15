@@ -104,6 +104,6 @@ SMBIOS::SMBIOS(void)
 	printf("Motherboard is %s %s/%s %s with BIOS %s %s", sysmanuf, sysproduct, boardmanuf, boardproduct, biosver2, biosdate);
 
 	// constraints
-	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL") && strcmp(biosdate, "09/11/2015"))
-		fatal("Please flash H8QGL BIOS DS3.5 911 for correct behaviour");
+	if (!strcmp(sysmanuf, "Supermicro") && !strcmp(sysproduct, "H8QGL") && strcmp(biosdate, "09/14/2015"))
+		fatal("Please flash H8QGL BIOS DS3.5 914 for correct behaviour");
 }
