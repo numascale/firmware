@@ -24,6 +24,7 @@
 #include "../library/utils.h"
 #include "../platform/ipmi.h"
 #include "../platform/options.h"
+#include "../platform/config.h"
 #include "../bootloader.h"
 
 const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
@@ -227,7 +228,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	// set local SIU SCI ID
 	write32(SIU_NODEID, sci);
 
-	// set master SCI ID for PCI IO routing
-	uint32_t val = read32(PIU_PCIIO_NODE) & ~0xfff;
-	write32(PIU_PCIIO_NODE, val | master);
+	// set master SCI ID for PCI IO and CF8 config routing
+	write32(PIU_PCIIO_NODE, master | ((uint32_t)master << 16) | (config->local_node->master << 31));
+	printf("PIU_PCIIO_NODE=%08x\n", master | ((uint32_t)master << 16) | (config->local_node->master << 31));
 }
