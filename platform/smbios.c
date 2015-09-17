@@ -35,7 +35,6 @@ SMBIOS::SMBIOS(void)
 	const char *mem = (const char *)0xf0000;
 	const char *buf, *data;
 	size_t fp;
-	int i = 0;
 
 	/* Search for signature */
 	for (fp = 0; fp <= 0xfff0; fp += 16)
@@ -50,6 +49,7 @@ SMBIOS::SMBIOS(void)
 
 	buf = data = (const char *)fp;
 
+	unsigned i = 0;
 	while (i < num && data + 4 <= buf + len) {
 		const char *next;
 		struct smbios_header *h = (struct smbios_header *)data;
@@ -95,7 +95,7 @@ SMBIOS::SMBIOS(void)
 	// trim BIOS version string
 	char biosver2[8];
 	strncpy(biosver2, biosver, sizeof(biosver2));
-	for (unsigned i = sizeof(biosver2) - 1; i; i--)
+	for (i = sizeof(biosver2) - 1; i; i--)
 		if (biosver2[i] == ' ')
 			biosver2[i] = '\0';
 		else
