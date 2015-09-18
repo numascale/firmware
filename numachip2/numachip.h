@@ -116,6 +116,7 @@ public:
 	static const reg_t LINK_FREQ_REV     = 0x0088;
 	static const reg_t UNIT_ID           = 0x00d0;
 	static const reg_t HT_NODE_ID        = 0x00c8;
+	static const reg_t HT_INIT_CTRL      = 0x00d8;
 
 	static const reg_t MAP_INDEX         = 0x1044;
 	static const reg_t DRAM_MAP_BASE     = 0x1048;

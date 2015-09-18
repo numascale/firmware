@@ -187,7 +187,6 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 
 	printf("Testing CSR response");
 	for (unsigned i = 0x0000; i < 0x4000; i += 4)
-//		printf("0x%x=0x%08x\n", i, read32(i));
 		read32(i);
 	printf("\n");
 
@@ -225,10 +224,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		options->init_only = 1;
 	}
 
-	// set local SIU SCI ID
+	// set local SIU SCI ID and ensure config cycles are routed
 	write32(SIU_NODEID, sci);
+	write32(HT_INIT_CTRL, 0);
 
 	// set master SCI ID for PCI IO and CF8 config routing
 	write32(PIU_PCIIO_NODE, master | ((uint32_t)master << 16) | (config->local_node->master << 31));
-	printf("PIU_PCIIO_NODE=%08x\n", master | ((uint32_t)master << 16) | (config->local_node->master << 31));
 }
