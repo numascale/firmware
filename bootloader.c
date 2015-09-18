@@ -354,7 +354,7 @@ static void remap(void)
 	}
 
 	// 9. setup IOH limits
-#ifdef FIXME /* hangs on remote node */
+#ifdef FIXME /* hangs on remote node due to config map being cleared earlier */
 	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
 		(*node)->iohub->limits(dram_top - 1);
 #else
@@ -1311,7 +1311,7 @@ int main(const int argc, char *const argv[])
 	nodes[0] = local_node;
 	printf("Servers ready:\n");
 
-	unsigned pos = 1;
+	unsigned done = 1;
 	do {
 		for (unsigned n = 0; n < config->nnodes; n++) {
 			// skip initialised nodes or nodes in other partitions
@@ -1320,13 +1320,14 @@ int main(const int argc, char *const argv[])
 
 			ht_t ht = Numachip2::probe_slave(config->nodes[n].sci);
 			if (ht) {
-				nodes[pos++] = new Node(config->nodes[n].sci, ht);
+				nodes[n] = new Node(config->nodes[n].sci, ht);
 				config->nodes[n].added = 1;
+				done++;
 			}
 
 			cpu_relax();
 		}
-	} while (pos < nnodes);
+	} while (done < nnodes);
 
 	scan();
 	remap();
