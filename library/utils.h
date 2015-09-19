@@ -31,6 +31,12 @@ namespace lib
 		return val;
 	}
 
+	static inline uint32_t uint32_tbswap(uint32_t val)
+	{
+		asm volatile("bswap %0" : "+r"(val));
+		return val;
+	}
+
 	void wait_key(const char *msg);
 	void udelay(const uint32_t usecs);
 	const char *pr_size(uint64_t size);
