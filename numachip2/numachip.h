@@ -26,7 +26,7 @@ class Numachip2 {
 	class MmioMap {
 		const Numachip2 &numachip;
 	public:
-		MmioMap(Numachip2 &_numachip);
+		explicit MmioMap(Numachip2 &_numachip);
 		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
 		void del(const int range);
 		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
@@ -36,7 +36,7 @@ class Numachip2 {
 	class DramMap {
 		const Numachip2 &numachip;
 	public:
-		DramMap(Numachip2 &_numachip);
+		explicit DramMap(Numachip2 &_numachip);
 		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
 		void del(const int range);
 		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
@@ -55,7 +55,7 @@ class Numachip2 {
 	class MmioAtt {
 		const Numachip2 &numachip;
 	public:
-		MmioAtt(Numachip2 &_numachip);
+		explicit MmioAtt(Numachip2 &_numachip);
 		void init(void);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};

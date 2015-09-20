@@ -522,6 +522,6 @@ void Opteron::discover(void)
 			val = read32(LINK_TYPE + l * 0x20);
 		} while ((val & (1 << 4)) || (!(val & 1)));
 
-		printf("%sconnected and %scoherent\n", val & 1 ? "" : "not ", val & 4 ? "non-" : "");
+		printf("%sconnected and %scoherent\n", (val & 1) ? "" : "not ", (val & 4) ? "non-" : "");
 	}
 }

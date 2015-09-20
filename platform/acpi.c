@@ -517,7 +517,7 @@ void ACPI::handover(void)
 	const uint8_t acpi_enable = fadt->data[52 - 36];
 
 	if (!smi_cmd || !acpi_enable) {
-		printf(": legacy support not enabled\n");
+		printf("ACPI legacy support not enabled\n");
 		return;
 	}
 
@@ -526,7 +526,7 @@ void ACPI::handover(void)
 	uint16_t sci_en = inb(acpipm1cntblk);
 
 	if ((sci_en & 1) == 1) {
-		printf(": already handed over\n");
+		printf("ACPI already handed over\n");
 		return;
 	}
 
@@ -537,10 +537,8 @@ void ACPI::handover(void)
 		lib::udelay(1000);
 		sci_en = inb(acpipm1cntblk);
 
-		if ((sci_en & 1) == 1) {
-			printf("\n"); // success
+		if ((sci_en & 1) == 1)
 			return;
-		}
 	} while (--limit);
 
 	fatal("ACPI handover timed out");

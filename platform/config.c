@@ -246,7 +246,7 @@ Config::Config(const char *filename)
 		printf("; geometry %dx%xx%d\n", size[0], size[1], size[2]);
 
 		for (unsigned i = 0; i < nnodes; i++) {
-			printf("Node %d: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
+			printf("Node %u: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
 			  i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
 			  nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5]);
 

@@ -41,7 +41,9 @@ void Node::init(void)
 		cores += nb->cores;
 	}
 
-	printf("%03x (%"PRIu64"GB, %u cores)\n", sci, dram_size >> 30, cores);
+	if (local)
+		printf("%03x", sci);
+	printf(" (%"PRIu64"GB, %u cores)\n", dram_size >> 30, cores);
 }
 
 void Node::check(void)

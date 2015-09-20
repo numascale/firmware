@@ -113,7 +113,7 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 void SR56x0::limits(const uint64_t limit)
 {
 	if (options->debug.maps)
-		printf("Setting limits on %03x IOH to 0x%"PRIx64, sci, limit);
+		printf("Setting limits on %03x IOH to 0x%"PRIx64"\n", sci, limit);
 	xassert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
 
 	// limit to HyperTransport range
@@ -126,7 +126,6 @@ void SR56x0::limits(const uint64_t limit)
 		nbmiscind_write(MISC_TOM3, ((limit << 22) - 1) | (1 << 31));
 	else
 		nbmiscind_write(MISC_TOM3, 0);
-	printf("\n");
 }
 
 void SR56x0::smi_disable(void)

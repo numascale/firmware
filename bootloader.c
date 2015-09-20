@@ -952,7 +952,7 @@ static void wait_for_slaves(void)
 	cmd.sci = config->local_node->sci;
 	cmd.tid = 0; /* Must match initial rsp.tid for RSP_SLAVE_READY */
 	waitfor = RSP_SLAVE_READY;
-	printf("Waiting for %d nodes...\n", config->nnodes - 1);
+	printf("Waiting for %u servers...\n", config->nnodes - 1);
 	count = 0;
 	backoff = 1;
 	last_stat = 0;

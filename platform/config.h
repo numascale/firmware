@@ -45,7 +45,7 @@ public:
 	struct node *local_node, *master, *nodes;
 
 	Config(void);
-	Config(const char *filename) nonnull;
+	explicit Config(const char *filename) nonnull;
 };
 
 extern Config *config;
