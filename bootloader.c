@@ -1317,17 +1317,20 @@ int main(const int argc, char *const argv[])
 
 	unsigned done = 1;
 	do {
-		for (unsigned n = 0; n < config->nnodes; n++) {
-			// skip initialised nodes or nodes in other partitions
-			if (config->nodes[n].added || config->nodes[n].partition != config->local_node->partition)
-				continue;
+		unsigned pos = 0;
 
-			ht_t ht = Numachip2::probe_slave(config->nodes[n].sci);
-			if (ht) {
-				nodes[n] = new Node(config->nodes[n].sci, ht);
-				config->nodes[n].added = 1;
-				done++;
+		for (unsigned n = 0; n < config->nnodes; n++) {
+			if (!config->nodes[n].added) {
+				ht_t ht = Numachip2::probe_slave(config->nodes[n].sci);
+				if (ht) {
+					nodes[pos] = new Node(config->nodes[n].sci, ht);
+					config->nodes[n].added = 1;
+					done++;
+				}
 			}
+
+			if (config->nodes[n].partition == config->local_node->partition)
+				pos++;
 
 			cpu_relax();
 		}
