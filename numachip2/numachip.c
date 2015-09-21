@@ -203,7 +203,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		assertf(buf && len > 0, "Image %s not found", options->flash);
 
 		uint32_t checksum = lib::checksum((unsigned char *)buf, len);
-		if (hdr.checksum != checksum) {
+		if (hdr.checksum != checksum || (read32(FLASH_REG0) >> 28) != 0xa) {
 			printf("Flashing %uMB image %s with checksum %u\n", len >> 20, options->flash, checksum);
 			flash(buf, len);
 
