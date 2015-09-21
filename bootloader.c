@@ -354,7 +354,7 @@ static void remap(void)
 	}
 
 	// FIXME: reserve 8MB at top of DRAM to prevent igb tx queue hangs
-	uint64_t len = 4ULL << 20;
+	uint64_t len = 8ULL << 20;
 	e820->add(dram_top - len, len, E820::RESERVED);
 
 	// 9. setup IOH limits
