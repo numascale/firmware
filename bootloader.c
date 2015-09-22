@@ -43,6 +43,8 @@ extern "C" {
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 
+#define foreach_node(x) for (Node *const *(x) = &nodes[0]; (x) < &nodes[nnodes]; (x)++)
+
 OS *os;
 Options *options;
 Config *config;
@@ -58,7 +60,7 @@ static unsigned nnodes;
 
 void check(void)
 {
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		(*node)->check();
 }
 
@@ -67,7 +69,7 @@ static void scan(void)
 	dram_top = 0;
 
 	// setup local DRAM windows
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		// trim nodes that are over sized and not according to granularity
 		(*node)->trim_dram_maps();
 		(*node)->dram_base = dram_top;
@@ -192,7 +194,7 @@ static void setup_gsm(void)
 		if (!config->nodes[n].partition)
 			printf(" %03x", config->nodes[n].sci);
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		uint64_t base = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_base;
 		uint64_t limit = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_end;
 		sci_t dest = (*node)->sci;
@@ -315,8 +317,8 @@ static void remap(void)
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (local_node->dram_end - 1) >> 24);
 
 	// 5. setup DRAM ATT routing
-	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
-		for (Node *const *dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++)
+	foreach_node(node)
+		foreach_node(dnode)
 			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
 
 	// 6. set top of memory
@@ -338,7 +340,7 @@ static void remap(void)
 	top->length = nodes[0]->dram_end + 1 - top->base;
 
 	// 8. update e820 map
-	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			// master always first in array
 			if (node != &nodes[0])
@@ -359,7 +361,7 @@ static void remap(void)
 
 	// 9. setup IOH limits
 #ifdef FIXME /* hangs on remote node due to config map being cleared earlier */
-	for (Node *const *node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		(*node)->iohub->limits(dram_top - 1);
 #else
 	local_node->iohub->limits(dram_top - 1);
@@ -387,7 +389,7 @@ static void tracing_arm(void)
 	if (!options->tracing)
 		return;
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		(*node)->tracing_arm();
 }
 
@@ -396,7 +398,7 @@ static void tracing_start(void)
 	if (!options->tracing)
 		return;
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		(*node)->tracing_start();
 }
 
@@ -405,7 +407,7 @@ static void tracing_stop(void)
 	if (!options->tracing)
 		return;
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		(*node)->tracing_stop();
 }
 
@@ -495,7 +497,7 @@ static void setup_cores(void)
 
 	// setup cores
 	printf("APICs");
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		// set correct MCFG base per node
 		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
 		push_msr(MSR_MCFG, mcfg);
@@ -557,7 +559,7 @@ static void test_verify(void)
 static void test_cores(void)
 {
 	uint16_t cores = 0;
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		cores += (*node)->napics;
 	cores -= 1; // exclude BSC
 
@@ -574,7 +576,7 @@ static void test_cores(void)
 		trampoline_sem_init(cores);
 		tracing_start();
 
-		for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+		foreach_node(node) {
 			for (unsigned n = 0; n < (*node)->napics; n++) {
 				if (node == &nodes[0] && n == 0) // skip BSC
 					continue;
@@ -614,7 +616,7 @@ static void acpi_tables(void)
 	mcfg.append((const char *)&reserved, sizeof(reserved));
 
 	uint16_t segment = 0;
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		struct acpi_mcfg ent;
 		ent.address = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
 		ent.pci_segment = segment++;
@@ -631,7 +633,7 @@ static void acpi_tables(void)
 	apic.append((const char *)&oapic->data[4], 4); // Flags
 
 	// append new x2APIC entries
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		unsigned n = 0;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
@@ -694,7 +696,7 @@ static void acpi_tables(void)
 	ment.lengthhi = 0;
 	srat.append((const char *)&ment, sizeof(ment));
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		unsigned n = 0;
 
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
@@ -744,18 +746,18 @@ static void acpi_tables(void)
 
 	if (options->debug.acpi) {
 		printf("Topology distances:\n   ");
-		for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++)
+		foreach_node(snode)
 			for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++)
 				printf(" %3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
 		printf("\n");
 	}
 
-	for (Node **snode = &nodes[0]; snode < &nodes[nnodes]; snode++) {
+	foreach_node(snode) {
 		for (Opteron **snb = &(*snode)->opterons[0]; snb < &(*snode)->opterons[(*snode)->nopterons]; snb++) {
 			if (options->debug.acpi)
 				printf("%3u", (snode - nodes) * (*snode)->nopterons + (snb - (*snode)->opterons));
 
-			for (Node **dnode = &nodes[0]; dnode < &nodes[nnodes]; dnode++) {
+			foreach_node(dnode) {
 				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
 					uint8_t dist;
 					if (*snode == *dnode) {
@@ -790,13 +792,13 @@ static void clear_dram(void)
 	printf("Clearing DRAM");
 	lib::critical_enter();
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		unsigned start = node == nodes ? 1 : 0;
 		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_start();
 	}
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++) {
+	foreach_node(node) {
 		unsigned start = node == nodes ? 1 : 0;
 		for (Opteron **nb = &(*node)->opterons[start]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_clear_wait();
@@ -809,7 +811,7 @@ static void clear_dram(void)
 	if (options->tracing)
 		return;
 
-	for (Node **node = &nodes[0]; node < &nodes[nnodes]; node++)
+	foreach_node(node)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++)
 			(*nb)->dram_scrub_enable();
 }

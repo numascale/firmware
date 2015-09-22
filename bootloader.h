@@ -32,7 +32,6 @@
 #include "numachip2/info.h"
 #include "node.h"
 
-#define foreach_node(x) for (Node **(x) = &nodes[0]; (x) < &nodes[config->nnodes]; (x)++)
 #define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
 
 void caches(const bool enable);
