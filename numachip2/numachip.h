@@ -190,8 +190,6 @@ public:
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
 
-	const static char *ringnames[6];
-
 	const sci_t sci;
 	const ht_t ht;
 

@@ -1317,26 +1317,25 @@ int main(const int argc, char *const argv[])
 	nodes[0] = local_node;
 	printf("Servers ready:\n");
 
-	unsigned done = 1;
-	do {
-		unsigned pos = 0;
+	unsigned pos = 1;
 
-		for (unsigned n = 0; n < config->nnodes; n++) {
-			if (!config->nodes[n].added) {
-				ht_t ht = Numachip2::probe_slave(config->nodes[n].sci);
-				if (ht) {
-					nodes[pos] = new Node(config->nodes[n].sci, ht);
-					config->nodes[n].added = 1;
-					done++;
-				}
-			}
+	// FIXME: nodes must be added in the expected sequence
+	for (unsigned n = 0; n < config->nnodes; n++) {
+		// skip nodes not in this partition
+		if (config->nodes[n].added || config->nodes[n].partition != config->local_node->partition)
+			continue;
 
-			if (config->nodes[n].partition == config->local_node->partition)
-				pos++;
-
+		ht_t ht;
+		while (1) {
+			ht = Numachip2::probe_slave(config->nodes[n].sci);
+			if (ht)
+				break;
 			cpu_relax();
 		}
-	} while (done < nnodes);
+
+		nodes[pos++] = new Node(config->nodes[n].sci, ht);
+		config->nodes[n].added = 1;
+	}
 
 	scan();
 	remap();

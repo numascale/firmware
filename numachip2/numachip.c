@@ -27,8 +27,6 @@
 #include "../platform/config.h"
 #include "../bootloader.h"
 
-const char *Numachip2::ringnames[] = {"XA", "XB", "YA", "YB", "ZA", "ZB"};
-
 uint64_t Numachip2::read64(const reg_t reg) const
 {
 	xassert(ht);
