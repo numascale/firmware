@@ -21,6 +21,7 @@
 #include "opteron/opteron.h"
 #include "opteron/sr56x0.h"
 #include "numachip2/numachip.h"
+#include "platform/config.h"
 
 class Node {
 	bool local;
@@ -36,6 +37,7 @@ public:
 	Opteron *opterons[7];
 	SR56x0 *iohub;
 	Numachip2 *numachip;
+	Config::node *config;
 	uint64_t dram_base, dram_size, dram_end;
 	uint64_t trace_base, trace_lim;
 	uint16_t apic_offset;
@@ -47,8 +49,8 @@ public:
 	void tracing_stop(void);
 	void trim_dram_maps(void);
 
-	Node(const sci_t _sci, const ht_t ht);
-	Node(const sci_t _sci, const sci_t master);
+	Node(Config::node *_config, const ht_t ht);
+	Node(Config::node *_config, const sci_t master);
 };
 
 extern Node *local_node;

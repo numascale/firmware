@@ -20,26 +20,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define LAYOUT 5
-
 struct numachip_info {
-	unsigned layout : 4;
-	unsigned size_x : 4;
-	unsigned size_y : 4;
-	unsigned size_z : 4;
+	char firmware[18];
+	unsigned self : 12;
+	uint8_t partition;
+	unsigned master : 12;
+	unsigned next_master : 12; // ie next partition or 0xfff for none
+	unsigned next : 12; // next node in partition
 	unsigned northbridges : 3;
+	unsigned cores : 6;
+	unsigned ht : 3;
 	unsigned neigh_ht : 3;
 	unsigned neigh_link : 2;
-	unsigned symmetric : 1;
-	unsigned renumbering : 1;
-	unsigned devices : 1;
-	unsigned observer : 1;
-	unsigned cores : 8;
-	unsigned ht : 3;
-	uint8_t partition; // 0 for observer
-	uint16_t fabric_nodes : 12;
-	uint16_t part_start : 12;
-	uint16_t part_nodes : 12; // 81 bits
-	unsigned pad : 7;
-	char firmware_ver[18];
 } __attribute__((packed)) __attribute__((aligned(4)));

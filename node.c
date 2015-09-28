@@ -104,7 +104,7 @@ void Node::trim_dram_maps(void)
 }
 
 // instantiated for remote nodes
-Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_LOCAL), sci(_sci), nopterons(ht)
+Node::Node(Config::node *_config, const ht_t ht): local(0), master(SCI_LOCAL), sci(_config->sci), nopterons(ht), config(_config)
 {
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n] = new Opteron(sci, n, local);
@@ -117,7 +117,7 @@ Node::Node(const sci_t _sci, const ht_t ht): local(0), master(SCI_LOCAL), sci(_s
 }
 
 // instantiated for local nodes
-Node::Node(const sci_t _sci, const sci_t _master): local(1), master(_master), sci(_sci)
+Node::Node(Config::node *_config, const sci_t _master): local(1), master(_master), sci(_config->sci), config(_config)
 {
 	uint32_t val = lib::cht_read32(0, Opteron::HT_NODE_ID);
 	nopterons = ((val >> 4) & 7) + 1;

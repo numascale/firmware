@@ -21,6 +21,7 @@
 #include "../library/base.h"
 
 class Config {
+public:
 	struct node {
 		uint32_t uuid;
 		uint32_t sci;
@@ -32,7 +33,7 @@ class Config {
 		bool added;
 		bool devices;
 	};
-
+private:
 	struct node *find(const sci_t sci) nonnull;
 	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt) nonnull;
 	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt) nonnull;
@@ -40,7 +41,6 @@ class Config {
 	void parse_json(json_t *root) nonnull;
 public:
 	uint32_t size[3];
-
 	unsigned nnodes;
 	struct node *local_node, *master, *nodes;
 

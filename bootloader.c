@@ -15,6 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Todo:
+- drop config->{local_node,master} in favour of {local_node,master}->config
+*/
+
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -234,47 +239,73 @@ static void setup_gsm(void)
 
 static void setup_info(void)
 {
-	xassert(sizeof(struct numachip_info) <= 32);
+	xassert(sizeof(struct numachip_info) <= Numachip2::INFO_SIZE * 4);
 	struct numachip_info *infop;
 	uint32_t info[sizeof(*infop) / 4];
 	memset(info, 0, sizeof(info));
 
-	infop = (struct numachip_info *)&info;
-
-	infop->layout = LAYOUT;
-	infop->size_x = config->size[0];
-	infop->size_y = config->size[1];
-	infop->size_z = config->size[2];
-	infop->northbridges = local_node->numachip->ht;
-	infop->neigh_ht = local_node->neigh_ht;
-	infop->neigh_link = local_node->neigh_link;
-	infop->symmetric = 1;
-	infop->renumbering = 0;
-	infop->devices = config->local_node->devices;
-	infop->observer = !config->local_node->partition;
-	infop->cores = acpi->napics;
-	infop->ht = local_node->numachip->ht;
-	infop->partition = config->local_node->partition;
-	infop->fabric_nodes = config->nnodes;
-
-	// find first node of partition
-	for (unsigned n = 0; n < config->nnodes; n++) {
-		if (config->nodes[n].partition == config->local_node->partition) {
-			infop->part_start = config->nodes[n].sci;
-			break;
-		}
-	}
-
-	infop->part_nodes = nnodes;
-	xassert(sizeof(VER) <= sizeof(infop->firmware_ver));
-	strncpy(infop->firmware_ver, VER, sizeof(infop->firmware_ver));
-
-	// write to numachip
 	for (unsigned n = 0; n < nnodes; n++) {
-		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++) {
-			xassert(i < Numachip2::INFO_SIZE);
-			nodes[n]->numachip->write32(Numachip2::INFO + i*4, info[i]);
+		infop = (struct numachip_info *)&info;
+		infop->self = nodes[n]->sci;
+		infop->partition = nodes[n]->config->partition;
+		infop->master = local_node->config->partition ? config->master->sci : 0xfff;
+
+		struct Config::node *cur = nodes[n]->config;
+
+		while (1) {
+			// increment and wrap
+			cur++;
+			if (cur > &config->nodes[config->nnodes - 1])
+				cur = &config->nodes[0];
+
+			// couldn't find a match, so fully wrapped
+			if (cur->sci == local_node->sci) {
+				infop->next_master = 0xfff;
+				break;
+			}
+
+			if (cur->partition && cur->partition != config->local_node->partition) {
+				infop->next_master = cur->sci;
+				break;
+			}
 		}
+
+		if (!config->local_node->partition)
+			infop->next = 0xfff;
+		else {
+			cur = nodes[n]->config;
+
+			while (1) {
+				// increment and wrap
+				cur++;
+				if (cur > &config->nodes[config->nnodes - 1])
+					cur = &config->nodes[0];
+
+				if (cur->partition == config->local_node->partition)
+					break;
+			}
+
+			infop->next = cur->sci;
+		}
+
+		infop->northbridges = local_node->numachip->ht; // FIXME
+		infop->cores = acpi->napics; // FIXME
+		infop->ht = local_node->numachip->ht; // FIXME
+		infop->neigh_ht = local_node->neigh_ht; // FIXME
+		infop->neigh_link = local_node->neigh_link; // FIXME
+		xassert(sizeof(VER) <= sizeof(infop->firmware));
+		strncpy(infop->firmware, VER, sizeof(infop->firmware));
+
+		printf("Firmware %s, self %03x, partition %u, master %03x, "
+                        "next_master %03x, next %03x, northbridges %u, cores %u, "
+                        "ht %u, neigh_ht %u, neigh_link %u\n",
+                        infop->firmware, infop->self, infop->partition, infop->master,
+                        infop->next_master, infop->next, infop->northbridges, infop->cores,
+                        infop->ht, infop->neigh_ht, infop->neigh_link);
+
+		// write to numachip
+		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++)
+			nodes[n]->numachip->write32(Numachip2::INFO + i * 4, info[i]);
 	}
 }
 
@@ -1210,7 +1241,7 @@ int main(const int argc, char *const argv[])
 	else
 		config = new Config(options->config_filename);
 
-	local_node = new Node((sci_t)config->local_node->sci, (sci_t)config->master->sci);
+	local_node = new Node(config->local_node, (sci_t)config->master->sci);
 
 	// ensure Numachip2 MMIO range is reserved for all cases
 	e820->add(Numachip2::LOC_BASE, Numachip2::LOC_LIM - Numachip2::LOC_BASE + 1, E820::RESERVED);
@@ -1333,7 +1364,7 @@ int main(const int argc, char *const argv[])
 			cpu_relax();
 		}
 
-		nodes[pos++] = new Node(config->nodes[n].sci, ht);
+		nodes[pos++] = new Node(&config->nodes[n], ht);
 		config->nodes[n].added = 1;
 	}
 
