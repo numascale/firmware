@@ -31,7 +31,7 @@ namespace lib
 		return val;
 	}
 
-	static inline uint32_t uint32_tbswap(uint32_t val)
+	static inline uint32_t bswap32(uint32_t val)
 	{
 		asm volatile("bswap %0" : "+r"(val));
 		return val;

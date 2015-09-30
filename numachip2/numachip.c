@@ -181,10 +181,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		char buildtime[17];
 		const unsigned buildlen = ((sizeof(buildtime) - 1) / sizeof(uint32_t));
 		for (unsigned i = 0; i < buildlen; i++)
-			*(uint32_t *)(buildtime + i * 4) = lib::uint32_tbswap(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
+			*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
 		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-		printf("%dC, %s, cksum %u, %s] assigned HT%u\n", temp, hdr.name, hdr.checksum, buildtime, ht);
+		printf("%dC, %s, cksum %u, built %s] assigned HT%u\n", temp, hdr.name, hdr.checksum, buildtime, ht);
 		assertf(temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 	} else
 		printf("Virtex assigned HT%u\n", ht);
