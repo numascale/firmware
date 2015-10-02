@@ -597,43 +597,39 @@ static void test_cores(void)
 	if (options->boot_wait)
 		lib::wait_key("Press enter to start core testing");
 
-	const unsigned iterations = 30;
-	printf("Testing %u cores for %u iterations:", cores, iterations);
+	printf("Testing %u cores", cores);
 	test_prepare();
 	lib::critical_enter();
 
-	for (unsigned loop = 0; loop < iterations; loop++) {
-		*REL32(errors) = 0; // clear error counter
-		trampoline_sem_init(cores);
-		tracing_start();
+	*REL32(errors) = 0; // clear error counter
+	trampoline_sem_init(cores);
+	tracing_start();
 
-		foreach_node(node) {
-			for (unsigned n = 0; n < (*node)->napics; n++) {
-				if (node == &nodes[0] && n == 0) // skip BSC
-					continue;
-				boot_core((*node)->apics[n], VECTOR_TEST);
-			}
+	foreach_node(node) {
+		for (unsigned n = 0; n < (*node)->napics; n++) {
+			if (node == &nodes[0] && n == 0) // skip BSC
+				continue;
+			boot_core((*node)->apics[n], VECTOR_TEST);
 		}
-		if (trampoline_sem_wait()) {
-			tracing_stop();
-			fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
-		}
-
-		lib::udelay(1500000);
-
-		// initiate finish, order here is important re-initialize the semaphore first
-		trampoline_sem_init(cores);
-		*REL32(vector) = VECTOR_TEST_FINISH;
-
-		if (trampoline_sem_wait()) {
-			tracing_stop();
-			fatal("%u cores failed to finish test", trampoline_sem_getvalue());
-		}
-
-		test_verify();
-		tracing_stop();
-		printf(" %u", loop);
 	}
+	if (trampoline_sem_wait()) {
+		tracing_stop();
+		fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
+	}
+
+	lib::udelay(300000);
+
+	// initiate finish, order here is important re-initialize the semaphore first
+	trampoline_sem_init(cores);
+	*REL32(vector) = VECTOR_TEST_FINISH;
+
+	if (trampoline_sem_wait()) {
+		tracing_stop();
+		fatal("%u cores failed to finish test", trampoline_sem_getvalue());
+	}
+
+	test_verify();
+	tracing_stop();
 	lib::critical_leave();
 	printf("\n");
 }
