@@ -26,10 +26,10 @@ struct numachip_info {
 	uint8_t partition;
 	unsigned master : 12;
 	unsigned next_master : 12; // ie next partition or 0xfff for none
-	unsigned next : 12; // next node in partition
-	unsigned northbridges : 3;
+	unsigned next : 12;        // next node in partition
+	unsigned hts : 3;          // hypertransport ids
 	unsigned cores : 6;
-	unsigned ht : 3;
+	unsigned ht : 3;           // numachip ht id
 	unsigned neigh_ht : 3;
 	unsigned neigh_link : 2;
 } __attribute__((packed)) __attribute__((aligned(4)));

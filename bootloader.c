@@ -288,7 +288,7 @@ static void setup_info(void)
 			infop->next = cur->sci;
 		}
 
-		infop->northbridges = local_node->numachip->ht; // FIXME
+		infop->hts = local_node->numachip->ht + 1;
 		infop->cores = acpi->napics; // FIXME
 		infop->ht = local_node->numachip->ht; // FIXME
 		infop->neigh_ht = local_node->neigh_ht; // FIXME
@@ -297,10 +297,10 @@ static void setup_info(void)
 		strncpy(infop->firmware, VER, sizeof(infop->firmware));
 
 		printf("Firmware %s, self %03x, partition %u, master %03x, "
-                        "next_master %03x, next %03x, northbridges %u, cores %u, "
+                        "next_master %03x, next %03x, hts %u, cores %u, "
                         "ht %u, neigh_ht %u, neigh_link %u\n",
                         infop->firmware, infop->self, infop->partition, infop->master,
-                        infop->next_master, infop->next, infop->northbridges, infop->cores,
+                        infop->next_master, infop->next, infop->hts, infop->cores,
                         infop->ht, infop->neigh_ht, infop->neigh_link);
 
 		// write to numachip
