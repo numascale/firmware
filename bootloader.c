@@ -295,14 +295,14 @@ static void setup_info(void)
 		infop->neigh_link = local_node->neigh_link; // FIXME
 		xassert(sizeof(VER) <= sizeof(infop->firmware));
 		strncpy(infop->firmware, VER, sizeof(infop->firmware));
-
+#ifdef DEBUG
 		printf("Firmware %s, self %03x, partition %u, master %03x, "
                         "next_master %03x, next %03x, hts %u, cores %u, "
                         "ht %u, neigh_ht %u, neigh_link %u\n",
                         infop->firmware, infop->self, infop->partition, infop->master,
                         infop->next_master, infop->next, infop->hts, infop->cores,
                         infop->ht, infop->neigh_ht, infop->neigh_link);
-
+#endif
 		// write to numachip
 		for (unsigned i = 0; i < sizeof(info)/sizeof(info[0]); i++)
 			nodes[n]->numachip->write32(Numachip2::INFO + i * 4, info[i]);
@@ -1276,6 +1276,17 @@ int main(const int argc, char *const argv[])
 			wait_for_master();
 	}
 
+	if (config->local_node->partition) {
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (config->nodes[n].partition == config->local_node->partition)
+				nnodes++;
+	} else
+		nnodes = 1;
+
+	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
+	xassert(nodes);
+	nodes[0] = local_node;
+
 	if (!config->local_node->partition) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
@@ -1285,10 +1296,6 @@ int main(const int argc, char *const argv[])
 		setup_info();
 		finished(options->observer_label ? options->observer_label : options->next_label);
 	}
-
-	for (unsigned n = 0; n < config->nnodes; n++)
-		if (config->nodes[n].partition == config->local_node->partition)
-			nnodes++;
 
 	// slaves
 	if (!config->local_node->master) {
@@ -1339,9 +1346,6 @@ int main(const int argc, char *const argv[])
 
 	config->local_node->added = 1;
 
-	nodes = (Node **)zalloc(sizeof(void *) * nnodes);
-	xassert(nodes);
-	nodes[0] = local_node;
 	printf("Servers ready:\n");
 
 	unsigned pos = 1;
