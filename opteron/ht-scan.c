@@ -487,7 +487,11 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		/* Add NC to coherent fabric */
 		ht_reconfig(neigh, link, nnodes);
 	}
-
+#ifdef EARLYEXIT
+	uint64_t msr = lib::rdmsr(0xc0010015);
+	lib::wrmsr(0xc0010015, msr & ~(1ULL << 17));
+	os->exec("ubuntu-1504-live");
+#endif
 	val = lib::cht_read32(0, HT_NODE_ID);
 	lib::cht_write32(nc, Numachip2::HT_NODE_ID,
 		   (((val >> 12) & 7) << 24) | /* LkNode */
