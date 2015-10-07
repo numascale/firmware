@@ -39,8 +39,8 @@
 
 void Numachip2::i2c_master_init(void)
 {
-	const uint16_t prescale_cnt = (read32(FLASH_REG0) == 0) ? 99 : 49; /* For 100MHz coreclk: 199 = 100 kHz, 49 = 400 kHz, 19 = 1MHz
-									    * For 200MHz coreclk: 399 = 100 kHz, 99 = 400 kHz, 39 = 1MHz */
+	const uint16_t prescale_cnt = (read32(FLASH_REG0) == 0) ? 174 : 349; /* For 100MHz coreclk: 174 = 100 kHz, 43 = 400 kHz
+									      * For 200MHz coreclk: 349 = 100 kHz, 86 = 400 kHz */
 	write16(I2C_REG0, prescale_cnt);
 	write8(I2C_REG0 + 2, 0x80); /* core_en */
 }
