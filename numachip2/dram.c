@@ -73,7 +73,7 @@ void Numachip2::dram_init(void)
 		// mctr PHY are not up; restart training
 		if (i == 0) {
 			if (options->debug.mctr)
-				printf("<mctr PHY not up>");
+				printf("<mctr PHY not up %08x %08x>", read32(MCTR_PHY_STATUS), read32(MCTR_PHY_STATUS2));
 			errors = 1;
 			dram_reset();
 			continue;
