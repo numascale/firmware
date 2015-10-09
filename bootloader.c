@@ -288,11 +288,11 @@ static void setup_info(void)
 			infop->next = cur->sci;
 		}
 
-		infop->hts = local_node->numachip->ht + 1;
-		infop->cores = acpi->napics; // FIXME
-		infop->ht = local_node->numachip->ht; // FIXME
-		infop->neigh_ht = local_node->neigh_ht; // FIXME
-		infop->neigh_link = local_node->neigh_link; // FIXME
+		infop->hts = nodes[n]->numachip->ht + 1;
+		infop->cores = nodes[n]->cores;
+		infop->ht = nodes[n]->numachip->ht;
+		infop->neigh_ht = nodes[n]->neigh_ht;
+		infop->neigh_link = nodes[n]->neigh_link;
 		xassert(sizeof(VER) <= sizeof(infop->firmware));
 		strncpy(infop->firmware, VER, sizeof(infop->firmware));
 #ifdef DEBUG
