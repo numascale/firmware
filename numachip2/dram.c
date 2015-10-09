@@ -22,6 +22,9 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+#define MTAG_SHIFT 5
+#define CTAG_SHIFT 3
+
 void Numachip2::dram_check(void) const
 {
 	uint32_t val = read32(MCTR_ECC_STATUS);
@@ -97,6 +100,44 @@ void Numachip2::dram_init(void)
 		cpu_relax();
 	printf(">");
 
+#if 1
+	const uint64_t hosttotal = e820->memlimit();
+	unsigned ncache_shift = 30; // minimum
+	uint64_t ctag = 1ULL << (ncache_shift - CTAG_SHIFT);
+	// round up to mask constraints to allow manipulation
+	uint64_t mtag = roundup((hosttotal >> MTAG_SHIFT) + 1, 1 << 19);
+
+	// check if insufficient MTag
+	if (mtag > (total - (1ULL << ncache_shift) - ctag)) {
+		// round down to mask constraint
+		mtag = (total - (1ULL << ncache_shift) - ctag) & ~((1 << 19) - 1);
+	} else {
+		// check if nCache can use more space
+		while ((1ULL << ncache_shift) + ctag + mtag <= total) {
+			ncache_shift++;
+			ctag = 1ULL << (ncache_shift - CTAG_SHIFT);
+		}
+
+		// too large, use next size down
+		ncache_shift--;
+		ctag = 1ULL << (ncache_shift - CTAG_SHIFT);
+	}
+
+	uint64_t mtag_base = (1ULL << ncache_shift) + ctag;
+	uint64_t mtag_mask = roundup_pow2(mtag, 1 << 19);
+	options->memlimit = (total - mtag_base) << MTAG_SHIFT;
+
+	// nCache, then CTag, then MTag
+	write32(NCACHE_CTRL, (ncache_shift - 30) << 3);
+	write32(CTAG_BASE + TAG_ADDR_MASK, (1 << (ncache_shift - 30)) - 1);
+	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     // no tag comparison mask for MTag
+	write32(CTAG_BASE + TAG_MCTR_OFFSET, 1ULL << (ncache_shift - 19));
+	write32(CTAG_BASE + TAG_MCTR_MASK, (ctag >> 19) - 1);
+	write32(MTAG_BASE + TAG_MCTR_OFFSET, mtag_base >> 19);
+	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag_mask >> 19) - 1);
+
+	printf("%uMB nCache", 1 << (ncache_shift - 20));
+#else
 	switch (total) {
 	case 4ULL << 30:
 		// 0-1024MB nCache; 1024-1152MB CTag; 1152-2048MB unused; 2048-4096MB MTag
@@ -123,66 +164,16 @@ void Numachip2::dram_init(void)
 	default:
 		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
 	}
-
-	dram_check();
-
-#ifdef BROKEN
-	const uint64_t hosttotal = e820->memlimit();
-	uint64_t ncache = 1ULL << 30; /* Minimum */
-	uint64_t ctag = ncache >> 3;
-	/* Round up to mask constraints to allow manipulation */
-	uint64_t mtag = roundup((hosttotal >> 5) + 1, 1 << 19);
-
-	// check if insufficient MTag
-	if (mtag > (total - ncache - ctag)) {
-		// round down to mask constraint
-		mtag = (total - ncache - ctag) & ~((1 << 19) - 1);
-		warning("Limiting local memory from %s to %s", lib::pr_size(hosttotal), lib::pr_size(mtag >> 5));
-		if (total < (32ULL << 30)) /* FIXME: check */
-			warning("Please use NumaConnect2 adapters supporting more server memory");
-	} else {
-		// check if nCache can use more space
-		while (ncache + ctag + mtag <= total) {
-			ncache *= 2;
-			ctag = ncache >> 3;
-		}
-
-		// too large, use next size down
-		ncache /= 2;
-		ctag = ncache >> 3;
-	}
-
-	/* nCache, then CTag, then MTag */
-	write32(CTAG_BASE + TAG_ADDR_MASK, (ncache >> 30) - 1);
-	write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);     /* No Tag comparison mask for MTag */
-	write32(CTAG_BASE + TAG_MCTR_OFFSET, ncache >> 19);
-	write32(CTAG_BASE + TAG_MCTR_MASK, (ctag >> 19) - 1);
-	write32(MTAG_BASE + TAG_MCTR_OFFSET, (ncache + ctag) >> 19);
-	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag >> 19) - 1);
-
-	xassert(read32(NCACHE_CTRL) & (1 << 6));
-	printf("%s %s partitions: %"PRIu64"MB nCache",
-	  lib::pr_size(total), nc2_ddr3_module_type(spd_eeprom.module_type), ncache >> 20);
-
-	for (int port = 0; port < 2; port++)
-		write32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL,
-		  ((total_shift - 30) << 3) | 1);
-
-	const char *mctls[] = {"MTag", "CTag"};
-	const uint64_t part[] = {mtag >> 20, ctag >> 20};
-
-
-	/* FIXME: add NCache back in when implemented */
-	for (int port = 0; port < 2; port++) {
-		printf(" %"PRIu64"MB %s", part[port], mctls[port]);
-
-		uint32_t val;
-		do {
-			cpu_relax();
-			val = read32(MTAG_BASE + port * MCTL_SIZE + TAG_CTRL);
-		} while ((val & 0x42) != 0x42);
-	}
 #endif
 
+#ifdef DEBUG
+	printf("CTag TAG_ADDR_MASK   %08x\n", read32(CTAG_BASE + TAG_ADDR_MASK));
+	printf("MTag TAG_ADDR_MASK   %08x\n", read32(MTAG_BASE + TAG_ADDR_MASK));
+	printf("CTag TAG_MCTR_OFFSET %08x\n", read32(CTAG_BASE + TAG_MCTR_OFFSET));
+	printf("CTag TAG_MCTR_MASK   %08x\n", read32(CTAG_BASE + TAG_MCTR_MASK));
+	printf("MTag TAG_MCTR_OFFSET %08x\n", read32(MTAG_BASE + TAG_MCTR_OFFSET));
+	printf("MTag TAG_MCTR_MASK   %08x\n", read32(MTAG_BASE + TAG_MCTR_MASK));
+#endif
+	dram_check();
 	printf("\n");
 }

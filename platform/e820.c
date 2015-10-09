@@ -252,10 +252,7 @@ uint64_t E820::memlimit(void)
 	while (pos->type != RAM)
 		pos--;
 
-	const uint64_t limit = pos->base + pos->length;
-	printf("Memory limit at %"PRIu64"GB\n", limit >> 30);
-
-	return limit;
+	return pos->base + pos->length;
 }
 
 void E820::test_address(const uint64_t addr, const uint64_t val)
