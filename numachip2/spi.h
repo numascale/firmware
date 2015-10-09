@@ -24,7 +24,7 @@
 #define SPI_LOG_SIZE      (16 << 20)
 
 struct spi_header {
-	char name[32];
+	char name[64];
 	uint32_t flashed; // seconds since epoch
 	uint32_t checksum;
 };
