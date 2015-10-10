@@ -164,10 +164,12 @@ public:
 	static const reg_t FABRIC_RECFG_DATA = 0x20f8;
 	static const reg_t FABRIC_RECFG_ADDR = 0x20fc;
 	static const reg_t RMPE_CTRL         = 0x2100;
+	static const reg_t RMPE_STATUS       = 0x2104;
 	static const reg_t RMPE_SEQ_INDEX    = 0x2130;
 	static const reg_t RMPE_WCS_ENTRY    = 0x2134;
 	static const reg_t RMPE_JUMP_ENTRY   = 0x2138;
 	static const reg_t LMPE_CTRL         = 0x2180;
+	static const reg_t LMPE_STATUS       = 0x2184;
 	static const reg_t LMPE_SEQ_INDEX    = 0x21b0;
 	static const reg_t LMPE_WCS_ENTRY    = 0x21b4;
 	static const reg_t LMPE_JUMP_ENTRY   = 0x21b8;

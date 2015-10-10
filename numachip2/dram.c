@@ -22,7 +22,8 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#define MTAG_SHIFT 5
+#define MTAG16_SHIFT 5
+#define MTAG8_SHIFT 6
 #define CTAG_SHIFT 3
 
 void Numachip2::dram_check(void) const
@@ -102,10 +103,11 @@ void Numachip2::dram_init(void)
 
 #if 1
 	const uint64_t hosttotal = e820->memlimit();
+	bool mtag_byte_mode = ((read32(LMPE_STATUS) & (1<<31)) != 0);
 	unsigned ncache_shift = 30; // minimum
 	uint64_t ctag = 1ULL << (ncache_shift - CTAG_SHIFT);
 	// round up to mask constraints to allow manipulation
-	uint64_t mtag = roundup((hosttotal >> MTAG_SHIFT) + 1, 1 << 19);
+	uint64_t mtag = roundup((hosttotal >> (mtag_byte_mode ? MTAG8_SHIFT : MTAG16_SHIFT)) + 1, 1 << 19);
 
 	// check if insufficient MTag
 	if (mtag > (total - (1ULL << ncache_shift) - ctag)) {
@@ -125,7 +127,7 @@ void Numachip2::dram_init(void)
 
 	uint64_t mtag_base = (1ULL << ncache_shift) + ctag;
 	uint64_t mtag_mask = roundup_pow2(mtag, 1 << 19);
-	options->memlimit = (total - mtag_base) << MTAG_SHIFT;
+	options->memlimit = (total - mtag_base) << (mtag_byte_mode ? MTAG8_SHIFT : MTAG16_SHIFT);
 
 	// nCache, then CTag, then MTag
 	write32(NCACHE_CTRL, (ncache_shift - 30) << 3);
