@@ -46,6 +46,7 @@ extern "C" {
 #include "platform/aml.h"
 #include "platform/trampoline.h"
 #include "platform/devices.h"
+#include "platform/pcialloc.h"
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 
@@ -1385,6 +1386,7 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
+	pci_realloc();
 	tracing_arm();
 	if (!options->fastboot)
 		test_cores();
