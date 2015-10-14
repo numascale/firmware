@@ -259,7 +259,7 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	}
 }
 
-void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes)
+void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts)
 {
 	uint32_t scrub[7];
 	uint32_t val;
@@ -270,7 +270,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	       (pf_enabled == 3) ? "enabled, 8-way" : "disabled");
 
 	/* Disable the L3 and DRAM scrubbers on all nodes in the system */
-	for (ht_t ht = 0; ht <= nnodes; ht++) {
+	for (ht_t ht = 0; ht <= hts; ht++) {
 		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
 		   See erratum 505 */
@@ -295,7 +295,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 		caches(0);
 
 		/* Set F0x68[ATMModeEn]=0 and F3x1B8[L3ATMModeEn]=0 */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
+		for (ht_t ht = 0; ht <= hts; ht++) {
 			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
 			val &= ~(1 << 12);
 #ifdef MEASURE
@@ -314,7 +314,7 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 
 	printf("+");
 
-	for (int i = nnodes; i >= 0; i--) {
+	for (int i = hts; i >= 0; i--) {
 		/* Update "neigh" bcast values for node about to increment fabric size */
 		val = lib::cht_read32(neigh, ROUTING + i * 4);
 		lib::cht_write32(neigh, ROUTING + i * 4, val | (0x80000 << link));
@@ -326,13 +326,13 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes
 	printf("*");
 
 	/* Reassert LimitCldtCfg */
-	for (ht_t ht = 0; ht <= nnodes; ht++) {
+	for (ht_t ht = 0; ht <= hts; ht++) {
 		val = lib::cht_read32(ht, LINK_TRANS_CTRL);
 		lib::cht_write32(ht, LINK_TRANS_CTRL, val | (1 << 15));
 	}
 
 	/* Restore L3 and DRAM scrubber register values */
-	for (ht_t ht = 0; ht <= nnodes; ht++) {
+	for (ht_t ht = 0; ht <= hts; ht++) {
 		/* Fam15h: Accesses to this register must first set F1x10C [DctCfgSel]=0;
 		   Accesses to this register with F1x10C [DctCfgSel]=1 are undefined;
 		   See erratum 505 */
@@ -353,12 +353,12 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 {
 	ht_t nc;
 	uint32_t val = lib::cht_read32(0, HT_NODE_ID);
-	ht_t nnodes = (val >> 4) & 7;
+	ht_t hts = (val >> 4) & 7;
 
 	/* Check the last cHT node for our VID/DID incase it's already been included in the cHT fabric */
-	val = lib::cht_read32(nnodes, Numachip2::VENDEV);
+	val = lib::cht_read32(hts, Numachip2::VENDEV);
 	if (val == vendev) {
-		nc = nnodes;
+		nc = hts;
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d already at HT%d\n", rev, nc);
 
@@ -396,7 +396,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		int rt;
 		bool use = 1;
 
-		for (neigh = 0; neigh <= nnodes; neigh++) {
+		for (neigh = 0; neigh <= hts; neigh++) {
 			uint32_t aggr = lib::cht_read32(neigh, COH_LINK_TRAF_DIST);
 
 			for (link = 0; link < 4; link++) {
@@ -420,7 +420,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 				if (aggr & (0x10000 << link))
 					use = 1;
 
-				for (rt = 0; rt <= nnodes; rt++) {
+				for (rt = 0; rt <= hts; rt++) {
 					val = lib::cht_read32(neigh, ROUTING + rt * 4);
 
 					if (val & (2 << link))
@@ -442,14 +442,14 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		printf("HT%u.%u is coherent and unrouted\n", neigh, link);
 
-		nc = nnodes + 1;
+		nc = hts + 1;
 		/* "neigh" request/response routing, copy bcast values from self */
 		val = lib::cht_read32(neigh, ROUTING + neigh * 4);
 		lib::cht_write32(neigh, ROUTING + nc * 4,
 			   (val & 0x07fc0000) | (0x402 << link));
 
 		/* Deassert LimitCldtCfg so we can talk to nodes > NodeCnt */
-		for (ht_t ht = 0; ht <= nnodes; ht++) {
+		for (ht_t ht = 0; ht <= hts; ht++) {
 			val = lib::cht_read32(ht, LINK_TRANS_CTRL);
 			lib::cht_write32(ht, LINK_TRANS_CTRL, val & ~(1 << 15));
 
@@ -485,7 +485,7 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 		ht_optimize_link(nc, neigh, link);
 
 		/* Add NC to coherent fabric */
-		ht_reconfig(neigh, link, nnodes);
+		ht_reconfig(neigh, link, hts);
 	}
 #ifdef EARLYEXIT
 	uint64_t msr = lib::rdmsr(0xc0010015);

@@ -128,24 +128,34 @@ public:
 	T *elements, *limit;
 
 	Vector(void): lim(0), used(0), elements(NULL), limit(NULL) {}
-	~Vector(void) {
+	~Vector(void)
+	{
 		free(elements);
 	}
 
-	void add(T elem) {
+	void add(T elem)
+	{
 		ensure();
 		elements[used++] = elem;
 		limit = &elements[used];
 	}
 
-	void del(const unsigned offset) {
+	T operator[](const unsigned pos) const
+	{
+		xassert(pos < used);
+		return elements[pos];
+	}
+
+	void del(const unsigned offset)
+	{
 		xassert(offset < used);
 		memmove(&elements[offset], &elements[offset + 1], (used - offset - 1) * sizeof(T));
 		used--;
 		limit = &elements[used];
 	}
 
-	void insert(T elem, const unsigned pos) {
+	void insert(T elem, const unsigned pos)
+	{
 		ensure();
 
 		/* Move any later elements down */

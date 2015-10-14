@@ -40,6 +40,8 @@ public:
 	Config::node *config;
 	uint64_t dram_base, dram_size, dram_end;
 	uint64_t trace_base, trace_lim;
+	uint64_t mmio32_base, mmio32_limit;
+	uint64_t mmio64_base, mmio64_limit;
 	uint16_t apic_offset;
 
 	void init(void);
@@ -55,3 +57,4 @@ public:
 
 extern Node *local_node;
 extern Node **nodes;
+extern unsigned nnodes;

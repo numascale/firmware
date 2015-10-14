@@ -43,6 +43,7 @@ extern "C" {
 #include "platform/ipmi.h"
 #include "platform/config.h"
 #include "platform/acpi.h"
+#include "platform/aml.h"
 #include "platform/trampoline.h"
 #include "platform/devices.h"
 #include "opteron/msrs.h"
@@ -61,7 +62,7 @@ IPMI *ipmi;
 char *asm_relocated;
 
 static uint64_t dram_top;
-static unsigned nnodes;
+unsigned nnodes;
 
 void check(void)
 {
@@ -805,6 +806,12 @@ static void acpi_tables(void)
 			(*n)++;
 		}
 	}
+
+	uint32_t extra_len;
+	unsigned char *extra = remote_aml(&extra_len);
+	AcpiTable ssdt("SSDT", 1);
+	ssdt.append(extra, extra_len);
+	// xassert(acpi->append(acpi->rsdt, 4, "SSDT", extra, extra_len));
 
 	acpi->allocate((sizeof(struct acpi_sdt) + 64) * 4 + mcfg.used + apic.used + srat.used + slit.used);
 	acpi->replace(mcfg);

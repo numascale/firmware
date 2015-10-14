@@ -107,7 +107,6 @@ public:
 class ACPI {
 	SMBIOS smbios;
 	struct acpi_rsdp *rptr;
-	struct acpi_sdt *rsdt, *xsdt;
 	bool bios_shadowed;
 	char *allocated;
 	unsigned nallocated, used;
@@ -118,6 +117,7 @@ class ACPI {
 	uint32_t slack(acpi_sdt *parent);
 	void get_cores(void);
 public:
+	struct acpi_sdt *rsdt, *xsdt;
 	uint8_t apics[256];
 	uint8_t napics;
 
