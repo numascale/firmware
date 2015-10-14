@@ -133,16 +133,19 @@ public:
 		free(elements);
 	}
 
-	void add(T elem)
+	void push_back(T elem)
 	{
 		ensure();
 		elements[used++] = elem;
 		limit = &elements[used];
 	}
 
-	T operator[](const unsigned pos) const
+	T operator[](const int pos) const
 	{
-		xassert(pos < used);
+		if (pos < 0)
+			return elements[used];
+
+		xassert(pos < (int)used);
 		return elements[pos];
 	}
 
@@ -152,6 +155,13 @@ public:
 		memmove(&elements[offset], &elements[offset + 1], (used - offset - 1) * sizeof(T));
 		used--;
 		limit = &elements[used];
+	}
+
+	T pop()
+	{
+		T elem = elements[0];
+		del(0);
+		return elem;
 	}
 
 	void insert(T elem, const unsigned pos)

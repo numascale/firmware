@@ -408,7 +408,7 @@ class Name: public Container {
 public:
 	Name(const char *_name, Container *c) {
 		strncpy(name, _name, sizeof(name));
-		children.add(c);
+		children.push_back(c);
 	};
 
 	Name(const char *_name) {
@@ -433,7 +433,7 @@ class Return: public Container {
 	static const uint8_t ReturnOp = 0xa4;
 public:
 	Return(Container *c) {
-		children.add(c);
+		children.push_back(c);
 	}
 
 	int build(void) {
@@ -496,8 +496,8 @@ unsigned char *remote_aml(uint32_t *len)
 
 	/* For the master's PCI bus, add a proximity object */
 	Container *rbus = new Scope("PCI0");
-	rbus->children.add(new Name("_PXM", new Constant(numa))); // FIXME: lookup from proximity table
-	sb->children.add(rbus);
+	rbus->children.push_back(new Name("_PXM", new Constant(numa))); // FIXME: lookup from proximity table
+	sb->children.push_back(rbus);
 	numa += local_node->numachip->ht;
 
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++) {
@@ -506,17 +506,17 @@ unsigned char *remote_aml(uint32_t *len)
 
 		Container *bus = new Device(name);
 
-		bus->children.add(new Name("_HID", new EisaId(EisaId::PNP0A08)));
-		bus->children.add(new Name("_CID", new EisaId(EisaId::PNP0A03)));
-		bus->children.add(new Name("_UID", new Constant(0x80 + (node - &nodes[0]))));
-		bus->children.add(new Name("_BBN", new Constant(0x00)));
-		bus->children.add(new Name("_SEG", new Constant(node - &nodes[0])));
-		bus->children.add(new Name("_ADR", new Constant(0x00)));
-		bus->children.add(new Name("_PXM", new Constant(numa)));
+		bus->children.push_back(new Name("_HID", new EisaId(EisaId::PNP0A08)));
+		bus->children.push_back(new Name("_CID", new EisaId(EisaId::PNP0A03)));
+		bus->children.push_back(new Name("_UID", new Constant(0x80 + (node - &nodes[0]))));
+		bus->children.push_back(new Name("_BBN", new Constant(0x00)));
+		bus->children.push_back(new Name("_SEG", new Constant(node - &nodes[0])));
+		bus->children.push_back(new Name("_ADR", new Constant(0x00)));
+		bus->children.push_back(new Name("_PXM", new Constant(numa)));
 
 		Container *package = new Package();
 
-		package->children.add(new WordBusNumber(
+		package->children.push_back(new WordBusNumber(
 		  WordBusNumber::ResourceProducer,
 		  WordBusNumber::MinFixed,
 		  WordBusNumber::MaxFixed,
@@ -528,7 +528,7 @@ unsigned char *remote_aml(uint32_t *len)
 		  0x0100));
 
 		if ((*node)->mmio32_limit > (*node)->mmio32_base)
-			package->children.add(new DWordMemory(
+			package->children.push_back(new DWordMemory(
 			  DWordMemory::ResourceProducer,
 			  DWordMemory::MinFixed,
 			  DWordMemory::MaxFixed,
@@ -541,7 +541,7 @@ unsigned char *remote_aml(uint32_t *len)
 			  (*node)->mmio32_limit - (*node)->mmio32_base + 1));
 
 		if ((*node)->mmio64_limit > (*node)->mmio64_base)
-			package->children.add(new QWordMemory(
+			package->children.push_back(new QWordMemory(
 			  QWordMemory::ResourceProducer,
 			  QWordMemory::MinFixed,
 			  QWordMemory::MaxFixed,
@@ -553,16 +553,16 @@ unsigned char *remote_aml(uint32_t *len)
 			  0x00000000,
 			  (*node)->mmio64_limit - (*node)->mmio64_base + 1));
 
-		bus->children.add(new Name("_CRS", package));
+		bus->children.push_back(new Name("_CRS", package));
 
 		Container *method = new Method("_CBA", 0, Method::NotSerialised);
 		const uint64_t base = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28);
 		Container *passed = new Return(new Constant(base));
 
-		method->children.add(passed);
-		bus->children.add(method);
+		method->children.push_back(passed);
+		bus->children.push_back(method);
 
-		sb->children.add(bus);
+		sb->children.push_back(bus);
 		numa += (*node)->numachip->ht;
 	}
 
