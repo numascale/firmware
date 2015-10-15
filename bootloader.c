@@ -50,8 +50,6 @@ extern "C" {
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
 
-#define foreach_node(x) for (Node *const *(x) = &nodes[0]; (x) < &nodes[nnodes]; (x)++)
-
 OS *os;
 Options *options;
 Config *config;
@@ -165,14 +163,11 @@ static void add(const Node &node)
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		(*nb)->write32(Opteron::IO_MAP_LIMIT, 0xfff000 | node.numachip->ht);
 		(*nb)->write32(Opteron::IO_MAP_BASE, 0x3);
+
 		for (unsigned r = 1; r < 4; r++) {
 			(*nb)->write32(Opteron::IO_MAP_LIMIT + r * 8, 0);
 			(*nb)->write32(Opteron::IO_MAP_BASE + r * 8, 0);
 		}
-
-		(*nb)->write32(Opteron::CONF_MAP, 0xff000003 | (node.numachip->ht << 4));
-		for (unsigned r = 1; r < 4; r++)
-			(*nb)->write32(Opteron::CONF_MAP + r * 4, 0);
 	}
 
 	// 16. set DRAM range on NumaChip
@@ -393,12 +388,8 @@ static void remap(void)
 	e820->add(dram_top - len, len, E820::RESERVED);
 
 	// 9. setup IOH limits
-#ifdef FIXME /* hangs on remote node due to config map being cleared earlier */
 	foreach_node(node)
 		(*node)->iohub->limits(dram_top - 1);
-#else
-	local_node->iohub->limits(dram_top - 1);
-#endif
 }
 
 #define MTRR_TYPE(x) (x) == 0 ? "uncacheable" : (x) == 1 ? "write-combining" : (x) == 4 ? "write-through" : (x) == 5 ? "write-protect" : (x) == 6 ? "write-back" : "unknown"
@@ -1386,7 +1377,6 @@ int main(const int argc, char *const argv[])
 	e820->test();
 	setup_cores();
 	acpi_tables();
-	pci_realloc();
 	tracing_arm();
 	if (!options->fastboot)
 		test_cores();

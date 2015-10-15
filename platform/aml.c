@@ -160,14 +160,14 @@ public:
 	virtual int build(void) {
 		int l = 0;
 
-		for (unsigned i = 0; i < children.used; i++)
+		for (unsigned i = 0; i < children.size(); i++)
 			l += children.elements[i]->build();
 
 		return l;
 	}
 
 	void insert(void) {
-		for (unsigned int i = 0; i < children.used; i++) {
+		for (unsigned int i = 0; i < children.size(); i++) {
 			ensure(children.elements[i]->offset);
 			memcpy((void *)&buf[offset], (const void *)&children.elements[i]->buf[0], children.elements[i]->offset);
 			offset += children.elements[i]->offset;
@@ -193,7 +193,7 @@ public:
 	}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		pack((uint8_t)0x87);
 		pack((uint16_t)0x0017); /* Minimum length (23) */
@@ -228,7 +228,7 @@ public:
 	}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		pack((uint8_t)0x8a);
 		pack((uint16_t)0x002b); /* Minimum length (43) */
@@ -260,7 +260,7 @@ public:
 	  gran(_gran), mina(_mina), maxa(_maxa), trans(_trans), size(_size) {}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		pack((uint8_t)0x87);
 		pack((uint16_t)0x0017); /* Minimum length (23) */
@@ -291,7 +291,7 @@ public:
 	  mina(_mina), maxa(_maxa), trans(_trans), size(_size) {}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		pack((uint8_t)0x88);
 		pack((uint16_t)0x000d); /* Minimum length (13) */
@@ -329,7 +329,7 @@ public:
 	Constant(const uint64_t _val): val(_val) {}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		if (val <= 1) {
 			pack((uint8_t)val);
@@ -369,7 +369,7 @@ public:
 	}
 
 	int build(void) {
-		xassert(children.used > 0);
+		xassert(children.size() > 0);
 
 		pack(MethodOp);
 		int l = strlen(name) + 1 + Container::build();
@@ -392,7 +392,7 @@ public:
 	EisaId(const uint16_t _id): id(_id) {}
 
 	int build(void) {
-		xassert(children.used == 0);
+		xassert(children.size() == 0);
 
 		pack(DWordPrefix);
 		pack(EISAID);
@@ -416,7 +416,7 @@ public:
 	}
 
 	int build(void) {
-		xassert(children.used == 1);
+		xassert(children.size() == 1);
 
 		pack(NameOp);
 		pack(name);
@@ -437,7 +437,7 @@ public:
 	}
 
 	int build(void) {
-		xassert(children.used == 1);
+		xassert(children.size() == 1);
 
 		pack(ReturnOp);
 		Container::build();

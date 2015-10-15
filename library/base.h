@@ -114,7 +114,7 @@ inline void *zalloc(size_t size)
 #endif
 
 template<class T> class Vector {
-	unsigned lim;
+	unsigned lim, used;
 
 	void ensure(void) {
 		xassert(used <= lim);
@@ -124,13 +124,17 @@ template<class T> class Vector {
 		}
 	}
 public:
-	unsigned used;
 	T *elements, *limit;
 
 	Vector(void): lim(0), used(0), elements(NULL), limit(NULL) {}
 	~Vector(void)
 	{
 		free(elements);
+	}
+
+	unsigned size() const
+	{
+		return used;
 	}
 
 	void push_back(T elem)
@@ -145,7 +149,8 @@ public:
 		if (pos < 0)
 			return elements[used];
 
-		xassert(pos < (int)used);
+		// must allow returning first element, as for loops check after assigning
+		xassert(pos == 0 || pos < (int)used);
 		return elements[pos];
 	}
 
