@@ -52,12 +52,12 @@ void Devices::IOAPIC::restore(void)
 		write64(i * 8 + 0x10, vectors[i]);
 }
 
-void pci_search(const sci_t sci, const struct devspec *list, const int bus)
+void pci_search(const sci_t sci, const struct devspec *list, const uint8_t bus)
 {
 	const struct devspec *listp;
 
-	for (int dev = 0; dev < (bus == 0 ? 24 : 32); dev++) {
-		for (int fn = 0; fn < 8; fn++) {
+	for (uint8_t dev = 0; dev < 32; dev++) {
+		for (uint8_t fn = 0; fn < 8; fn++) {
 			uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0xc);
 			/* PCI device functions are not necessarily contiguous */
 			if (val == 0xffffffff)
@@ -73,7 +73,7 @@ void pci_search(const sci_t sci, const struct devspec *list, const int bus)
 
 			/* Recurse down bridges */
 			if ((type & 0x7f) == 0x01) {
-				int sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				uint8_t sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
 				pci_search(sci, list, sec);
 			}
 
@@ -96,7 +96,7 @@ void disable_kvm_ports(const sci_t sci, const unsigned port)
 	lib::mcfg_write32(sci, 0, 19, 0, 0x40, val | (1 << (port + 16)));
 }
 
-static uint16_t capability(const sci_t sci, const int bus, const int dev, const int fn, const uint8_t cap)
+static uint16_t capability(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint8_t cap)
 {
 	/* Check for capability list */
 	if (!(lib::mcfg_read32(sci, bus, dev, fn, 0x4) & (1 << 20)))
@@ -120,7 +120,7 @@ static uint16_t capability(const sci_t sci, const int bus, const int dev, const 
 	return PCI_CAP_NONE;
 }
 
-static uint16_t extcapability(const sci_t sci, const int bus, const int dev, const int fn, const uint16_t cap)
+uint16_t extcapability(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint16_t cap)
 {
 	uint8_t visited[0x1000];
 	uint16_t offset = 0x100;
@@ -141,16 +141,16 @@ static uint16_t extcapability(const sci_t sci, const int bus, const int dev, con
 	return PCI_CAP_NONE;
 }
 
-static void pci_dma_disable(const uint16_t sci, const int bus, const int dev, const int fn)
+static void pci_dma_disable(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val & ~(1 << 2)); /* Bus Master */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val & ~(1 << 2)); // Bus Master
 }
 
-static void pci_dma_enable(const uint16_t sci, const int bus, const int dev, const int fn)
+static void pci_dma_enable(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val | (1 << 2)); /* Bus Master */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val | (1 << 2)); // Bus Master
 }
 
 void pci_dma_disable_all(const sci_t sci)
@@ -171,7 +171,7 @@ void pci_dma_enable_all(const sci_t sci)
 	pci_search_start(sci, devices);
 }
 
-void pci_disable_device(const uint16_t sci, const int bus, const int dev, const int fn)
+void pci_disable_device(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	// put device into D3 if possible
 	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_POWER);
@@ -204,7 +204,7 @@ void pci_disable_all(const sci_t sci)
 	pci_search_start(sci, devices);
 }
 
-static void completion_timeout(const sci_t sci, const int bus, const int dev, const int fn)
+static void completion_timeout(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	uint32_t val;
 	printf("PCI device @ %02x:%02x.%x: ", bus, dev, fn);
@@ -281,7 +281,7 @@ static void completion_timeout(const sci_t sci, const int bus, const int dev, co
 	printf("\n");
 }
 
-static void stop_ohci(const sci_t sci, const int bus, const int dev, const int fn)
+static void stop_ohci(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
 	if ((bar0 == 0xffffffff) || (bar0 == 0))
@@ -317,7 +317,7 @@ static void stop_ohci(const sci_t sci, const int bus, const int dev, const int f
 	val = lib::mem_read32(bar0 + HcControl);
 }
 
-static void stop_ehci(const uint16_t sci, const int bus, const int dev, const int fn)
+static void stop_ehci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
 	if (bar0 == 0)
@@ -349,7 +349,7 @@ static void stop_ehci(const uint16_t sci, const int bus, const int dev, const in
 	fatal("EHCI controller @ %02x:%02x.%x handover timed out", bus, dev, fn);
 }
 
-static void stop_xhci(const uint16_t sci, const int bus, const int dev, const int fn)
+static void stop_xhci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	printf("XHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
 	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
@@ -393,7 +393,7 @@ static void stop_xhci(const uint16_t sci, const int bus, const int dev, const in
 	printf("legacy handover timed out\n");
 }
 
-static void stop_ahci(const uint16_t sci, const int bus, const int dev, const int fn)
+static void stop_ahci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
 {
 	printf("AHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
 	/* BAR5 (ABAR) contains legacy control registers */
