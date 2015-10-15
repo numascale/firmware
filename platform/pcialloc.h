@@ -83,7 +83,7 @@ public:
 			parent->children.push_back(this);
 	}
 
-	void add(BAR *bar)
+	void add(BAR *bar) const
 	{
 		// store in parent if non-root
 		Device *target = parent ? parent : this;

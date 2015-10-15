@@ -19,7 +19,7 @@ upload: bootloader.c32
 
 .PHONY: check
 check:
-	cppcheck --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
+	cppcheck -q --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
 
 .PHONY: clean
 clean:

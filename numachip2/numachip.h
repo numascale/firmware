@@ -47,7 +47,7 @@ class Numachip2 {
 		const Numachip2 &numachip;
 		unsigned depth;
 	public:
-		DramAtt(Numachip2 &_numachip);
+		explicit DramAtt(Numachip2 &_numachip);
 		void init(void);
 		void range(const uint64_t base, const uint64_t limit, const sci_t dest);
 	};
