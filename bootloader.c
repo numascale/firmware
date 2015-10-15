@@ -1369,6 +1369,7 @@ int main(const int argc, char *const argv[])
 
 	scan();
 	remap();
+	pci_realloc();
 	copy_inherit();
 	clear_dram();
 	if (options->tracing)

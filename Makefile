@@ -103,7 +103,9 @@ platform/e820.o: platform/e820.c platform/e820.h platform/trampoline.h
 platform/devices.o: platform/devices.c platform/devices.h
 platform/devices.o: platform/pcialloc.c platform/pcialloc.h
 platform/trampoline.o: platform/trampoline.S platform/trampoline.h
+platform/pcialloc.h: platform/pcialloc.c
 
+library/base.h: platform/pcialloc.h platform/pcialloc.c
 library/access.o: library/access.c library/access.h
 library/utils.o: library/utils.h
 

@@ -18,10 +18,15 @@
 #include <stdio.h>
 
 #include "pcialloc.h"
+#include "../node.h"
+#include "../library/access.h"
 #include "../library/utils.h"
+#include "../opteron/msrs.h"
 #include "../numachip2/numachip.h"
+#include "../platform/devices.h"
+#include "../platform/options.h"
 
-using namespace std;
+Allocator *Device::alloc;
 
 static bool compare1(const BAR* lhs, const BAR* rhs)
 {
@@ -91,124 +96,140 @@ void BAR::print() const
 void Device::print() const
 {
 	printf("%03x.%02x:%02x.%x:", sci, bus, dev, fn);
-	for (BAR *bar = bars_nonpref32[0]; bar <= bars_nonpref32[-1]; ++bar)
+	for (BAR *bar = bars_nonpref32[0]; bar < bars_nonpref32[-1]; ++bar)
 		bar->print();
-	for (BAR *bar = bars_pref32[0]; bar <= bars_pref32[-1]; ++bar)
+	for (BAR *bar = bars_pref32[0]; bar < bars_pref32[-1]; ++bar)
 		bar->print();
-	for (BAR *bar = bars_pref64[0]; bar <= bars_pref64[-1]; ++bar)
+	for (BAR *bar = bars_pref64[0]; bar < bars_pref64[-1]; ++bar)
 		bar->print();
 
 	printf("\n");
 
-	for (Device *d = children[0]; d <= children[-1]; ++d)
+	for (Device *d = children[0]; d < children[-1]; ++d)
 		d->print();
 }
 
-static Bridge* node(const sci_t sci)
+// returns offset to skip for 64-bit BAR
+unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Endpoint *ep, const uint16_t vfs = 0)
 {
-	Bridge* b0 = new Bridge(sci, NULL, 0, 0, 0); // host bridge
-	// FIXME: check if expanision ROM is non-pref
-	Bridge* b1 = new Bridge(sci, b0, 0, 2, 0); // sec 1, sub 1
+	uint32_t cmd = lib::mcfg_read32(sci, bus, dev, fn, 4);
+	lib::mcfg_write32(sci, bus, dev, fn, 4, 0);
 
-	Bridge* b2 = new Bridge(sci, b0, 0, 3, 0); // sec 2, sub 2
+	uint32_t save = lib::mcfg_read32(sci, bus, dev, fn, offset);
+	bool io = save & 1;
+	uint32_t mask = io ? 1 : 15;
+	uint64_t assigned = save & ~mask;
+	bool s64 = ((save >> 1) & 3) == 2;
+	bool pref = (save >> 3) & 1;
 
-	Bridge* b3 = new Bridge(sci, b0, 0, 4, 0); // sec 3, sub 8
+	lib::mcfg_write32(sci, bus, dev, fn, offset, 0xffffffff);
+	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, offset);
 
-	Bridge* b9 = new Bridge(sci, b0, 0, 9, 0); // sec 9, sub 9
+	// skip unimplemented BARs
+	if (val != 0x00000000 && val != 0xffffffff) {
+		uint64_t len = val & ~mask;
 
-	Bridge* ba = new Bridge(sci, b0, 0, 0x14, 4); // sec 0xa, sub 0xa
+		if (s64) {
+			uint32_t save2 = lib::mcfg_read32(sci, bus, dev, fn, offset + 4);
+			assigned |= (uint64_t)save2 << 32;
+			lib::mcfg_write32(sci, bus, dev, fn, offset + 4, 0xffffffff);
+			len |= (uint64_t)lib::mcfg_read32(sci, bus, dev, fn, offset + 4) << 32;
+			lib::mcfg_write32(sci, bus, dev, fn, offset + 4, save2);
+		}
 
-	Bridge* b4 = new Bridge(sci, b3, 3, 0x00, 0); // sec 4, sub 8
-	b4->add(new BAR(0, 0, 128 << 10, 0xef2e0000));
+		len &= ~(len - 1);
+		if (len)
+			printf(" %s:%s%s%s @ 0x%llx", lib::pr_size(len), io ? "IO" : "MMIO", s64 ? "64" : "", pref ? "P" : "", assigned);
 
-	Bridge* b5 = new Bridge(sci, b4, 4, 0x00, 0); // sec 5, sub 5
-
-	Bridge* b6 = new Bridge(sci, b4, 4, 0x01, 0); // sec 6, sub 6
-
-	Bridge* b7 = new Bridge(sci, b4, 4, 0x04, 0); // sec 7, sub 7
-
-	Bridge* b8 = new Bridge(sci, b4, 4, 0x05, 0); // sec 8, sub 8
-
-	Endpoint* ep = new Endpoint(sci, b0, 0, 0, 0);
-
-	if (sci == 0x000) {
-		ep = new Endpoint(sci, b0, 0, 0x12, 0);
-		ep->add(new BAR(0, 0, 4 << 10, 0xef3fb000));
-
-		ep = new Endpoint(sci, b0, 0, 0x12, 1);
-		ep->add(new BAR(0, 0, 4 << 10, 0xef3fc000));
-
-		ep = new Endpoint(sci, b0, 0, 0x12, 2);
-		ep->add(new BAR(0, 0, 256, 0xef3ffe00));
-
-		ep = new Endpoint(sci, b0, 0, 0x13, 0);
-		ep->add(new BAR(0, 0, 4 << 10, 0xef3fd000));
-
-		ep = new Endpoint(sci, b0, 0, 0x13, 1);
-		ep->add(new BAR(0, 0, 4 << 10, 0xef3fe000));
-
-		ep = new Endpoint(sci, b0, 0, 0x13, 2);
-		ep->add(new BAR(0, 0, 256, 0xef3fff00));
+		BAR *bar = new BAR(s64, pref, len, assigned);
+		ep->add(bar);
 	}
 
-	ep = new Endpoint(sci, b0, 0, 0x14, 0);
+	lib::mcfg_write32(sci, bus, dev, fn, offset, save);
+	lib::mcfg_write32(sci, bus, dev, fn, 4, cmd);
 
-	if (sci == 0x000) {
-		ep = new Endpoint(sci, b0, 0, 0x14, 3);
-	}
-
-	ep = new Endpoint(sci, b1, 1, 0, 0);
-	ep->add(new BAR(1, 0, 32 << 20, 0xe6000000));
-
-	ep = new Endpoint(sci, b1, 1, 0, 1);
-	ep->add(new BAR(1, 0, 32 << 20, 0xe8000000));
-
-	ep = new Endpoint(sci, b2, 2, 0, 0);
-	ep->add(new BAR(1, 0, 32 << 20, 0xea000000));
-
-	ep = new Endpoint(sci, b2, 2, 0, 1);
-	ep->add(new BAR(1, 0, 32 << 20, 0xec000000));
-
-	ep = new Endpoint(sci, b5, 5, 0, 0);
-	ep->add(new BAR(1, 0, 64 << 10, 0xef1f0000));
-	ep->add(new BAR(1, 0, 256 << 10, 0xef180000));
-	ep->add(new BAR(0, 0, 1 << 20, 0xef000000)); // ROM
-
-	if (sci == 0x000) {
-		ep = new Endpoint(sci, ba, 0xa, 3, 0);
-		ep->add(new BAR(0, 1, 8 << 20, 0xe5800000));
-		ep->add(new BAR(0, 0, 16 << 10, 0xeeffc000));
-		ep->add(new BAR(0, 0, 8 << 20, 0xee000000));
-		ep->add(new BAR(0, 0, 64 << 10, 0xee800000)); // ROM
-	}
-
-	return b0;
+	// skip second register if a 64-bit BAR
+	return s64 ? 4 : 0;
 }
 
-static Allocator *Device::alloc;
+void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, Endpoint *ep)
+{
+	printf(" > dev %x:%02x.%x", bus, dev, fn);
+
+	for (unsigned offset = 0x10; offset <= 0x30; offset += 4) {
+		// skip gap between last BAR and expansion ROM address
+		if (offset == 0x28)
+			offset = 0x30;
+
+		offset += probe_bar(sci, bus, dev, fn, offset, ep);
+	}
+
+	// assign BARs in capabilities
+	uint16_t cap = extcapability(PCI_ECAP_SRIOV, sci, bus, dev, fn);
+	if (cap != PCI_CAP_NONE) {
+		// PCI SR-IOV spec needs the number of Virtual Functions times the BAR in space
+		const uint16_t vfs = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x0c) >> 16;
+
+		for (unsigned offset = 0x24; offset <= 0x38; offset += 4)
+			offset += probe_bar(sci, bus, dev, fn, cap + offset, ep, vfs);
+	}
+
+	printf("\n");
+}
+
+static void populate(const sci_t sci, const uint8_t bus, Bridge *br)
+{
+	for (uint8_t dev = 0; dev < 32; dev++) {
+		for (uint8_t fn = 0; fn < 8; fn++) {
+			uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0xc);
+			// PCI device functions are not necessarily contiguous
+			if (val == 0xffffffff)
+				continue;
+
+			uint8_t type = val >> 16;
+
+			// recurse down bridges
+			if ((type & 0x7f) == 0x01) {
+				Bridge *sub = new Bridge(sci, br, bus, dev, fn);
+				uint8_t sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				populate(sci, sec, sub);
+			} else {
+				Endpoint *ep = new Endpoint(sci, br, bus, dev, fn);
+				scan_device(sci, bus, dev, fn, ep);
+			}
+
+			// if not multi-function, break out of function loop
+			if (!fn && !(type & 0x80))
+				break;
+		}
+	}
+}
 
 void pci_realloc()
 {
 	Vector<Bridge*> roots;
+	Device::alloc = new Allocator(lib::rdmsr(MSR_TOPMEM), 0x10000000000);
 
-	Allocator alloc(0xe0000000, 0x10000000000);
-	Device::alloc = &alloc;
-
+	lib::critical_enter();
+	// options->debug.access = 1;
 	// phase 1
-	roots.push_back(node(0x000));
-	roots.push_back(node(0x001));
-	roots.push_back(node(0x010));
-	roots.push_back(node(0x011));
+	foreach_node(node) {
+		Bridge* b0 = new Bridge((*node)->sci, NULL, 0, 0, 0); // host bridge
+		populate((*node)->sci, 0, b0);
+		roots.push_back(b0);
+	}
+	// options->debug.access = 0;
+	lib::critical_leave();
 
-	for (Bridge *br = roots[0]; br <= roots[-1]; ++br)
+	for (Bridge *br = roots[0]; br < roots[-1]; ++br)
 		br->classify();
 
-	for (Bridge *br = roots[0]; br <= roots[-1]; ++br) {
+	for (Bridge *br = roots[0]; br < roots[-1]; ++br) {
 		Device::alloc->round_node();
 		br->assign();
 	}
 
-	for (Bridge *br = roots[0]; br <= roots[-1]; ++br)
+	for (Bridge *br = roots[0]; br < roots[-1]; ++br)
 		br->print();
 
 	Device::alloc->report();
