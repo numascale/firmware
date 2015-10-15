@@ -1,0 +1,11 @@
+*~
+*.orig
+*.c32
+*.[oa]
+*.so
+*.elf
+*.o.d
+syslinux-*
+json-*
+mjson-*
+version.h
