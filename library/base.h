@@ -143,17 +143,14 @@ public:
 		elements[used++] = elem;
 		limit = &elements[used];
 	}
-
-	T operator[](const int pos) const
+#ifdef FOO
+	T operator[](const unsigned pos) const
 	{
-		if (pos < 0)
-			return elements[used];
-
 		// must allow returning first element, as for loops check after assigning
-		xassert(pos == 0 || pos < (int)used);
+		xassert(pos < used);
 		return elements[pos];
 	}
-
+#endif
 	void del(const unsigned offset)
 	{
 		xassert(offset < used);
@@ -171,6 +168,7 @@ public:
 
 	void insert(T elem, const unsigned pos)
 	{
+		xassert(pos <= used);
 		ensure();
 
 		/* Move any later elements down */

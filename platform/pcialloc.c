@@ -27,7 +27,7 @@
 #include "../platform/options.h"
 
 Allocator *Device::alloc;
-
+#ifdef UNUSED
 static bool compare1(const BAR* lhs, const BAR* rhs)
 {
 	return lhs->len < rhs->len;
@@ -37,7 +37,7 @@ static bool compare2(const BAR* lhs, const BAR* rhs)
 {
 	return lhs->len > rhs->len;
 }
-
+#endif
 uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len)
 {
 	if (s64 && pref) {
@@ -96,17 +96,17 @@ void BAR::print() const
 void Device::print() const
 {
 	printf("%03x.%02x:%02x.%x:", sci, bus, dev, fn);
-	for (BAR *bar = bars_nonpref32[0]; bar < bars_nonpref32[-1]; ++bar)
-		bar->print();
-	for (BAR *bar = bars_pref32[0]; bar < bars_pref32[-1]; ++bar)
-		bar->print();
-	for (BAR *bar = bars_pref64[0]; bar < bars_pref64[-1]; ++bar)
-		bar->print();
+	for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++)
+		(*bar)->print();
+	for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++)
+		(*bar)->print();
+	for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++)
+		(*bar)->print();
 
 	printf("\n");
 
-	for (Device *d = children[0]; d < children[-1]; ++d)
-		d->print();
+	for (Device **d = children.elements; d < children.limit; d++)
+		(*d)->print();
 }
 
 // returns offset to skip for 64-bit BAR
@@ -141,7 +141,7 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 		if (len)
 			printf(" %s:%s%s%s @ 0x%llx", lib::pr_size(len), io ? "IO" : "MMIO", s64 ? "64" : "", pref ? "P" : "", assigned);
 
-		BAR *bar = new BAR(s64, pref, len, assigned);
+		BAR *bar = new BAR(io, s64, pref, len, assigned);
 		ep->add(bar);
 	}
 
@@ -165,7 +165,7 @@ void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const ui
 	}
 
 	// assign BARs in capabilities
-	uint16_t cap = extcapability(PCI_ECAP_SRIOV, sci, bus, dev, fn);
+	uint16_t cap = extcapability(sci, bus, dev, fn, PCI_ECAP_SRIOV);
 	if (cap != PCI_CAP_NONE) {
 		// PCI SR-IOV spec needs the number of Virtual Functions times the BAR in space
 		const uint16_t vfs = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x0c) >> 16;
@@ -210,27 +210,27 @@ void pci_realloc()
 	Vector<Bridge*> roots;
 	Device::alloc = new Allocator(lib::rdmsr(MSR_TOPMEM), 0x10000000000);
 
+	printf("PCI scan:\n");
 	lib::critical_enter();
-	// options->debug.access = 1;
+
 	// phase 1
 	foreach_node(node) {
 		Bridge* b0 = new Bridge((*node)->sci, NULL, 0, 0, 0); // host bridge
 		populate((*node)->sci, 0, b0);
 		roots.push_back(b0);
 	}
-	// options->debug.access = 0;
 	lib::critical_leave();
 
-	for (Bridge *br = roots[0]; br < roots[-1]; ++br)
-		br->classify();
+	for (Bridge **br = roots.elements; br < roots.limit; br++)
+		(*br)->classify();
 
-	for (Bridge *br = roots[0]; br < roots[-1]; ++br) {
+	for (Bridge **br = roots.elements; br < roots.limit; br++) {
 		Device::alloc->round_node();
-		br->assign();
+		(*br)->assign();
 	}
 
-	for (Bridge *br = roots[0]; br < roots[-1]; ++br)
-		br->print();
+	for (Bridge **br = roots.elements; br < roots.limit; br++)
+		(*br)->print();
 
 	Device::alloc->report();
 }

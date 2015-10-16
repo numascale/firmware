@@ -50,11 +50,11 @@ class BAR
 {
 	uint64_t addr;
 public:
-	const bool s64, pref;
+	const bool io, s64, pref;
 	const uint64_t len;
 
-	BAR(const bool _s64, const bool _pref, const uint64_t _len, const uint64_t _addr):
-		addr(_addr), s64(_s64), pref(_pref), len(_len)
+	BAR(const bool _io, const bool _s64, const bool _pref, const uint64_t _len, const uint64_t _addr):
+		addr(_addr), io(_io), s64(_s64), pref(_pref), len(_len)
 	{}
 	void assign(const uint64_t _addr)
 	{
@@ -70,6 +70,7 @@ class Device
 	Vector<BAR *> bars_nonpref32;
 	Vector<BAR *> bars_pref32;
 	Vector<BAR *> bars_pref64;
+	Vector<BAR *> bars_io;
 public:
 	Device *parent; // only a bridge in practise
 	uint8_t bus, dev, fn;
@@ -83,10 +84,15 @@ public:
 			parent->children.push_back(this);
 	}
 
-	void add(BAR *bar) const
+	void add(BAR *bar)
 	{
 		// store in parent if non-root
 		Device *target = parent ? parent : this;
+
+		if (bar->io) {
+			target->bars_io.push_back(bar);
+			return;
+		}
 
 		if (bar->s64 && !bar->pref) {
 			target->bars_pref64.push_back(bar);
@@ -99,15 +105,15 @@ public:
 			target->bars_nonpref32.push_back(bar);
 	}
 
-	void add(Device *device) const
+	void add(Device *device)
 	{
 		children.push_back(device);
 	}
 
 	void classify()
 	{
-		for (Device *dev = children[0]; dev < children[-1]; ++dev)
-			dev->classify();
+		for (Device **d = children.elements; d < children.limit; d++)
+			(*d)->classify();
 
 		// if there are 64-bit prefetchable BARs and 32-bit ones, assign 64-bit ones in 32-bit space, as bridge only supports one prefetchable range
 		if (bars_pref64.size() && bars_pref32.size()) {
@@ -121,29 +127,35 @@ public:
 
 	void assign() const
 	{
+		// clear remote IO BARs
+		// FIXME check for master correctly
+		if (sci != 0x000)
+			for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
+				(*bar)->assign(0);
+
 		// FIXME sort
 		// std::sort(bars_nonpref32.begin(), bars_nonpref32.end(), compare1);
-		for (BAR *bar = bars_nonpref32[0]; bar < bars_nonpref32[-1]; ++bar) {
-			uint64_t addr = alloc->alloc(bar->s64, bar->pref, bar->len);
-			bar->assign(addr);
+		for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++) {
+			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len);
+			(*bar)->assign(addr);
 		}
 
 		// FIXME sort
 		// std::sort(bars_pref32.begin(), bars_pref32.end(), compare2);
-		for (BAR *bar = bars_pref32[0]; bar < bars_pref32[-1]; ++bar) {
-			uint64_t addr = alloc->alloc(bar->s64, bar->pref, bar->len);
-			bar->assign(addr);
+		for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++) {
+			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len);
+			(*bar)->assign(addr);
 		}
 
 		// FIXME sort
 		// std::sort(bars_pref64.begin(), bars_pref64.end(), compare1);
-		for (BAR *bar = bars_pref64[0]; bar < bars_pref64[-1]; ++bar) {
-			uint64_t addr = alloc->alloc(bar->s64, bar->pref, bar->len);
-			bar->assign(addr);
+		for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++) {
+			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len);
+			(*bar)->assign(addr);
 		}
 
-		for (Device *bar = children[0]; bar < children[-1]; ++bar)
-			bar->assign();
+		for (Device **d = children.elements; d < children.limit; d++)
+			(*d)->assign();
 	}
 
 	void print() const;

@@ -59,7 +59,7 @@ protected:
 	int offset, bufsize;
 public:
 	Vector<Container *> children;
-	unsigned char *buf;
+	char *buf;
 	enum ResourceUsage {ResourceProducer, ResourceConsumer};
 	enum MinType {MinNotFixed, MinFixed};
 	enum MaxType {MaxNotFixed, MaxFixed};
@@ -81,7 +81,7 @@ public:
 			return;
 
 		bufsize += 1024;
-		buf = (unsigned char *)realloc((void *)buf, bufsize);
+		buf = (char *)realloc((void *)buf, bufsize);
 		xassert(buf);
 	}
 
@@ -160,17 +160,17 @@ public:
 	virtual int build(void) {
 		int l = 0;
 
-		for (unsigned i = 0; i < children.size(); i++)
-			l += children.elements[i]->build();
+		for (Container **c = children.elements; c < children.limit; c++)
+			l += (*c)->build();
 
 		return l;
 	}
 
 	void insert(void) {
-		for (unsigned int i = 0; i < children.size(); i++) {
-			ensure(children.elements[i]->offset);
-			memcpy((void *)&buf[offset], (const void *)&children.elements[i]->buf[0], children.elements[i]->offset);
-			offset += children.elements[i]->offset;
+		for (Container **c = children.elements; c < children.limit; c++) {
+			ensure((*c)->offset);
+			memcpy((void *)&buf[offset], (const void *)&(*c)->buf[0], (*c)->offset);
+			offset += (*c)->offset;
 		}
 	}
 };
@@ -488,7 +488,7 @@ public:
 	}
 };
 
-unsigned char *remote_aml(uint32_t *len)
+char *remote_aml(uint32_t *len)
 {
 	Container *sb = new Scope("\\_SB_");
 

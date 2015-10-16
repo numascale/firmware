@@ -22,6 +22,6 @@
 
 #define AML_MAXNODES 999
 
-unsigned char *remote_aml(uint32_t *len);
+char *remote_aml(uint32_t *len);
 
 #endif

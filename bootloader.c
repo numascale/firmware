@@ -800,7 +800,7 @@ static void acpi_tables(void)
 	}
 
 	uint32_t extra_len;
-	unsigned char *extra = remote_aml(&extra_len);
+	const char *extra = remote_aml(&extra_len);
 	AcpiTable ssdt("SSDT", 1);
 	ssdt.append(extra, extra_len);
 	// xassert(acpi->append(acpi->rsdt, 4, "SSDT", extra, extra_len));
