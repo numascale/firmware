@@ -59,9 +59,6 @@ void Numachip2::dram_init(void)
 	printf("%uGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
 	       spd_eeprom.mpart[0] ? (char *)spd_eeprom.mpart : "unknown");
 
-	// make sure Function3 MCTR CSR is available (it's not on older images)
-	assertf(read32(0x3000) == 0x07031b47, "MCTR CSR Block not available");
-
 	bool errors;
 
 	do {
@@ -95,12 +92,18 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_MASK, ~0);
 	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 
+	// make sure Function3 MCTR CSR is available (it's not on older images)
+	if (read32(0x3000) != 0x07031b47) {
+		warning("MCTR CSR Block not available");
+		options->memlimit = 32ULL << 30;
+		return;
+	}
+
 	// wait for memory init done
 	printf("<zeroing");
 	while (read32(MTAG_BASE + TAG_CTRL) & 1)
 		cpu_relax();
 	printf(">");
-
 #if 1
 	const uint64_t hosttotal = e820->memlimit();
 	bool mtag_byte_mode = ((read32(LMPE_STATUS) & (1<<31)) != 0);

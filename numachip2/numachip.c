@@ -223,7 +223,7 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 			warning("Image already loaded");
 	}
 
-	if (read32(FLASH_REG0) >> 28 != 0xa) {
+	if (is_stratixv && read32(FLASH_REG0) >> 28 != 0xa) {
 		warning("Non-application image detected; forcing init-only option");
 		options->init_only = 1;
 	}
