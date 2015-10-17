@@ -88,22 +88,25 @@ void Allocator::report()
 
 void BAR::print() const
 {
-	printf(" %s,%s,%u", lib::pr_size(len), pref ? "P" : "NP", s64 ? 64 : 32);
+	printf(" %s,%s,%u", lib::pr_size(len), io ? "I" : pref ? "P" : "NP", s64 ? 64 : 32);
 	if (addr)
 		printf(",0x%llx", addr);
 }
 
 void Device::print() const
 {
-	printf("%03x.%02x:%02x.%x:", sci, bus, dev, fn);
-	for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++)
-		(*bar)->print();
-	for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++)
-		(*bar)->print();
-	for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++)
-		(*bar)->print();
-
-	printf("\n");
+	if (bars_io.size() || bars_nonpref32.size() || bars_pref32.size() || bars_pref64.size()) {
+		printf("%03x.%02x:%02x.%x:", sci, bus, dev, fn);
+		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
+			(*bar)->print();
+		for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++)
+			(*bar)->print();
+		for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++)
+			(*bar)->print();
+		for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++)
+			(*bar)->print();
+		printf("\n");
+	}
 
 	for (Device **d = children.elements; d < children.limit; d++)
 		(*d)->print();
@@ -138,9 +141,6 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 		}
 
 		len &= ~(len - 1);
-		if (len)
-			printf(" %s:%s%s%s @ 0x%llx", lib::pr_size(len), io ? "IO" : "MMIO", s64 ? "64" : "", pref ? "P" : "", assigned);
-
 		BAR *bar = new BAR(io, s64, pref, len, assigned);
 		ep->add(bar);
 	}
@@ -154,8 +154,6 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 
 void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, Endpoint *ep)
 {
-	printf(" > dev %x:%02x.%x", bus, dev, fn);
-
 	for (unsigned offset = 0x10; offset <= 0x30; offset += 4) {
 		// skip gap between last BAR and expansion ROM address
 		if (offset == 0x28)
@@ -173,8 +171,6 @@ void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const ui
 		for (unsigned offset = 0x24; offset <= 0x38; offset += 4)
 			offset += probe_bar(sci, bus, dev, fn, cap + offset, ep, vfs);
 	}
-
-	printf("\n");
 }
 
 static void populate(const sci_t sci, const uint8_t bus, Bridge *br)
@@ -210,7 +206,6 @@ void pci_realloc()
 	Vector<Bridge*> roots;
 	Device::alloc = new Allocator(lib::rdmsr(MSR_TOPMEM), 0x10000000000);
 
-	printf("PCI scan:\n");
 	lib::critical_enter();
 
 	// phase 1
@@ -229,8 +224,11 @@ void pci_realloc()
 		(*br)->assign();
 	}
 
-	for (Bridge **br = roots.elements; br < roots.limit; br++)
-		(*br)->print();
+	if (options->debug.remote_io) {
+		printf("PCI scan:\n");
+		for (Bridge **br = roots.elements; br < roots.limit; br++)
+			(*br)->print();
+	}
 
 	Device::alloc->report();
 }
