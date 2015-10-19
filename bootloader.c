@@ -803,13 +803,13 @@ static void acpi_tables(void)
 	const char *extra = remote_aml(&extra_len);
 	AcpiTable ssdt("SSDT", 1);
 	ssdt.append(extra, extra_len);
-	// xassert(acpi->append(acpi->rsdt, 4, "SSDT", extra, extra_len));
 
-	acpi->allocate((sizeof(struct acpi_sdt) + 64) * 4 + mcfg.used + apic.used + srat.used + slit.used);
+	acpi->allocate((sizeof(struct acpi_sdt) + 64) * 5 + mcfg.used + apic.used + srat.used + slit.used + ssdt.used);
 	acpi->replace(mcfg);
 	acpi->replace(apic);
 	acpi->replace(srat);
 	acpi->replace(slit);
+	acpi->add(ssdt);
 	acpi->check();
 }
 

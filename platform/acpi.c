@@ -668,6 +668,23 @@ char *AcpiTable::reserve(const unsigned len)
 	return p;
 }
 
+void ACPI::add(const AcpiTable &table)
+{
+	acpi_sdt *table2 = (acpi_sdt *)(allocated + used);
+	//(acpi_sdt *)e820->expand(E820::ACPI, table.header.len);
+
+	used += sizeof(struct acpi_sdt) + table.used;
+	xassert(used < nallocated);
+	memcpy(table2, &table.header, sizeof(struct acpi_sdt));
+	memcpy((char *)table2 + sizeof(struct acpi_sdt), table.payload, table.used);
+
+	table2->checksum = 0;
+	table2->checksum = checksum((const char *)table2, table2->len);
+
+	add_child(table2, xsdt, 8);
+	add_child(table2, rsdt, 4);
+}
+
 void ACPI::replace(const AcpiTable &table)
 {
 	acpi_sdt *table2 = (acpi_sdt *)(allocated + used);

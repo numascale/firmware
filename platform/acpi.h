@@ -134,6 +134,7 @@ public:
 	checked bool append(const acpi_sdt *parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
 	void handover(void);
 	ACPI(void);
+	void add(const AcpiTable &table);
 	void replace(const AcpiTable &table);
 };
 
