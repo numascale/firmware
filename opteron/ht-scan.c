@@ -102,12 +102,22 @@ static bool proc_lessthan_b0(const ht_t ht)
 
 void Opteron::optimise_linkbuffers(const ht_t nb, const int link)
 {
-	const int IsocRspData = 0, IsocNpReqData = 0, IsocRspCmd = 0, IsocPReq = 0, IsocNpReqCmd = 0;
-	const int RspData = 1, NpReqData = 2, ProbeCmd = 2, RspCmd = 2, PReq = 2, NpReqCmd = 2;
+	const unsigned IsocRspData = 0, IsocNpReqData = 0, IsocRspCmd = 0, IsocPReq = 0, IsocNpReqCmd = 0;
+	const unsigned RspData = 3, NpReqData = 0, ProbeCmd = 12, RspCmd = 4, PReq = 0, NpReqCmd = 8;
+	unsigned FreeCmd = 32 - NpReqCmd - PReq - RspCmd - ProbeCmd - IsocNpReqCmd - IsocPReq - IsocRspCmd;
+	unsigned FreeData = 8 - NpReqData - RspData - PReq - IsocPReq - IsocNpReqData - IsocRspData;
 
-	/* Ensure constraints are met */
-	uint32_t FreeCmd = 32 - NpReqCmd - PReq - RspCmd - ProbeCmd - IsocNpReqCmd - IsocPReq - IsocRspCmd;
-	uint32_t FreeData = 8 - NpReqData - RspData - PReq - IsocPReq - IsocNpReqData - IsocRspData;
+	// constraints
+	xassert(RspData <= 3);
+	xassert(NpReqData <= 3);
+	xassert(ProbeCmd <= 15);
+	xassert(RspCmd <= 15);
+	xassert(PReq <= 7);
+	xassert(NpReqCmd <= 31);
+	xassert(FreeCmd <= 31);
+	xassert(FreeData <= 7);
+	xassert((NpReqCmd + PReq + RspCmd + ProbeCmd + FreeCmd + IsocNpReqCmd + IsocPReq + IsocRspCmd) <= 32);
+	xassert((NpReqData + RspData + PReq + FreeData + IsocPReq + IsocNpReqData + IsocRspData) <= 8);
 	xassert((ProbeCmd + RspCmd + PReq + NpReqCmd + IsocRspCmd + IsocPReq + IsocNpReqCmd) <= 24);
 
 	uint32_t val = NpReqCmd | (PReq << 5) | (RspCmd << 8) | (ProbeCmd << 12) |
