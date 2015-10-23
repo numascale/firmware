@@ -54,16 +54,16 @@ void ACPI::shadow_bios(void)
 	bios_shadowed = 1;
 }
 
-uint8_t ACPI::checksum(const char *addr, const int len)
+uint8_t ACPI::checksum(const char *addr, const unsigned len)
 {
 	uint8_t sum = 0;
-	for (int i = 0; i < len; i++)
+	for (unsigned i = 0; i < len; i++)
 		sum -= addr[i];
 
 	return sum;
 }
 
-void ACPI::assert_checksum(const acpi_sdt *table, const int len)
+void ACPI::assert_checksum(const acpi_sdt *table, const unsigned len)
 {
 	if (checksum((const char *)table, len) == 0)
 		return;
@@ -72,12 +72,11 @@ void ACPI::assert_checksum(const acpi_sdt *table, const int len)
 	fatal("ACPI table %.4s at 0x%p has bad checksum", table->sig.s, table);
 }
 
-acpi_rsdp *ACPI::find_rsdp(const char *start, int len)
+acpi_rsdp *ACPI::find_rsdp(const char *start, const unsigned len)
 {
 	acpi_rsdp *ret = NULL;
-	int i;
 
-	for (i = 0; i < len; i += 16) {
+	for (unsigned i = 0; i < len; i += 16) {
 		if (*(uint32_t *)(start + i) == STR_DW_H("RSD ") &&
 		    *(uint32_t *)(start + i + 4) == STR_DW_H("PTR ")) {
 			ret = (acpi_rsdp *)(start + i);
@@ -88,7 +87,7 @@ acpi_rsdp *ACPI::find_rsdp(const char *start, int len)
 	return ret;
 }
 
-acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const int ptrsize)
+acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const unsigned ptrsize)
 {
 	uint64_t childp;
 	acpi_sdt *table;
@@ -123,7 +122,7 @@ acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const int pt
 }
 
 // return the number of bytes after an ACPI table before the next
-uint32_t ACPI::slack(acpi_sdt *parent)
+uint32_t ACPI::slack(const acpi_sdt *parent)
 {
 	acpi_sdt *next_table = (acpi_sdt *)0xffffffff;
 	uint32_t *rsdt_entries = (uint32_t *) & (rsdt->data);
@@ -189,7 +188,7 @@ uint32_t ACPI::slack(acpi_sdt *parent)
 	return (uint32_t)next_table - (uint32_t)parent - parent->len;
 }
 
-bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize)
+bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *const parent, const unsigned ptrsize)
 {
 	uint64_t newp, childp;
 	acpi_sdt *table;
@@ -250,7 +249,7 @@ again:
 	fatal("ACPI tables immutable when replacing child at 0x%p", &parent->data[i]);
 }
 
-void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize)
+void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *const parent, const unsigned ptrsize)
 {
 	// if insufficient space, replace unimportant tables
 	if (slack(parent) < ptrsize) {
@@ -349,7 +348,7 @@ acpi_sdt *ACPI::find_sdt(const char *sig)
 	return NULL;
 }
 
-void ACPI::allocate(unsigned len)
+void ACPI::allocate(const unsigned len)
 {
 	allocated = (char *)lib::zalloc_top(len);
 	xassert(allocated);
@@ -373,7 +372,7 @@ void ACPI::dump(const acpi_sdt *table, const unsigned limit)
 	printf("\n");
 }
 
-bool ACPI::append(const acpi_sdt *parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
+bool ACPI::append(const acpi_sdt *parent, const unsigned ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
 {
 	// check if enough space to append to SSDT
 	acpi_sdt *table = find_child(sig, parent, ptrsize);

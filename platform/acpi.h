@@ -112,9 +112,9 @@ class ACPI {
 	unsigned nallocated, used;
 
 	void shadow_bios(void);
-	acpi_rsdp *find_rsdp(const char *start, int len);
-	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const int ptrsize) nonnull;
-	uint32_t slack(acpi_sdt *parent);
+	acpi_rsdp *find_rsdp(const char *start, const unsigned len);
+	acpi_sdt *find_child(const char *sig, const acpi_sdt *parent, const unsigned ptrsize) nonnull;
+	uint32_t slack(const acpi_sdt *parent);
 	void get_cores(void);
 public:
 	struct acpi_sdt *rsdt, *xsdt;
@@ -123,15 +123,15 @@ public:
 
 	void allocate(unsigned len);
 	static void dump(const acpi_sdt *table, const unsigned limit = 0);
-	static void assert_checksum(const acpi_sdt *table, const int len);
-	static checked uint8_t checksum(const char *addr, const int len);
+	static void assert_checksum(const acpi_sdt *table, const unsigned len);
+	static checked uint8_t checksum(const char *addr, const unsigned len);
 	void check(void);
-	checked bool replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *parent, const unsigned ptrsize);
-	void add_child(const acpi_sdt *replacement, acpi_sdt *parent, unsigned ptrsize);
+	checked bool replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *const parent, const unsigned ptrsize);
+	void add_child(const acpi_sdt *replacement, acpi_sdt *const parent, unsigned ptrsize);
 	checked acpi_sdt *find_root(const char *sig);
 	checked bool replace_root(const char *sig, const acpi_sdt *replacement);
 	checked acpi_sdt *find_sdt(const char *sig);
-	checked bool append(const acpi_sdt *parent, const int ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
+	checked bool append(const acpi_sdt *parent, const unsigned ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len);
 	void handover(void);
 	ACPI(void);
 	void add(const AcpiTable &table);
