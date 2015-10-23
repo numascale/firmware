@@ -38,7 +38,7 @@ static bool compare2(const BAR* lhs, const BAR* rhs)
 	return lhs->len > rhs->len;
 }
 #endif
-uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len)
+uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs = 0)
 {
 	if (s64 && pref) {
 		uint64_t ret = pos64;
@@ -49,7 +49,7 @@ uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len)
 	if (pref) {
 		// align BAR
 		uint64_t ret = roundup(pos32_pref, len);
-		uint64_t pos32_pref2 = ret + len;
+		uint64_t pos32_pref2 = ret + len * vfs;
 
 		// fail allocation if no space
 		if (((int64_t)pos32_nonpref - (int64_t)pos32_pref2) < 0) {
@@ -61,7 +61,7 @@ uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len)
 		return ret;
 	}
 
-	uint64_t pos32_nonpref2 = pos32_nonpref - len;
+	uint64_t pos32_nonpref2 = pos32_nonpref - len * vfs;
 	pos32_nonpref2 &= ~(len - 1); // align
 
 	// fail allocation if no space
@@ -141,7 +141,7 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 		}
 
 		len &= ~(len - 1);
-		BAR *bar = new BAR(io, s64, pref, len, assigned);
+		BAR *bar = new BAR(io, s64, pref, len, assigned, vfs);
 		ep->add(bar);
 	}
 
