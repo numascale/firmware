@@ -72,7 +72,7 @@ namespace lib
 		const char units[] = {0, 'K', 'M', 'G', 'T', 'P'};
 
 		unsigned i = 0;
-		while (size >= 1024 && i < sizeof(units)) {
+		while (size >= 1024 && i < sizeof(units) - 1) {
 			size /= 1024;
 			i++;
 		}
