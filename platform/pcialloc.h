@@ -43,7 +43,7 @@ public:
 	{}
 	uint64_t alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs);
 	void round_node();
-	void report();
+	void report() const;
 };
 
 class BAR
@@ -85,80 +85,14 @@ public:
 			parent->children.push_back(this);
 	}
 
-	void add(BAR *bar)
-	{
-		// store in parent if non-root
-		Device *target = parent ? parent : this;
-
-		if (bar->io) {
-			target->bars_io.push_back(bar);
-			return;
-		}
-
-		if (bar->s64 && !bar->pref) {
-			target->bars_pref64.push_back(bar);
-			return;
-		}
-
-		if (bar->pref)
-			target->bars_pref32.push_back(bar);
-		else
-			target->bars_nonpref32.push_back(bar);
-	}
-
+	void add(BAR *bar);
 	void add(Device *device)
 	{
 		children.push_back(device);
 	}
 
-	void classify()
-	{
-		for (Device **d = children.elements; d < children.limit; d++)
-			(*d)->classify();
-
-		// if there are 64-bit prefetchable BARs and 32-bit ones, assign 64-bit ones in 32-bit space, as bridge only supports one prefetchable range
-		if (bars_pref64.size() && bars_pref32.size()) {
-			printf("demoting 64-bit perf BARs\n");
-			while (bars_pref64.size()) {
-				BAR *bar = bars_pref64.pop();
-				bars_pref32.push_back(bar);
-			}
-		}
-	}
-
-	void assign() const
-	{
-		// clear remote IO BARs
-		// FIXME check for master correctly
-		if (sci != 0x000)
-			for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
-				(*bar)->assign(0);
-
-		// FIXME sort
-		// std::sort(bars_nonpref32.begin(), bars_nonpref32.end(), compare1);
-		for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++) {
-			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
-			(*bar)->assign(addr);
-		}
-
-		// FIXME sort
-		// std::sort(bars_pref32.begin(), bars_pref32.end(), compare2);
-		for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++) {
-			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
-			(*bar)->assign(addr);
-		}
-
-		// FIXME sort
-		// std::sort(bars_pref64.begin(), bars_pref64.end(), compare1);
-		for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++) {
-			uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
-			(*bar)->assign(addr);
-		}
-
-		for (Device **d = children.elements; d < children.limit; d++)
-			(*d)->assign();
-	}
-
+	void classify();
+	void assign() const;
 	void print() const;
 };
 
