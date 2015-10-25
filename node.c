@@ -104,7 +104,7 @@ void Node::trim_dram_maps(void)
 }
 
 // instantiated for remote nodes
-Node::Node(Config::node *_config, const ht_t ht): local(0), master(SCI_LOCAL), sci(_config->sci), nopterons(ht), config(_config)
+Node::Node(Config::node *_config, const ht_t ht): local(0), master_sci(SCI_LOCAL), sci(_config->sci), nopterons(ht), config(_config)
 {
 	for (ht_t n = 0; n < nopterons; n++)
 		opterons[n] = new Opteron(sci, n, local);
@@ -117,7 +117,7 @@ Node::Node(Config::node *_config, const ht_t ht): local(0), master(SCI_LOCAL), s
 }
 
 // instantiated for local nodes
-Node::Node(Config::node *_config, const sci_t _master): local(1), master(_master), sci(_config->sci), config(_config)
+Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci(_master_sci), sci(_config->sci), config(_config)
 {
 	uint32_t val = lib::cht_read32(0, Opteron::HT_NODE_ID);
 	nopterons = ((val >> 4) & 7) + 1;
@@ -139,7 +139,7 @@ Node::Node(Config::node *_config, const sci_t _master): local(1), master(_master
 	assertf(nc, "NumaChip2 not found");
 
 	check(); // check for Protocol Error MCEs
-	numachip = new Numachip2(sci, nc, local, master);
+	numachip = new Numachip2(sci, nc, local, master_sci);
 	xassert(nopterons == nc);
 
 	// add MMIO range for local CSR space

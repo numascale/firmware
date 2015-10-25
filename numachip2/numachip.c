@@ -150,8 +150,8 @@ void Numachip2::check(void) const
 	dram_check();
 }
 
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t _master):
-  local(_local), master(_master), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
+Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t master_sci):
+  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
 	xassert(ht);
 
@@ -233,5 +233,5 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 	write32(HT_INIT_CTRL, 0);
 
 	// set master SCI ID for PCI IO and CF8 config routing
-	write32(PIU_PCIIO_NODE, master | ((uint32_t)master << 16) | (config->local_node->master << 31));
+	write32(PIU_PCIIO_NODE, master_sci | ((uint32_t)master_sci << 16) | (config->local_node->master << 31));
 }
