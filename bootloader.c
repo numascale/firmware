@@ -799,9 +799,16 @@ static void acpi_tables(void)
 		}
 	}
 
+	// ensure BIOS-provided DSDT uses ACPI revision 2, to 64-bit intergers are accepted
+	acpi_sdt *dsdt = acpi->find_sdt("DSDT");
+	if (dsdt->revision < 2) {
+		dsdt->revision = 2;
+		dsdt->checksum += ACPI::checksum((const char *)dsdt, dsdt->len);
+	}
+
 	uint32_t extra_len;
 	const char *extra = remote_aml(&extra_len);
-	AcpiTable ssdt("SSDT", 1);
+	AcpiTable ssdt("SSDT", 2);
 	ssdt.append(extra, extra_len);
 
 	acpi->allocate((sizeof(struct acpi_sdt) + 64) * 5 + mcfg.used + apic.used + srat.used + slit.used + ssdt.used);
