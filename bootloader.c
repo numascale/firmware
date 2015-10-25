@@ -60,7 +60,7 @@ ACPI *acpi;
 IPMI *ipmi;
 char *asm_relocated;
 
-static uint64_t dram_top;
+uint64_t dram_top;
 unsigned nnodes;
 
 void check(void)

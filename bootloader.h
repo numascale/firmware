@@ -34,3 +34,5 @@
 
 void caches(const bool enable);
 void check(void);
+
+extern uint64_t dram_top;

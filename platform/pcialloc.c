@@ -19,6 +19,7 @@
 
 #include "pcialloc.h"
 #include "../node.h"
+#include "../bootloader.h"
 #include "../library/access.h"
 #include "../library/utils.h"
 #include "../opteron/msrs.h"
@@ -361,7 +362,8 @@ static void pci_prepare(const Node *const node)
 void pci_realloc()
 {
 	Vector<Bridge*> roots;
-	Device::alloc = new Allocator(lib::rdmsr(MSR_TOPMEM), 0x10000000000);
+	// start MMIO64 after the HyperTransport decode range to avoid interference
+	Device::alloc = new Allocator(lib::rdmsr(MSR_TOPMEM), max(dram_top, Opteron::HT_LIMIT));
 
 	lib::critical_enter();
 
