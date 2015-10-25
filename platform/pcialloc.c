@@ -131,6 +131,10 @@ void Device::classify()
 
 void Device::assign() const
 {
+	uint64_t pos32_pref = alloc->pos32_pref;
+	uint64_t pos32_nonpref = alloc->pos32_nonpref;
+	uint64_t pos64 = alloc->pos64;
+
 	// clear remote IO BARs
 	// FIXME check for master correctly
 	if (sci != 0x000)
@@ -160,6 +164,46 @@ void Device::assign() const
 
 	for (Device **d = children.elements; d < children.limit; d++)
 		(*d)->assign();
+
+	// assign bridge windows
+	if (bridge) {
+		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", sci, bus, dev, fn,
+			   lib::pr_size(alloc->pos32_pref - pos32_pref),
+			   lib::pr_size(pos32_nonpref - alloc->pos32_nonpref),
+			   lib::pr_size(alloc->pos64 - pos64));
+
+		// zero IO BARs on slaves only
+		if (sci != 0x000) { // FIXME: use master SCI
+			lib::mcfg_write32(sci, bus, dev, fn, 0x1c, 0xf0);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
+		}
+
+		uint32_t start, end;
+		if (alloc->pos32_pref - pos32_pref > 0) {
+			start = pos32_pref;
+			end = pos32_pref;
+		} else {
+			start = pos32_nonpref;
+			end = alloc->pos32_nonpref;
+		}
+
+		if (end - start > 0) {
+			uint32_t val = (start >> 16) | ((end - 1) & 0xffff0000);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x20, val);
+		} else
+			lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fffff);
+
+		if (alloc->pos64 - pos64 > 0) {
+			uint32_t val = (pos64 >> 16) | ((alloc->pos64 - 1) & 0xffff0000);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x24, val);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x28, pos64 >> 32);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x2c, (alloc->pos64 - 1) >> 32);
+		} else {
+			lib::mcfg_write32(sci, bus, dev, fn, 0x24, 0x0000ffff);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x28, 0x00000000);
+			lib::mcfg_write32(sci, bus, dev, fn, 0x2c, 0x00000000);
+		}
+	}
 }
 
 void Device::print() const

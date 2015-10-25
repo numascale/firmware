@@ -33,9 +33,10 @@
 
 class Allocator
 {
-	const uint64_t start32, end32 , start64;
-	uint64_t pos32_pref, pos32_nonpref, pos64;
+	const uint64_t start32, end32, start64;
 public:
+	uint64_t pos32_pref, pos32_nonpref, pos64;
+
 	Allocator(const uint64_t _start32, const uint64_t _start64):
 		start32(_start32), end32(0xfdffffff), start64(_start64), pos32_pref(_start32), pos32_nonpref(end32), pos64(start64)
 	{}
