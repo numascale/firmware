@@ -72,13 +72,14 @@ class Device
 	Vector<BAR *> bars_pref32;
 	Vector<BAR *> bars_pref64;
 	Vector<BAR *> bars_io;
+	const bool bridge;
 public:
 	Device *parent; // only a bridge in practise
 	uint8_t bus, dev, fn;
 	static Allocator *alloc;
 
-	Device(const sci_t _sci, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn):
-		sci(_sci), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
+	Device(const sci_t _sci, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const bool _bridge):
+		sci(_sci), bridge(_bridge), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
 	{
 		// add as parent's child
 		if (parent)
@@ -99,14 +100,14 @@ public:
 class Endpoint: public Device
 {
 public:
-	Endpoint(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn)
+	Endpoint(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn, 0)
 	{}
 };
 
 class Bridge: public Device
 {
 public:
-	Bridge(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn)
+	Bridge(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn, 1)
 	{}
 };
 
