@@ -270,6 +270,50 @@ static void populate(const sci_t sci, const uint8_t bus, Bridge *br)
 	}
 }
 
+static void pci_prepare(const Node *const node)
+{
+	// enable SP5100 SATA MSI support
+	uint32_t val2 = lib::mcfg_read32(node->sci, 0, 17, 0, 0x40);
+	lib::mcfg_write32(node->sci, 0, 17, 0, 0x40, val2 | 1);
+	uint32_t val = lib::mcfg_read32(node->sci, 0, 17, 0, 0x60);
+	lib::mcfg_write32(node->sci, 0, 17, 0, 0x60, (val & ~0xff00) | 0x5000);
+	lib::mcfg_write32(node->sci, 0, 17, 0, 0x40, val2);
+
+	if (!node->config->master) {
+		// disable HPET MMIO decoding
+		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x40);
+		lib::mcfg_write32(node->sci, 0, 20, 0, 0x40, val & ~(1 << 28));
+
+		// hide IDE controller
+		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0xac);
+		lib::mcfg_write32(node->sci, 0, 20, 0, 0xac, val | (1 << 19));
+
+		// hide the ISA LPC controller
+		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x64);
+		lib::mcfg_write32(node->sci, 0, 20, 0, 0x64, val & ~(1 << 20));
+
+		// disable and hide all USB controllers
+		lib::mcfg_write32(node->sci, 0, 18, 0, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 18, 1, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 18, 2, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 19, 0, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 19, 1, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 19, 2, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 0, 19, 5, 4, 0x0400);
+		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x68);
+		lib::mcfg_write32(node->sci, 0, 20, 0, 0x68, val & ~0xf7);
+
+		// disable the ACPI/SMBus function
+		lib::mcfg_write32(node->sci, 0, 20, 0, 4, 0x0400);
+
+		// disable and hide VGA controller
+		lib::mcfg_write32(node->sci, 0, 20, 4, 4, 0x0400);
+		lib::mcfg_write32(node->sci, 1, 4, 0, 4, 0x0400);
+		val = lib::mcfg_read32(node->sci, 0, 20, 4, 0x5c);
+		lib::mcfg_write32(node->sci, 0, 20, 4, 0x5c, val & ~0xffff0000);
+	}
+}
+
 void pci_realloc()
 {
 	Vector<Bridge*> roots;
@@ -279,6 +323,8 @@ void pci_realloc()
 
 	// phase 1
 	foreach_node(node) {
+		pci_prepare(*node);
+
 		Bridge* b0 = new Bridge((*node)->sci, NULL, 0, 0, 0); // host bridge
 		populate((*node)->sci, 0, b0);
 		roots.push_back(b0);
