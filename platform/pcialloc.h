@@ -101,14 +101,14 @@ public:
 class Endpoint: public Device
 {
 public:
-	Endpoint(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn, 0)
+	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(node, _parent, _bus, _dev, _fn, 0)
 	{}
 };
 
 class Bridge: public Device
 {
 public:
-	Bridge(const sci_t sci, Device *parent, const uint8_t bus, const uint8_t dev, const uint8_t fn): Device(sci, parent, bus, dev, fn, 1)
+	Bridge(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 1)
 	{}
 };
 
