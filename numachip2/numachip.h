@@ -27,20 +27,20 @@ class Numachip2 {
 		const Numachip2 &numachip;
 	public:
 		explicit MmioMap(Numachip2 &_numachip);
-		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
-		void del(const int range);
-		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
-		void print(const int range);
+		void add(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht);
+		void del(const unsigned range);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
+		void print(const unsigned range);
 	};
 
 	class DramMap {
 		const Numachip2 &numachip;
 	public:
 		explicit DramMap(Numachip2 &_numachip);
-		void add(const int range, const uint64_t base, const uint64_t limit, const uint8_t dht);
-		void del(const int range);
-		bool read(const int range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
-		void print(const int range);
+		void add(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht);
+		void del(const unsigned range);
+		bool read(const unsigned range, uint64_t *base, uint64_t *limit, uint8_t *dht) nonnull;
+		void print(const unsigned range);
 	};
 
 	class DramAtt {
