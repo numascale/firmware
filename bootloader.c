@@ -816,7 +816,8 @@ static void acpi_tables(void)
 	acpi->replace(apic);
 	acpi->replace(srat);
 	acpi->replace(slit);
-	acpi->add(ssdt);
+	if (options->remote_io)
+		acpi->add(ssdt);
 	acpi->check();
 }
 
@@ -1376,7 +1377,8 @@ int main(const int argc, char *const argv[])
 
 	scan();
 	remap();
-	pci_realloc();
+	if (options->remote_io)
+		pci_realloc();
 	copy_inherit();
 	clear_dram();
 	if (options->tracing)

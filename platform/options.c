@@ -144,7 +144,7 @@ void Options::parse_flags(const char *val, void *data)
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
 	ht_slowmode(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0),
-	fastboot(0), memlimit(~0), tracing(0)
+	fastboot(0), remote_io(0), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
@@ -161,6 +161,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
 		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
 		{"fastboot",        &Options::parse_bool,   &fastboot},        /* Skip slow phases */
+		{"remote-io",       &Options::parse_bool,   &remote_io},
 		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
 		{"memlimit",        &Options::parse_int64,  &memlimit},        /* Per-server memory limit */
 		{"flash",           &Options::parse_string, &flash},
