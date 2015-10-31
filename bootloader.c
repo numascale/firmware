@@ -596,7 +596,7 @@ static void test_cores(void)
 
 	*REL32(errors) = 0; // clear error counter
 	trampoline_sem_init(cores);
-	tracing_start();
+//	tracing_start();
 
 	foreach_node(node) {
 		for (unsigned n = 0; n < (*node)->napics; n++) {
