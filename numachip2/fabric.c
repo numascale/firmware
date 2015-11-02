@@ -215,6 +215,8 @@ void Numachip2::fabric_init(void)
 		if (!config->size[index / 2])
 			continue;
 
+		assertf(val & (1 << index), "Image doesn't support configured %c axis", 'X' + index / 2);
+
 		if (is_lc4) {
 			lcs[nlcs++] = new LC4(*this, index);
 		} else {
