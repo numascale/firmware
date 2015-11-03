@@ -18,7 +18,6 @@
 #include <stdio.h>
 
 #include "pcialloc.h"
-#include "../node.h"
 #include "../bootloader.h"
 #include "../library/access.h"
 #include "../library/utils.h"
@@ -84,7 +83,7 @@ void Allocator::round_node()
 
 void Allocator::report() const
 {
-	printf("%s left\n", lib::pr_size(pos32_nonpref - pos32_pref));
+	printf("%s of %s MMIO32 allocated\n", lib::pr_size(pos32_nonpref - pos32_pref), lib::pr_size(0x100000000 - lib::rdmsr(MSR_TOPMEM)));
 }
 
 void BAR::print() const
@@ -138,7 +137,7 @@ void Device::assign() const
 
 	// clear remote IO BARs
 	// FIXME check for master correctly
-	if (sci != 0x000)
+	if (!node->config->master)
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
 
@@ -166,17 +165,20 @@ void Device::assign() const
 	for (Device **d = children.elements; d < children.limit; d++)
 		(*d)->assign();
 
+	// disable I/O, DMA and legacy interrupts; enable memory decode
+	lib::mcfg_write32(node->sci, bus, dev, fn, 0x4, 0x0402);
+
 	// assign bridge windows
 	if (bridge) {
-		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", sci, bus, dev, fn,
+		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", node->sci, bus, dev, fn,
 			   lib::pr_size(alloc->pos32_pref - pos32_pref),
 			   lib::pr_size(pos32_nonpref - alloc->pos32_nonpref),
 			   lib::pr_size(alloc->pos64 - pos64));
 
 		// zero IO BARs on slaves only
-		if (sci != 0x000) { // FIXME: use master SCI
-			lib::mcfg_write32(sci, bus, dev, fn, 0x1c, 0xf0);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
+		if (!node->config->master) {
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x1c, 0xf0);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x30, 0);
 		}
 
 		uint32_t start, end;
@@ -190,27 +192,30 @@ void Device::assign() const
 
 		if (end - start > 0) {
 			uint32_t val = (start >> 16) | ((end - 1) & 0xffff0000);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x20, val);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x20, val);
 		} else
-			lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fffff);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x20, 0x0000fffff);
 
 		if (alloc->pos64 - pos64 > 0) {
 			uint32_t val = (pos64 >> 16) | ((alloc->pos64 - 1) & 0xffff0000);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x24, val);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x28, pos64 >> 32);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x2c, (alloc->pos64 - 1) >> 32);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x24, val);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x28, pos64 >> 32);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x2c, (alloc->pos64 - 1) >> 32);
 		} else {
-			lib::mcfg_write32(sci, bus, dev, fn, 0x24, 0x0000ffff);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x28, 0x00000000);
-			lib::mcfg_write32(sci, bus, dev, fn, 0x2c, 0x00000000);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x24, 0x0000ffff);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x28, 0x00000000);
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x2c, 0x00000000);
 		}
-	}
+	} else
+		if (!node->config->master)
+			// set Interrupt Line register to 0 (unallocated)
+			lib::mcfg_write32(node->sci, bus, dev, fn, 0x3c, 0);
 }
 
 void Device::print() const
 {
 	if (bars_io.size() || bars_nonpref32.size() || bars_pref32.size() || bars_pref64.size()) {
-		printf("%03x.%02x:%02x.%x:", sci, bus, dev, fn);
+		printf("%03x.%02x:%02x.%x:", node->sci, bus, dev, fn);
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->print();
 		for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++)
@@ -287,11 +292,11 @@ void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const ui
 	}
 }
 
-static void populate(const sci_t sci, const uint8_t bus, Bridge *br)
+static void populate(Bridge *br, const uint8_t bus)
 {
 	for (uint8_t dev = 0; dev < 32; dev++) {
 		for (uint8_t fn = 0; fn < 8; fn++) {
-			uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0xc);
+			uint32_t val = lib::mcfg_read32(br->node->sci, bus, dev, fn, 0xc);
 			// PCI device functions are not necessarily contiguous
 			if (val == 0xffffffff)
 				continue;
@@ -300,12 +305,12 @@ static void populate(const sci_t sci, const uint8_t bus, Bridge *br)
 
 			// recurse down bridges
 			if ((type & 0x7f) == 0x01) {
-				Bridge *sub = new Bridge(sci, br, bus, dev, fn);
-				uint8_t sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
-				populate(sci, sec, sub);
+				Bridge *sub = new Bridge(br->node, br, bus, dev, fn);
+				uint8_t sec = (lib::mcfg_read32(br->node->sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				populate(sub, sec);
 			} else {
-				Endpoint *ep = new Endpoint(sci, br, bus, dev, fn);
-				scan_device(sci, bus, dev, fn, ep);
+				Endpoint *ep = new Endpoint(br->node, br, bus, dev, fn);
+				scan_device(br->node->sci, bus, dev, fn, ep);
 			}
 
 			// if not multi-function, break out of function loop
@@ -371,8 +376,8 @@ void pci_realloc()
 	foreach_node(node) {
 		pci_prepare(*node);
 
-		Bridge* b0 = new Bridge((*node)->sci, NULL, 0, 0, 0); // host bridge
-		populate((*node)->sci, 0, b0);
+		Bridge* b0 = new Bridge(*node, NULL, 0, 0, 0); // host bridge
+		populate(b0, 0);
 		roots.push_back(b0);
 	}
 	lib::critical_leave();
@@ -383,8 +388,34 @@ void pci_realloc()
 
 	// phase 3
 	for (Bridge **br = roots.elements; br < roots.limit; br++) {
-		Device::alloc->round_node();
+		(*br)->node->mmio64_base = Device::alloc->pos64;
+		uint64_t pos32_pref = Device::alloc->pos32_pref;
+		uint64_t pos32_nonpref = Device::alloc->pos32_nonpref;
+
 		(*br)->assign();
+		Device::alloc->round_node();
+
+		if (Device::alloc->pos32_pref != pos32_pref) {
+			(*br)->node->mmio32_base = pos32_pref;
+			(*br)->node->mmio32_limit = Device::alloc->pos32_pref;
+		} else {
+			(*br)->node->mmio32_base = Device::alloc->pos32_nonpref;
+			(*br)->node->mmio32_limit = pos32_nonpref;
+		}
+
+		(*br)->node->mmio64_limit = Device::alloc->pos64;
+		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->sci, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
+	}
+
+	// setup ATTs and maps
+	foreach_node(src) {
+		foreach_node(dst) {
+			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit, (*dst)->sci);
+			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit, (*dst)->sci);
+		}
+
+		if ((*src)->mmio64_limit)
+			(*src)->numachip->mmiomap.add(3, (*src)->mmio64_base, (*src)->mmio64_limit, (*src)->opterons[0]->ioh_ht);
 	}
 
 	if (options->debug.remote_io) {

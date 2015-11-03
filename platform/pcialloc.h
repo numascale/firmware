@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "../node.h"
 #include "../library/base.h"
 
 // FIXME: add BARs to vector in bridge
@@ -67,7 +68,6 @@ public:
 
 class Device
 {
-	const sci_t sci;
 	Vector<Device *> children;
 	Vector<BAR *> bars_nonpref32;
 	Vector<BAR *> bars_pref32;
@@ -75,12 +75,13 @@ class Device
 	Vector<BAR *> bars_io;
 	const bool bridge;
 public:
+	Node *node;
 	Device *parent; // only a bridge in practise
 	uint8_t bus, dev, fn;
 	static Allocator *alloc;
 
-	Device(const sci_t _sci, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const bool _bridge):
-		sci(_sci), bridge(_bridge), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
+	Device(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const bool _bridge):
+		bridge(_bridge), node(_node), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
 	{
 		// add as parent's child
 		if (parent)
@@ -101,7 +102,7 @@ public:
 class Endpoint: public Device
 {
 public:
-	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(node, _parent, _bus, _dev, _fn, 0)
+	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 0)
 	{}
 };
 

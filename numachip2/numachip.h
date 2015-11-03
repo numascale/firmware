@@ -70,7 +70,6 @@ class Numachip2 {
 	LC *lcs[6];
 	uint8_t nlcs;
 	const bool local;
-	const sci_t master;
 	unsigned dram_total_shift;
 
 	/* i2c-master.c */
