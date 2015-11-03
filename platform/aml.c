@@ -556,7 +556,7 @@ char *remote_aml(uint32_t *len)
 		bus->children.push_back(new Name("_CRS", package));
 
 		Container *method = new Method("_CBA", 0, Method::NotSerialised);
-		const uint64_t base = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28);
+		const uint64_t base = Numachip2::MCFG_BASE | ((uint64_t)(*node)->config->id << 28);
 		Container *passed = new Return(new Constant(base));
 
 		method->children.push_back(passed);

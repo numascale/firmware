@@ -192,7 +192,7 @@ public:
 	static const uint32_t VENDEV_NC2 = 0x07001b47;
 	static const uint32_t TIMEOUT_VAL = 0xdeadbeef;
 
-	const sci_t sci;
+	const Config::node *config;
 	const ht_t ht;
 
 	uint16_t xbar_routes[256][3];
@@ -224,7 +224,7 @@ public:
 	static ht_t probe_slave(const sci_t sci);
 	void late_init(void);
 	uint32_t rom_read(const uint8_t reg);
-	Numachip2(const sci_t sci, const ht_t _ht, const bool _local, const sci_t master);
+	Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id);
 	void fabric_train(void);
 	void fabric_routing(void);
 	void fabric_check(void) const;

@@ -166,19 +166,19 @@ void Device::assign() const
 		(*d)->assign();
 
 	// disable I/O, DMA and legacy interrupts; enable memory decode
-	lib::mcfg_write32(node->sci, bus, dev, fn, 0x4, 0x0402);
+	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, 0x0402);
 
 	// assign bridge windows
 	if (bridge) {
-		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", node->sci, bus, dev, fn,
+		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", node->config->id, bus, dev, fn,
 			   lib::pr_size(alloc->pos32_pref - pos32_pref),
 			   lib::pr_size(pos32_nonpref - alloc->pos32_nonpref),
 			   lib::pr_size(alloc->pos64 - pos64));
 
 		// zero IO BARs on slaves only
 		if (!node->config->master) {
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x1c, 0xf0);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x30, 0);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x1c, 0xf0);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x30, 0);
 		}
 
 		uint32_t start, end;
@@ -192,30 +192,30 @@ void Device::assign() const
 
 		if (end - start > 0) {
 			uint32_t val = (start >> 16) | ((end - 1) & 0xffff0000);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x20, val);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x20, val);
 		} else
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x20, 0x0000fffff);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x20, 0x0000fffff);
 
 		if (alloc->pos64 - pos64 > 0) {
 			uint32_t val = (pos64 >> 16) | ((alloc->pos64 - 1) & 0xffff0000);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x24, val);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x28, pos64 >> 32);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x2c, (alloc->pos64 - 1) >> 32);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, val);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, pos64 >> 32);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, (alloc->pos64 - 1) >> 32);
 		} else {
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x24, 0x0000ffff);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x28, 0x00000000);
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x2c, 0x00000000);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, 0x0000ffff);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, 0x00000000);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, 0x00000000);
 		}
 	} else
 		if (!node->config->master)
 			// set Interrupt Line register to 0 (unallocated)
-			lib::mcfg_write32(node->sci, bus, dev, fn, 0x3c, 0);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0);
 }
 
 void Device::print() const
 {
 	if (bars_io.size() || bars_nonpref32.size() || bars_pref32.size() || bars_pref64.size()) {
-		printf("%03x.%02x:%02x.%x:", node->sci, bus, dev, fn);
+		printf("%03x.%02x:%02x.%x:", node->config->id, bus, dev, fn);
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->print();
 		for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++)
@@ -296,7 +296,7 @@ static void populate(Bridge *br, const uint8_t bus)
 {
 	for (uint8_t dev = 0; dev < 32; dev++) {
 		for (uint8_t fn = 0; fn < 8; fn++) {
-			uint32_t val = lib::mcfg_read32(br->node->sci, bus, dev, fn, 0xc);
+			uint32_t val = lib::mcfg_read32(br->node->config->id, bus, dev, fn, 0xc);
 			// PCI device functions are not necessarily contiguous
 			if (val == 0xffffffff)
 				continue;
@@ -306,11 +306,11 @@ static void populate(Bridge *br, const uint8_t bus)
 			// recurse down bridges
 			if ((type & 0x7f) == 0x01) {
 				Bridge *sub = new Bridge(br->node, br, bus, dev, fn);
-				uint8_t sec = (lib::mcfg_read32(br->node->sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				uint8_t sec = (lib::mcfg_read32(br->node->config->id, bus, dev, fn, 0x18) >> 8) & 0xff;
 				populate(sub, sec);
 			} else {
 				Endpoint *ep = new Endpoint(br->node, br, bus, dev, fn);
-				scan_device(br->node->sci, bus, dev, fn, ep);
+				scan_device(br->node->config->id, bus, dev, fn, ep);
 			}
 
 			// if not multi-function, break out of function loop
@@ -323,44 +323,44 @@ static void populate(Bridge *br, const uint8_t bus)
 static void pci_prepare(const Node *const node)
 {
 	// enable SP5100 SATA MSI support
-	uint32_t val2 = lib::mcfg_read32(node->sci, 0, 17, 0, 0x40);
-	lib::mcfg_write32(node->sci, 0, 17, 0, 0x40, val2 | 1);
-	uint32_t val = lib::mcfg_read32(node->sci, 0, 17, 0, 0x60);
-	lib::mcfg_write32(node->sci, 0, 17, 0, 0x60, (val & ~0xff00) | 0x5000);
-	lib::mcfg_write32(node->sci, 0, 17, 0, 0x40, val2);
+	uint32_t val2 = lib::mcfg_read32(node->config->id, 0, 17, 0, 0x40);
+	lib::mcfg_write32(node->config->id, 0, 17, 0, 0x40, val2 | 1);
+	uint32_t val = lib::mcfg_read32(node->config->id, 0, 17, 0, 0x60);
+	lib::mcfg_write32(node->config->id, 0, 17, 0, 0x60, (val & ~0xff00) | 0x5000);
+	lib::mcfg_write32(node->config->id, 0, 17, 0, 0x40, val2);
 
 	if (!node->config->master) {
 		// disable HPET MMIO decoding
-		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x40);
-		lib::mcfg_write32(node->sci, 0, 20, 0, 0x40, val & ~(1 << 28));
+		val = lib::mcfg_read32(node->config->id, 0, 20, 0, 0x40);
+		lib::mcfg_write32(node->config->id, 0, 20, 0, 0x40, val & ~(1 << 28));
 
 		// hide IDE controller
-		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0xac);
-		lib::mcfg_write32(node->sci, 0, 20, 0, 0xac, val | (1 << 19));
+		val = lib::mcfg_read32(node->config->id, 0, 20, 0, 0xac);
+		lib::mcfg_write32(node->config->id, 0, 20, 0, 0xac, val | (1 << 19));
 
 		// hide the ISA LPC controller
-		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x64);
-		lib::mcfg_write32(node->sci, 0, 20, 0, 0x64, val & ~(1 << 20));
+		val = lib::mcfg_read32(node->config->id, 0, 20, 0, 0x64);
+		lib::mcfg_write32(node->config->id, 0, 20, 0, 0x64, val & ~(1 << 20));
 
 		// disable and hide all USB controllers
-		lib::mcfg_write32(node->sci, 0, 18, 0, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 18, 1, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 18, 2, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 19, 0, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 19, 1, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 19, 2, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 0, 19, 5, 4, 0x0400);
-		val = lib::mcfg_read32(node->sci, 0, 20, 0, 0x68);
-		lib::mcfg_write32(node->sci, 0, 20, 0, 0x68, val & ~0xf7);
+		lib::mcfg_write32(node->config->id, 0, 18, 0, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 18, 1, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 18, 2, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 19, 0, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 19, 1, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 19, 2, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 19, 5, 4, 0x0400);
+		val = lib::mcfg_read32(node->config->id, 0, 20, 0, 0x68);
+		lib::mcfg_write32(node->config->id, 0, 20, 0, 0x68, val & ~0xf7);
 
 		// disable the ACPI/SMBus function
-		lib::mcfg_write32(node->sci, 0, 20, 0, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 0, 20, 0, 4, 0x0400);
 
 		// disable and hide VGA controller
-		lib::mcfg_write32(node->sci, 0, 20, 4, 4, 0x0400);
-		lib::mcfg_write32(node->sci, 1, 4, 0, 4, 0x0400);
-		val = lib::mcfg_read32(node->sci, 0, 20, 4, 0x5c);
-		lib::mcfg_write32(node->sci, 0, 20, 4, 0x5c, val & ~0xffff0000);
+		lib::mcfg_write32(node->config->id, 0, 20, 4, 4, 0x0400);
+		lib::mcfg_write32(node->config->id, 1, 4, 0, 4, 0x0400);
+		val = lib::mcfg_read32(node->config->id, 0, 20, 4, 0x5c);
+		lib::mcfg_write32(node->config->id, 0, 20, 4, 0x5c, val & ~0xffff0000);
 	}
 }
 
@@ -404,14 +404,14 @@ void pci_realloc()
 		}
 
 		(*br)->node->mmio64_limit = Device::alloc->pos64;
-		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->sci, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
+		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
 	}
 
 	// setup ATTs and maps
 	foreach_node(src) {
 		foreach_node(dst) {
-			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit, (*dst)->sci);
-			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit, (*dst)->sci);
+			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit, (*dst)->config->id);
+			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit, (*dst)->config->id);
 		}
 
 		if ((*src)->mmio64_limit)

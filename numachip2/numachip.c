@@ -30,49 +30,49 @@
 uint64_t Numachip2::read64(const reg_t reg) const
 {
 	xassert(ht);
-	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read64(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write64_split(const reg_t reg, const uint64_t val) const
 {
 	xassert(ht);
-	lib::mcfg_write64_split(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write64_split(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint32_t Numachip2::read32(const reg_t reg) const
 {
 	xassert(ht);
-	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
 	xassert(ht);
-	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint16_t Numachip2::read16(const reg_t reg) const
 {
 	xassert(ht);
-	return lib::mcfg_read16(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read16(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write16(const reg_t reg, const uint16_t val) const
 {
 	xassert(ht);
-	lib::mcfg_write16(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write16(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const reg_t reg) const
 {
 	xassert(ht);
-	return lib::mcfg_read8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+	return lib::mcfg_read8(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const reg_t reg, const uint8_t val) const
 {
 	xassert(ht);
-	lib::mcfg_write8(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+	lib::mcfg_write8(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Numachip2::apic_icr_write(const uint32_t low, const uint32_t apicid)
@@ -150,8 +150,8 @@ void Numachip2::check(void) const
 	dram_check();
 }
 
-Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const sci_t master_sci):
-  local(_local), sci(_sci), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
+Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id):
+  local(_local), config(_config), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
 	xassert(ht);
 
@@ -228,10 +228,10 @@ Numachip2::Numachip2(const sci_t _sci, const ht_t _ht, const bool _local, const 
 		options->init_only = 1;
 	}
 
-	// set local SIU SCI ID and ensure config cycles are routed
-	write32(SIU_NODEID, sci);
+	// set local SIU ID and ensure config cycles are routed
+	write32(SIU_NODEID, config->id);
 	write32(HT_INIT_CTRL, 0);
 
 	// set master SCI ID for PCI IO and CF8 config routing
-	write32(PIU_PCIIO_NODE, master_sci | ((uint32_t)master_sci << 16) | (config->local_node->master << 31));
+	write32(PIU_PCIIO_NODE, master_id | ((uint32_t)master_id << 16) | (::config->local_node->master << 31));
 }

@@ -44,7 +44,7 @@ void Numachip2::DramAtt::init(void)
 void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
 	if (options->debug.maps)
-		printf("%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", numachip.sci, base, limit, dest);
+		printf("%s: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", numachip.config->hostname, base, limit, dest);
 
 	xassert(limit > base);
 	xassert(limit < (1ULL << depth));
@@ -75,7 +75,7 @@ void Numachip2::MmioAtt::init(void)
 void Numachip2::MmioAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
 	if (options->debug.maps)
-		printf("%03x: MMIO32 ATT 0x%"PRIx64":0x%"PRIx64" to %03x", numachip.sci, base, limit, dest);
+		printf("%s: MMIO32 ATT 0x%"PRIx64":0x%"PRIx64" to %03x", numachip.config->hostname, base, limit, dest);
 
 	xassert(limit > base);
 	const uint64_t mask = (1ULL << MMIO32_ATT_SHIFT) - 1;

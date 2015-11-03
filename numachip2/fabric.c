@@ -36,7 +36,7 @@ void Numachip2::fabric_reset(void)
 
 	// bring configured links out of reset
 	for (unsigned i = 0; i < 3; i++) {
-		if (config->size[i]) {
+		if (::config->size[i]) {
 			assertf(((val >> (i * 2)) & 3) == 3, "Image doesn't support configured %c axis", 'X' + i);
 			mask &= ~(3 << (i * 2));
 		}
@@ -50,7 +50,7 @@ void Numachip2::fabric_check(void) const
 	uint32_t val = read32(SIU_EVENTSTAT);
 
 	if (val) {
-		warning("SIU on %03x has issues 0x%08x", sci, val);
+		warning("SIU on %s has issues 0x%08x", config->hostname, val);
 
 		if (val & (1ULL << 22)) printf(" RS master illegal packet\n");
 		if (val & (1ULL << 21)) printf(" CC master illegal packet\n");
@@ -186,13 +186,13 @@ void Numachip2::fabric_routing(void)
 	memset(xbar_routes, 0xff, sizeof(xbar_routes));
 
 	printf("Routing:");
-	for (unsigned node = 0; node < config->nnodes; node++) {
-		uint8_t out = lcs[0]->route1(sci, config->nodes[node].sci);
-		printf(" %03x:%u->%03x", sci, out, config->nodes[node].sci);
-		xbar_route(config->nodes[node].sci, out);
+	for (unsigned node = 0; node < ::config->nnodes; node++) {
+		uint8_t out = lcs[0]->route1(config->position, ::config->nodes[node].position);
+		printf(" %03x:%u->%03x", config->id, out, ::config->nodes[node].id);
+		xbar_route(::config->nodes[node].id, out);
 
 		foreach_lc(lc)
-			(*lc)->add_route(config->nodes[node].sci, out);
+			(*lc)->add_route(::config->nodes[node].id, out);
 	}
 	printf("\n");
 
@@ -217,7 +217,7 @@ void Numachip2::fabric_init(void)
 		printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
 
 	for (unsigned index = 0; index < 6; index++) {
-		if (!config->size[index / 2])
+		if (!::config->size[index / 2])
 			continue;
 
 		if (is_lc4) {

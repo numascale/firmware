@@ -44,7 +44,7 @@ void LC4::check(void)
 {
 	const uint64_t val = status();
 	if (val) {
-		warning("Fabric LC4 link %u on %03x has issues 0x%016" PRIx64, index, numachip.sci, val);
+		warning("Fabric LC4 link %u on %s has issues 0x%016" PRIx64, index, numachip.config->hostname, val);
 
 		if (val & 0xff)           printf("Error count: %d\n", (unsigned)(val & 0xff));
 

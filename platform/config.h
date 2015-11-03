@@ -24,9 +24,10 @@ class Config {
 public:
 	struct node {
 		uint32_t uuid;
-		uint32_t sci;
+		uint32_t position; // used only for routing
 		uint32_t partition;
 		char hostname[32];
+		uint16_t id;
 		uint8_t mac[6];
 		bool master;
 		bool seen;

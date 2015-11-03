@@ -25,8 +25,8 @@
 
 void Node::init(void)
 {
-	if (SR56x0::probe(sci))
-		iohub = new SR56x0(sci, local);
+	if (SR56x0::probe(config->id))
+		iohub = new SR56x0(config->id, local);
 	else
 		fatal("Unknown IO hub");
 
@@ -42,7 +42,7 @@ void Node::init(void)
 	}
 
 	if (local)
-		printf("%03x", sci);
+		printf("%03x", config->id);
 	printf(" (%"PRIu64"GB, %u cores)\n", dram_size >> 30, cores);
 }
 
@@ -81,7 +81,7 @@ void Node::trim_dram_maps(void)
 	if (over <= 0)
 		return;
 
-	printf("Trimming %03x maps by %"PRIu64"MB\n", sci, over >> 20);
+	printf("Trimming %03x maps by %"PRIu64"MB\n", config->id, over >> 20);
 
 	while (over > 0) {
 		uint64_t max = 0;
@@ -104,20 +104,20 @@ void Node::trim_dram_maps(void)
 }
 
 // instantiated for remote nodes
-Node::Node(Config::node *_config, const ht_t ht): local(0), master_sci(SCI_LOCAL), sci(_config->sci), nopterons(ht), config(_config)
+Node::Node(Config::node *_config, const ht_t ht): local(0), master_sci(SCI_LOCAL), nopterons(ht), config(_config)
 {
 	for (ht_t n = 0; n < nopterons; n++)
-		opterons[n] = new Opteron(sci, n, local);
+		opterons[n] = new Opteron(config->id, n, local);
 
 	// FIXME set neigh_ht/link/sublink
 
-	numachip = new Numachip2(sci, ht, local, SCI_LOCAL);
+	numachip = new Numachip2(config, ht, local, SCI_LOCAL);
 
 	init();
 }
 
 // instantiated for local nodes
-Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci(_master_sci), sci(_config->sci), config(_config)
+Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci(_master_sci), config(_config)
 {
 	uint32_t val = lib::cht_read32(0, Opteron::HT_NODE_ID);
 	nopterons = ((val >> 4) & 7) + 1;
@@ -129,7 +129,7 @@ Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci
 
 	// Opterons are on all HT IDs before Numachip
 	for (ht_t nb = 0; nb < nopterons; nb++)
-		opterons[nb] = new Opteron(sci, nb, local);
+		opterons[nb] = new Opteron(config->id, nb, local);
 
 #ifndef SIM
 	const ht_t nc = Opteron::ht_fabric_fixup(neigh_ht, neigh_link, Numachip2::VENDEV_NC2);
@@ -139,7 +139,7 @@ Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci
 	assertf(nc, "NumaChip2 not found");
 
 	check(); // check for Protocol Error MCEs
-	numachip = new Numachip2(sci, nc, local, master_sci);
+	numachip = new Numachip2(config, nc, local, master_sci);
 	xassert(nopterons == nc);
 
 	// add MMIO range for local CSR space

@@ -156,8 +156,10 @@ void Config::parse_json(json_t *root)
 
 	int i;
 	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
+		nodes[i].id = i;
+
 		parse_json_num(obj, "uuid", &nodes[i].uuid, 1); /* Optional */
-		if (!parse_json_num(obj, "sci", &nodes[i].sci, 0)) {
+		if (!parse_json_num(obj, "sci", &nodes[i].position, 0)) {
 			error("Label <sci> not found in fabric configuration file");
 			errors++;
 		}
@@ -206,21 +208,22 @@ Config::Config(void)
 	xassert(nodes);
 
 	nodes->uuid = ::local_node->numachip->uuid;
-	nodes->sci = 0;
+	nodes->position = 0;
 	nodes->partition = 0;
 	nodes->master = 1;
+	nodes->id = 0;
 	strcpy(nodes->hostname, "self");
 
 	local_node = nodes;
 }
 
-struct Config::node *Config::find(const sci_t sci)
+struct Config::node *Config::find(const sci_t id)
 {
 	for (unsigned n = 0; n < nnodes; n++)
-		if (nodes[n].sci == sci)
+		if (nodes[n].id == id)
 			return &nodes[n];
 
-	fatal("Failed to find %03x in configuration", sci);
+	fatal("Failed to find %03x in configuration", id);
 }
 
 Config::Config(const char *filename)
@@ -253,7 +256,7 @@ Config::Config(const char *filename)
 			if (nodes[i].uuid != 0xffffffff)
 				printf("UUID %08X, ", nodes[i].uuid);
 
-			printf("%03x, ", nodes[i].sci);
+			printf("%03x, ", nodes[i].id);
 			if (nodes[i].partition)
 				printf("partition %u\n", nodes[i].partition);
 			else
@@ -316,5 +319,5 @@ Config::Config(const char *filename)
 		printf("; partition %u", local_node->partition);
 	else
 		printf("; observer");
-	printf("; %03x; %s\n", local_node->sci, local_node->master ? "master" : "slave");
+	printf("; %03x; %s\n", local_node->id, local_node->master ? "master" : "slave");
 }

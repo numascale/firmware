@@ -89,7 +89,7 @@ static void scan(void)
 
 		if (options->debug.maps)
 			printf("%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=0x%"PRIx64"\n",
-				(*node)->sci, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
+				(*node)->config->id, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 }
 
@@ -99,7 +99,7 @@ static void add(const Node &node)
 
 	// 7. setup MMIO32 ATT to master
 	// forward everything for now, even regions that map to dram (in case of non-coherent accesses to dram)
-	node.numachip->mmioatt.range(0, 0xffffffff, local_node->sci);
+	node.numachip->mmioatt.range(0, 0xffffffff, local_node->config->id);
 
 	// 8. set Opteron maps to forward VGA and MMIO32 regions to NumaChip (which then forwards according to MMIO32 ATT)
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
@@ -194,12 +194,12 @@ static void setup_gsm(void)
 	printf("Setting up GSM to");
 	for (unsigned n = 0; n < config->nnodes; n++)
 		if (!config->nodes[n].partition)
-			printf(" %03x", config->nodes[n].sci);
+			printf(" %s", config->nodes[n].hostname);
 
 	foreach_node(node) {
 		uint64_t base = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_base;
 		uint64_t limit = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_end;
-		sci_t dest = (*node)->sci;
+		sci_t dest = (*node)->config->id;
 
 		(*node)->numachip->write32(Numachip2::GSM_MASK, (1ULL << (Numachip2::GSM_SHIFT - 36)) - 1);
 
@@ -209,10 +209,10 @@ static void setup_gsm(void)
 				continue;
 
 			// We must probe first to find NumaChip HT node (it might be different from others)
-			ht_t ht = Numachip2::probe(config->nodes[n].sci);
+			ht_t ht = Numachip2::probe(config->nodes[n].id);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\n%03x: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", config->nodes[n].sci, base, limit, dest);
+					printf("\n%s: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", config->nodes[n].hostname, base, limit, dest);
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -221,11 +221,11 @@ static void setup_gsm(void)
 				xassert((base & mask) == 0);
 				xassert((limit & mask) == mask);
 
-				lib::mcfg_write32(config->nodes[n].sci, 0, 24 + ht, Numachip2::SIU_ATT_INDEX >> 12,
+				lib::mcfg_write32(config->nodes[n].id, 0, 24 + ht, Numachip2::SIU_ATT_INDEX >> 12,
 						  Numachip2::SIU_ATT_INDEX & 0xfff, (1 << 31) | (base >> Numachip2::SIU_ATT_SHIFT));
 
 				for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
-					lib::mcfg_write32(config->nodes[n].sci, 0, 24 + ht,
+					lib::mcfg_write32(config->nodes[n].id, 0, 24 + ht,
 							  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
 
 			}
@@ -243,9 +243,9 @@ static void setup_info(void)
 
 	for (unsigned n = 0; n < nnodes; n++) {
 		infop = (struct numachip_info *)&info;
-		infop->self = nodes[n]->sci;
+		infop->self = nodes[n]->config->id;
 		infop->partition = nodes[n]->config->partition;
-		infop->master = local_node->config->partition ? config->master->sci : 0xfff;
+		infop->master = local_node->config->partition ? config->master->id : 0xfff;
 
 		struct Config::node *cur = nodes[n]->config;
 
@@ -256,13 +256,13 @@ static void setup_info(void)
 				cur = &config->nodes[0];
 
 			// couldn't find a match, so fully wrapped
-			if (cur->sci == local_node->sci) {
+			if (cur->id == local_node->config->id) {
 				infop->next_master = 0xfff;
 				break;
 			}
 
 			if (cur->partition && cur->partition != config->local_node->partition) {
-				infop->next_master = cur->sci;
+				infop->next_master = cur->id;
 				break;
 			}
 		}
@@ -282,7 +282,7 @@ static void setup_info(void)
 					break;
 			}
 
-			infop->next = cur->sci;
+			infop->next = cur->id;
 		}
 
 		infop->hts = nodes[n]->numachip->ht + 1;
@@ -347,7 +347,7 @@ static void remap(void)
 	// 5. setup DRAM ATT routing
 	foreach_node(node)
 		foreach_node(dnode)
-			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->sci);
+			(*node)->numachip->dramatt.range((*dnode)->dram_base, (*dnode)->dram_end, (*dnode)->config->id);
 
 	// 6. set top of memory
 	lib::wrmsr(MSR_TOPMEM2, dram_top);
@@ -403,7 +403,7 @@ static void copy_inherit(void)
 		// FIXME
 		(*node)->neigh_ht = local_node->neigh_ht;
 		(*node)->neigh_link = local_node->neigh_link;
-		printf("%03x Numachip @ HT%u.%u\n", (*node)->sci, (*node)->neigh_ht,
+		printf("%03x Numachip @ HT%u.%u\n", (*node)->config->id, (*node)->neigh_ht,
 		       (*node)->neigh_link);
 	}
 }
@@ -471,7 +471,7 @@ static void setup_cores_observer(void)
 
 	for (unsigned n = 1; n < acpi->napics; n++) {
 		trampoline_sem_init(1);
-		boot_core(((uint32_t)local_node->sci << 8) | acpi->apics[n], VECTOR_SETUP_OBSERVER);
+		boot_core(((uint32_t)local_node->config->id << 8) | acpi->apics[n], VECTOR_SETUP_OBSERVER);
 		if (trampoline_sem_wait())
 			fatal("%u cores failed to complete observer setup (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 	}
@@ -523,11 +523,11 @@ static void setup_cores(void)
 	printf("APICs");
 	foreach_node(node) {
 		// set correct MCFG base per node
-		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28) | 0x21;
+		const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)(*node)->config->id << 28) | 0x21;
 		push_msr(MSR_MCFG, mcfg);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
-			(*node)->apics[n] = ((uint32_t)(*node)->sci << 8) | acpi->apics[n];
+			(*node)->apics[n] = ((uint32_t)(*node)->config->id << 8) | acpi->apics[n];
 
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
@@ -638,7 +638,7 @@ static void acpi_tables(void)
 	uint16_t segment = 0;
 	foreach_node(node) {
 		struct acpi_mcfg ent;
-		ent.address = Numachip2::MCFG_BASE | ((uint64_t)(*node)->sci << 28ULL);
+		ent.address = Numachip2::MCFG_BASE | ((uint64_t)(*node)->config->id << 28ULL);
 		ent.pci_segment = segment++;
 		ent.start_bus_number = 0;
 		ent.end_bus_number = 255;
@@ -899,7 +899,7 @@ static void wait_status(void)
 			continue;
 
 		if (!config->nodes[n].seen)
-			printf(" %03x/%s", config->nodes[n].sci, config->nodes[n].hostname);
+			printf(" %s", config->nodes[n].hostname);
 	}
 
 	printf("\n");
@@ -989,7 +989,7 @@ static void wait_for_slaves(void)
 	cmd.sig = UDP_SIG;
 	cmd.state = CMD_STARTUP;
 	memcpy(cmd.mac, config->local_node->mac, 6);
-	cmd.sci = config->local_node->sci;
+	cmd.sci = config->local_node->id;
 	cmd.tid = 0; /* Must match initial rsp.tid for RSP_SLAVE_READY */
 	waitfor = RSP_SLAVE_READY;
 	printf("Waiting for %u servers...\n", config->nnodes - 1);
@@ -1137,7 +1137,7 @@ static void wait_for_master(void)
 	rsp.sig = UDP_SIG;
 	rsp.state = RSP_SLAVE_READY;
 	memcpy(rsp.mac, config->local_node->mac, 6);
-	rsp.sci = config->local_node->sci;
+	rsp.sci = config->local_node->id;
 	rsp.tid = 0;
 
 	count = 0;
@@ -1244,7 +1244,7 @@ int main(const int argc, char *const argv[])
 	else
 		config = new Config(options->config_filename);
 
-	local_node = new Node(config->local_node, (sci_t)config->master->sci);
+	local_node = new Node(config->local_node, (sci_t)config->master->id);
 
 	// ensure Numachip2 MMIO range is reserved for all cases
 	e820->add(Numachip2::LOC_BASE, Numachip2::LOC_LIM - Numachip2::LOC_BASE + 1, E820::RESERVED);
@@ -1268,7 +1268,7 @@ int main(const int argc, char *const argv[])
 	e820->add(Numachip2::MCFG_BASE, Numachip2::MCFG_LIM - Numachip2::MCFG_BASE + 1, E820::RESERVED);
 
 	// setup local MCFG access
-	const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)config->local_node->sci << 28) | 0x21;
+	const uint64_t mcfg = Numachip2::MCFG_BASE | ((uint64_t)config->local_node->id << 28) | 0x21;
 	lib::wrmsr(MSR_MCFG, mcfg);
 	push_msr(MSR_MCFG, mcfg);
 
@@ -1309,10 +1309,10 @@ int main(const int argc, char *const argv[])
 		os->cleanup();
 		if (!options->handover_acpi) // handover performed earlier
 			acpi->handover();
-		handover_legacy(local_node->sci);
+		handover_legacy(local_node->config->id);
 
 		// read from master after mapped
-		printf("Waiting for %03x/%s", config->master->sci, config->master->hostname);
+		printf("Waiting for %s", config->master->hostname);
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
@@ -1324,7 +1324,7 @@ int main(const int argc, char *const argv[])
 
 		printf("\n");
 		local_node->iohub->smi_disable();
-		pci_disable_all(local_node->sci);
+		pci_disable_all(local_node->config->id);
 
 		// clear BSP flag
 		uint64_t val = lib::rdmsr(MSR_APIC_BAR);
@@ -1333,9 +1333,9 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "This server %03x/%s is part of a %u-server NumaConnect2 system\n"
-		       "Refer to the console on %03x/%s", config->local_node->sci, config->local_node->hostname,
-		       nnodes, config->master->sci, config->master->hostname);
+		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system\n"
+		       "Refer to the console on %s", config->local_node->hostname,
+		       nnodes, config->master->hostname);
 
 		caches(0);
 
@@ -1365,7 +1365,7 @@ int main(const int argc, char *const argv[])
 
 		ht_t ht;
 		while (1) {
-			ht = Numachip2::probe_slave(config->nodes[n].sci);
+			ht = Numachip2::probe_slave(config->nodes[n].id);
 			if (ht)
 				break;
 			cpu_relax();

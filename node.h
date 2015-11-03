@@ -30,7 +30,6 @@ class Node {
 	bool local;
 	const sci_t master_sci;
 public:
-	sci_t sci;
 	ht_t neigh_ht;
 	link_t neigh_link;
 	uint32_t apics[56];
