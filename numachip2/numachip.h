@@ -196,9 +196,9 @@ public:
 	const ht_t ht;
 
 	uint16_t xbar_routes[256][3];
-	static const uint8_t chunk_lim = 7;
-	static const uint8_t offset_lim = 7;
-	static const uint8_t bit_lim = 2;
+	static const uint8_t lc_chunks = 4;
+	static const uint8_t lc_offsets = 16;
+	static const uint8_t lc_bits = 3;
 
 	MmioMap mmiomap;
 	friend class MmioMap;

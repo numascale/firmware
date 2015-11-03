@@ -136,10 +136,10 @@ void LC4::add_route(const sci_t dst, const uint8_t out)
 
 void LC4::commit(void)
 {
-	for (unsigned chunk = 0; chunk <= numachip.chunk_lim; chunk++) {
+	for (unsigned chunk = 0; chunk < numachip.lc_chunks; chunk++) {
 		numachip.write32(ROUT_CTRL + index * SIZE, (2 << 4) | chunk); // set table routing mode and chunk address
-		for (unsigned offset = 0; offset <= numachip.offset_lim; offset++) {
-			for (unsigned bit = 0; bit <= numachip.bit_lim; bit++)
+		for (unsigned offset = 0; offset < numachip.lc_offsets; offset++) {
+			for (unsigned bit = 0; bit < numachip.lc_bits; bit++)
 				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, numachip.xbar_routes[(chunk<<4)+offset][bit]);
 			// link routing table
 			numachip.write32(SCIROUTE + index * SIZE + offset * 4, link_routes[(chunk<<4)+offset]);

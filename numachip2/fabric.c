@@ -173,7 +173,7 @@ void Numachip2::xbar_route(const sci_t dst, const uint8_t out)
 	const unsigned regoffset = dst >> 4;
 	const unsigned bitoffset = dst & 0xf;
 
-	for (unsigned bit = 0; bit <= bit_lim; bit++) {
+	for (unsigned bit = 0; bit < lc_bits; bit++) {
 		uint16_t *ent = &xbar_routes[regoffset][bit];
 		*ent &= ~(1 << bitoffset);
 		*ent |= ((out >> bit) & 1) << bitoffset;
@@ -197,10 +197,10 @@ void Numachip2::fabric_routing(void)
 	printf("\n");
 
 	// SIU routing table
-	for (unsigned chunk = 0; chunk <= chunk_lim; chunk++) {
+	for (unsigned chunk = 0; chunk < lc_chunks; chunk++) {
 		write32(SIU_XBAR_CHUNK, chunk);
-		for (unsigned offset = 0; offset <= offset_lim; offset++)
-			for (unsigned bit = 0; bit <= bit_lim; bit++)
+		for (unsigned offset = 0; offset < lc_offsets; offset++)
+			for (unsigned bit = 0; bit < lc_bits; bit++)
 				write32(SIU_XBAR_TABLE + bit * SIU_XBAR_TABLE_SIZE + offset * 4, xbar_routes[(chunk<<4)+offset][bit]);
 	}
 

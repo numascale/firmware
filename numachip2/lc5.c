@@ -120,10 +120,10 @@ uint8_t LC5::route1(const sci_t src, const sci_t dst)
 
 void LC5::commit(void)
 {
-	for (unsigned chunk = 0; chunk <= numachip.chunk_lim; chunk++) {
+	for (unsigned chunk = 0; chunk < numachip.lc_chunks; chunk++) {
 		numachip.write32(ROUTE_CHUNK + index * SIZE, chunk);
-		for (unsigned offset = 0; offset <= numachip.offset_lim; offset++)
-			for (unsigned bit = 0; bit <= numachip.bit_lim; bit++)
+		for (unsigned offset = 0; offset < numachip.lc_offsets; offset++)
+			for (unsigned bit = 0; bit < numachip.lc_bits; bit++)
 				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, numachip.xbar_routes[(chunk<<4)+offset][bit]);
 	}
 }
