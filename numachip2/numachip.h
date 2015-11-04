@@ -19,6 +19,7 @@
 
 #include "spd.h"
 #include "../library/base.h"
+#include "../platform/config.h"
 
 class LC;
 
