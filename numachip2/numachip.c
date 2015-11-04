@@ -198,7 +198,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 		assertf(is_stratixv, "Flashing not supported on this platform");
 		size_t len = 0;
 		char *buf = os->read_file(options->flash, &len);
-		assertf(buf && len > 0, "Image %s not found", options->flash);
+		assertf(buf && len > 0, "Image %s not found or permission issues", options->flash);
 
 		uint32_t checksum = lib::checksum((unsigned char *)buf, len);
 		if (hdr.checksum != checksum || (read32(FLASH_REG0) >> 28) != 0xa) {
