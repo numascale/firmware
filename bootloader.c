@@ -1240,9 +1240,6 @@ int main(const int argc, char *const argv[])
 	if (options->handover_acpi)
 		acpi->handover();
 
-	if (options->singleton)
-		config = new Config();
-	else
 		config = new Config(options->config_filename);
 
 	local_node = new Node(config->local_node, (sci_t)config->master->id);

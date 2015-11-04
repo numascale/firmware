@@ -27,12 +27,10 @@ class Options {
 public:
 	const char *next_label, *observer_label;
 	const char *config_filename, *flash;
-	bool ht_slowmode, ht_selftest;
+	bool ht_slowmode;
 	bool init_only;
 	bool boot_wait;
 	bool handover_acpi;
-	bool reentrant;
-	bool singleton;
 	bool fastboot;
 	bool remote_io;
 	uint64_t memlimit;

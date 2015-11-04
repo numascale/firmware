@@ -107,11 +107,7 @@ void Options::parse_flags(const char *val, void *data)
 
 	const char *pos = strtok(params, ",");
 	while (pos) {
-		if (!strcmp(pos, "all"))
-			memset(flags, 1, sizeof(Options::debug));
-		else if (!strcmp(pos, "full"))
-			memset(flags, 255, sizeof(Options::debug));
-		else if (!strcmp(pos, "config"))
+		if (!strcmp(pos, "config"))
 			flags->config = 1;
 		else if (!strcmp(pos, "access"))
 			flags->access = 1;
@@ -143,28 +139,25 @@ void Options::parse_flags(const char *val, void *data)
 }
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
-	ht_slowmode(0), ht_selftest(0), boot_wait(0), handover_acpi(0), reentrant(0), singleton(0),
+	ht_slowmode(0), boot_wait(0), handover_acpi(0),
 	fastboot(0), remote_io(0), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
 	static const struct optargs list[] = {
-		{"next-label",	    &Options::parse_string, &next_label},      /* Next PXELINUX label to boot after loader */
-		{"observer-label",  &Options::parse_string, &observer_label},  /* Next PXELINUX label to boot after loader for observers */
-		{"ht.slowmode",     &Options::parse_bool,   &ht_slowmode},     /* Enforce 200MHz 8-bit HT link */
-		{"ht.selftest",     &Options::parse_bool,   &ht_selftest},
-		{"init-only",       &Options::parse_bool,   &init_only},
-		{"wait",            &Options::parse_bool,   &boot_wait},
-		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   /* Workaround Linux not being able to handover ACPI */
-		{"config",          &Options::parse_string, &config_filename},
-		{"reentrant",       &Options::parse_bool,   &reentrant},       /* Allow bootloader reload on error */
-		{"debug",           &Options::parse_flags,  &debug},           /* Subsystem debug flags */
-		{"singleton",       &Options::parse_bool,   &singleton},       /* Single-card, no config */
-		{"fastboot",        &Options::parse_bool,   &fastboot},        /* Skip slow phases */
-		{"remote-io",       &Options::parse_bool,   &remote_io},
-		{"tracing",         &Options::parse_int64,  &tracing},         /* Reserve tracebuffers */
-		{"memlimit",        &Options::parse_int64,  &memlimit},        /* Per-server memory limit */
-		{"flash",           &Options::parse_string, &flash},
+		{"next-label",	    &Options::parse_string, &next_label},      // next PXELINUX label to boot after loader
+		{"observer-label",  &Options::parse_string, &observer_label},  // next PXELINUX label to boot after loader for observers
+		{"ht.slowmode",     &Options::parse_bool,   &ht_slowmode},     // enforce 200MHz 8-bit HT link
+		{"init-only",       &Options::parse_bool,   &init_only},       // load next-label after adding NumaChip to coherent fabric
+		{"wait",            &Options::parse_bool,   &boot_wait},       // wait for keypress before loading next-label
+		{"handover-acpi",   &Options::parse_bool,   &handover_acpi},   // workaround Linux failing ACPI handover
+		{"config",          &Options::parse_string, &config_filename}, // path to fabric configuration JSON
+		{"debug",           &Options::parse_flags,  &debug},           // enable subsystem debug checking/output
+		{"fastboot",        &Options::parse_bool,   &fastboot},        // skip/reduce slower testing during unification
+		{"remote-io",       &Options::parse_bool,   &remote_io},       // enable experimental remote IO
+		{"tracing",         &Options::parse_int64,  &tracing},         // memory per NUMA node reserved for HT tracing
+		{"memlimit",        &Options::parse_int64,  &memlimit},        // per-server memory limit
+		{"flash",           &Options::parse_string, &flash},           // path to image file to flash
 	};
 
 	unsigned errors = 0;

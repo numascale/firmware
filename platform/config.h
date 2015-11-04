@@ -45,7 +45,6 @@ public:
 	unsigned nnodes;
 	struct node *local_node, *master, *nodes;
 
-	Config(void);
 	explicit Config(const char *filename) nonnull;
 };
 
