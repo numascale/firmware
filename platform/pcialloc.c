@@ -395,6 +395,8 @@ void pci_realloc()
 		(*br)->assign();
 		Device::alloc->round_node();
 
+		printf("\n");
+
 		if (Device::alloc->pos32_pref != pos32_pref) {
 			(*br)->node->mmio32_base = pos32_pref;
 			(*br)->node->mmio32_limit = Device::alloc->pos32_pref;
@@ -405,17 +407,18 @@ void pci_realloc()
 
 		(*br)->node->mmio64_limit = Device::alloc->pos64;
 		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
+
 	}
 
 	// setup ATTs and maps
 	foreach_node(src) {
 		foreach_node(dst) {
-			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit, (*dst)->config->id);
-			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit, (*dst)->config->id);
+			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit - 1, (*dst)->config->id);
+			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit - 1, (*dst)->config->id);
 		}
 
 		if ((*src)->mmio64_limit)
-			(*src)->numachip->mmiomap.add(3, (*src)->mmio64_base, (*src)->mmio64_limit, (*src)->opterons[0]->ioh_ht);
+			(*src)->numachip->mmiomap.add(3, (*src)->mmio64_base, (*src)->mmio64_limit - 1, (*src)->opterons[0]->ioh_ht);
 	}
 
 	if (options->debug.remote_io) {

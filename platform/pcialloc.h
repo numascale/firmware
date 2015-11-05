@@ -23,8 +23,6 @@
 #include "../node.h"
 #include "../library/base.h"
 
-// FIXME: add BARs to vector in bridge
-
 /*
  - phase 1: the tree is built with all BARs added to 32-bit pref, 32-bit non-pref and 64-bit pref lists in the parent bridge
  - phase 2: at every bridge, the path to the root bridge is searched for 32-bit prefetchable BARs
@@ -39,7 +37,7 @@ public:
 	uint64_t pos32_pref, pos32_nonpref, pos64;
 
 	Allocator(const uint64_t _start32, const uint64_t _start64):
-		start32(_start32), end32(0xfdffffff), start64(_start64), pos32_pref(_start32), pos32_nonpref(end32), pos64(start64)
+		start32(_start32), end32(0xfe000000), start64(_start64), pos32_pref(_start32), pos32_nonpref(end32), pos64(start64)
 	{}
 	void reserve(const uint32_t addr, const uint32_t len)
 	{}
