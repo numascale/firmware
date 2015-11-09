@@ -140,7 +140,7 @@ void Options::parse_flags(const char *val, void *data)
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
 	ht_slowmode(0), boot_wait(0), handover_acpi(0),
-	fastboot(0), remote_io(0), memlimit(~0), tracing(0)
+	fastboot(0), remote_io(0), dimmtest(2), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
@@ -158,6 +158,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"tracing",         &Options::parse_int64,  &tracing},         // memory per NUMA node reserved for HT tracing
 		{"memlimit",        &Options::parse_int64,  &memlimit},        // per-server memory limit
 		{"flash",           &Options::parse_string, &flash},           // path to image file to flash
+		{"dimmtest",        &Options::parse_int,    &dimmtest},        // Run memory controller BIST for DIMM
 		{"test.manufacture",&Options::parse_bool,   &test_manufacture},// perform manufacture testing; requires a cable between each port pair
 	};
 
@@ -191,6 +192,13 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 	}
 	printf("\n");
 	assertf(!errors, "Invalid arguments specified");
+
+	// Enable all BIST sequences if we're doing manufacture testing
+	if (test_manufacture)
+		dimmtest = 0xff;
+
+	if (fastboot)
+		dimmtest = 0;
 
 	if (tracing > 0 && tracing < (16ULL << 20)) {
 		warning("Too small trace buffers specified (%"PRIu64" MB), must be 16MB or more. Disabled.", tracing >> 20);

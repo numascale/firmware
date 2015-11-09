@@ -90,16 +90,33 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_CTRL, 0);
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0);
 	write32(MTAG_BASE + TAG_MCTR_MASK, ~0);
-	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 
-	// make sure Function3 MCTR CSR is available (it's not on older images)
-	if (read32(0x3000) != 0x07031b47) {
-		warning("MCTR CSR Block not available");
-		options->memlimit = 32ULL << 30;
-		return;
+	// test memory
+	// XXX: For now since not all images have BIST enabled yet, we need to check if it's available
+	write32(MCTR_BIST_CTRL, ((dram_total_shift - 3) << 3));
+	uint32_t val = read32(MCTR_BIST_CTRL);
+	if (options->dimmtest > 0 && (val >> 3) == (dram_total_shift - 3)) {
+		write32(MCTR_BIST_ADDR, 0);
+		write32(MCTR_BIST_CTRL, ((options->dimmtest & 0xff) << 16) | ((dram_total_shift - 3) << 3) | (1<<2) | (1<<1) | (1<<0));
+
+		const char *baton = "-\\|/";
+		i = 0;
+		printf("<testing ");
+
+		while (1) {
+			val = read32(MCTR_BIST_CTRL);
+			if (!(val & 1))
+				break;
+			printf("%c\b", baton[i++%4]);
+			lib::udelay(20000);
+		}
+
+		printf("\b>");
+		assertf(((val >> 9) & 3) == 3, "NumaConnect DIMM failure");
 	}
 
-	// wait for memory init done
+	// start zeroing and wait
+	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
 	printf("<zeroing");
 	while (read32(MTAG_BASE + TAG_CTRL) & 1)
 		cpu_relax();

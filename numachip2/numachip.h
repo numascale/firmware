@@ -180,6 +180,8 @@ public:
 	static const reg_t SIU_ATT_ENTRY     = 0x2304;
 	static const reg_t SIU_EVENTSTAT     = 0x2308;
 	static const reg_t SIU_XBAR_TABLE_SIZE = 0x40;
+	static const reg_t MCTR_BIST_CTRL    = 0x3040;
+	static const reg_t MCTR_BIST_ADDR    = 0x3044;
 	static const reg_t MCTR_PHY_STATUS   = 0x3810;
 	static const reg_t MCTR_PHY_STATUS2  = 0x3818;
 	static const reg_t MCTR_ECC_CONTROL  = 0x3CC0;

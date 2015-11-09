@@ -34,6 +34,7 @@ public:
 	bool fastboot;
 	bool remote_io;
 	bool test_manufacture;
+	int dimmtest;
 	uint64_t memlimit;
 	uint64_t tracing;
 	struct debug_flags {
