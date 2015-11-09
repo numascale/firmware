@@ -1240,6 +1240,9 @@ int main(const int argc, char *const argv[])
 	if (options->handover_acpi)
 		acpi->handover();
 
+	if (options->test_manufacture)
+		config = new Config();
+	else
 		config = new Config(options->config_filename);
 
 	local_node = new Node(config->local_node, (sci_t)config->master->id);
@@ -1279,6 +1282,14 @@ int main(const int argc, char *const argv[])
 			wait_for_slaves();
 		else
 			wait_for_master();
+	}
+
+	if (options->test_manufacture) {
+		for (unsigned i = 0; i < 10; i++)
+			local_node->numachip->fabric_train();
+
+		printf("MANUFACTURE TEST PASSED\n");
+		halt();
 	}
 
 	if (config->local_node->partition) {

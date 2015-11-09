@@ -158,6 +158,7 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"tracing",         &Options::parse_int64,  &tracing},         // memory per NUMA node reserved for HT tracing
 		{"memlimit",        &Options::parse_int64,  &memlimit},        // per-server memory limit
 		{"flash",           &Options::parse_string, &flash},           // path to image file to flash
+		{"test.manufacture",&Options::parse_bool,   &test_manufacture},// perform manufacture testing; requires a cable between each port pair
 	};
 
 	unsigned errors = 0;

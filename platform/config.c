@@ -197,6 +197,26 @@ void Config::parse_json(json_t *root)
 		fatal("%d errors found in fabric configuration file", errors);
 }
 
+Config::Config(void)
+{
+	size[0] = 1;
+	size[1] = 1;
+	size[2] = 1;
+
+	nnodes = 1;
+	nodes = (struct node *)zalloc(sizeof(*nodes));
+	xassert(nodes);
+
+	nodes->uuid = ::local_node->numachip->uuid;
+	nodes->position = 0;
+	nodes->partition = 0;
+	nodes->master = 1;
+	nodes->id = 0;
+	strcpy(nodes->hostname, "self");
+
+	local_node = nodes;
+}
+
 struct Config::node *Config::find(const sci_t id)
 {
 	for (unsigned n = 0; n < nnodes; n++)

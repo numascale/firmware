@@ -33,6 +33,7 @@ public:
 	bool handover_acpi;
 	bool fastboot;
 	bool remote_io;
+	bool test_manufacture;
 	uint64_t memlimit;
 	uint64_t tracing;
 	struct debug_flags {
