@@ -87,41 +87,27 @@ void Numachip2::dram_init(void)
 	if (options->debug.mctr)
 		printf("<mctr PHY up>");
 
-	write32(MTAG_BASE + TAG_CTRL, 0);
-	write32(MTAG_BASE + TAG_MCTR_OFFSET, 0);
-	write32(MTAG_BASE + TAG_MCTR_MASK, ~0);
-
 	// test memory
-	// XXX: For now since not all images have BIST enabled yet, we need to check if it's available
-	write32(MCTR_BIST_CTRL, ((dram_total_shift - 3) << 3));
-	uint32_t val = read32(MCTR_BIST_CTRL);
-	if (options->dimmtest > 0 && (val >> 3) == (dram_total_shift - 3)) {
-		write32(MCTR_BIST_ADDR, 0);
-		write32(MCTR_BIST_CTRL, ((options->dimmtest & 0xff) << 16) | ((dram_total_shift - 3) << 3) | (1<<2) | (1<<1) | (1<<0));
-
+	write32(MCTR_BIST_ADDR, 0);
+	if (options->dimmtest > 0) {
 		const char *baton = "-\\|/";
-		i = 0;
+		write32(MCTR_BIST_CTRL, ((options->dimmtest & 0xff) << 16) | ((dram_total_shift - 3) << 3) | (1<<2) | (1<<1) | (1<<0));
 		printf("<testing ");
-
-		while (1) {
-			val = read32(MCTR_BIST_CTRL);
-			if (!(val & 1))
-				break;
+		while (read32(MCTR_BIST_CTRL) & 1) {
 			printf("%c\b", baton[i++%4]);
 			lib::udelay(20000);
 		}
-
 		printf("\b>");
-		assertf(((val >> 9) & 3) == 3, "NumaConnect DIMM failure");
+		assertf(((read32(MCTR_BIST_CTRL) >> 9) & 3) == 3, "NumaConnect DIMM failure");
 	}
 
 	// start zeroing and wait
-	write32(MTAG_BASE + TAG_CTRL, ((dram_total_shift - 27) << 3) | 1);
+	write32(MCTR_BIST_CTRL, (1<<12) | ((dram_total_shift - 3) << 3) | (1<<2) | (1<<0));
 	printf("<zeroing");
-	while (read32(MTAG_BASE + TAG_CTRL) & 1)
+	while (read32(MCTR_BIST_CTRL) & 1)
 		cpu_relax();
 	printf(">");
-#if 1
+
 	const uint64_t hosttotal = e820->memlimit();
 	bool mtag_byte_mode = ((read32(LMPE_STATUS) & (1<<31)) != 0);
 	unsigned ncache_shift = 30; // minimum
@@ -159,34 +145,6 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag_mask >> 19) - 1);
 
 	printf("%uMB nCache", 1 << (ncache_shift - 20));
-#else
-	switch (total) {
-	case 4ULL << 30:
-		// 0-1024MB nCache; 1024-1152MB CTag; 1152-2048MB unused; 2048-4096MB MTag
-		write32(CTAG_BASE + TAG_ADDR_MASK, 0);
-		write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);
-		write32(CTAG_BASE + TAG_MCTR_OFFSET, 0x800);
-		write32(CTAG_BASE + TAG_MCTR_MASK, 0xff);
-		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
-		write32(MTAG_BASE + TAG_MCTR_MASK, 0xfff);
-		write32(NCACHE_CTRL, (0 << 3)); // 1 GByte nCache
-		options->memlimit = 64ULL << 30; // Max 64G per node
-		break;
-	case 8ULL << 30:
-		// 0-2048MB nCache; 2048-2304MB CTag; 2304-4096MB unused; 4096-8192MB MTag
-		write32(CTAG_BASE + TAG_ADDR_MASK, 1);
-		write32(MTAG_BASE + TAG_ADDR_MASK, 0x7f);
-		write32(CTAG_BASE + TAG_MCTR_OFFSET, 0x1000);
-		write32(CTAG_BASE + TAG_MCTR_MASK, 0x1ff);
-		write32(MTAG_BASE + TAG_MCTR_OFFSET, 0x2000);
-		write32(MTAG_BASE + TAG_MCTR_MASK, 0x1fff);
-		write32(NCACHE_CTRL, (1 << 3)); // 2 GByte nCache
-		options->memlimit = 128ULL << 30; // Max 128G per node
-		break;
-	default:
-		error("Unexpected Numachip2 DIMM size of %"PRIu64"MB", total);
-	}
-#endif
 
 #ifdef DEBUG
 	printf("CTag TAG_ADDR_MASK   %08x\n", read32(CTAG_BASE + TAG_ADDR_MASK));
