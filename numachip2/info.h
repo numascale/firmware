@@ -32,4 +32,6 @@ struct numachip_info {
 	unsigned ht : 3;           // numachip ht id
 	unsigned neigh_ht : 3;
 	unsigned neigh_link : 2;
+	unsigned linkmask : 6;     // bitmask of links to scan
+	bool lc4;                  // else LC5
 } __attribute__((packed)) __attribute__((aligned(4)));

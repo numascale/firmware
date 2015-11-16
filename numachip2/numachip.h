@@ -188,8 +188,8 @@ public:
 	static const reg_t MCTR_BIST_ADDR    = 0x3044;
 	static const reg_t MCTR_PHY_STATUS   = 0x3810;
 	static const reg_t MCTR_PHY_STATUS2  = 0x3818;
-	static const reg_t MCTR_ECC_CONTROL  = 0x3CC0;
-	static const reg_t MCTR_ECC_STATUS   = 0x3CC4;
+	static const reg_t MCTR_ECC_CONTROL  = 0x3cc0;
+	static const reg_t MCTR_ECC_STATUS   = 0x3cc4;
 
 	static const unsigned SIU_ATT_SHIFT  = 34;
 	static const unsigned MMIO32_ATT_SHIFT = 20;
@@ -201,6 +201,8 @@ public:
 
 	const Config::node *config;
 	const ht_t ht;
+	bool is_lc4;
+	uint8_t linkmask;
 
 	uint16_t xbar_routes[256][3];
 	static const uint8_t lc_chunks = 4;

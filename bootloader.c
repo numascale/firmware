@@ -246,6 +246,7 @@ static void setup_info(void)
 		infop->self = nodes[n]->config->id;
 		infop->partition = nodes[n]->config->partition;
 		infop->master = local_node->config->partition ? config->master->id : 0xfff;
+		infop->lc4 = local_node->numachip->is_lc4;
 
 		struct Config::node *cur = nodes[n]->config;
 
@@ -290,6 +291,7 @@ static void setup_info(void)
 		infop->ht = nodes[n]->numachip->ht;
 		infop->neigh_ht = nodes[n]->neigh_ht;
 		infop->neigh_link = nodes[n]->neigh_link;
+		infop->linkmask = nodes[n]->numachip->linkmask;
 		if (sizeof(VER) > sizeof(infop->firmware))
 			warning("Bootloader version string too long for info packet");
 		strncpy(infop->firmware, VER, sizeof(infop->firmware));

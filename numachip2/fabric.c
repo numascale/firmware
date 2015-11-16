@@ -32,12 +32,12 @@ void Numachip2::fabric_reset(void)
 	// ensure all links are in reset
 	uint32_t mask = 0x3f;
 	write32(HSS_PLLCTL, mask);
-	uint32_t val = read32(HSS_PLLCTL);
+	linkmask = read32(HSS_PLLCTL);
 
 	// bring configured links out of reset
 	for (unsigned i = 0; i < 3; i++) {
 		if (::config->size[i]) {
-			assertf(((val >> (i * 2)) & 3) == 3, "Image doesn't support configured %c axis", 'X' + i);
+			assertf(((linkmask >> (i * 2)) & 3) == 3, "Image doesn't support configured %c axis", 'X' + i);
 			mask &= ~(3 << (i * 2));
 		}
 	}
@@ -211,7 +211,7 @@ void Numachip2::fabric_routing(void)
 void Numachip2::fabric_init(void)
 {
 	uint32_t val = read32(HSS_PLLCTL);
-	bool is_lc4 = (val >> 16) == 0x0704;
+	is_lc4 = (val >> 16) == 0x0704;
 
 	if (local)
 		printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
