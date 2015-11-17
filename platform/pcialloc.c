@@ -129,34 +129,30 @@ void Device::classify()
 	}
 }
 
-void Device::assign() const
+void Device::assign()
 {
 	uint64_t pos32_pref = alloc->pos32_pref;
 	uint64_t pos32_nonpref = alloc->pos32_nonpref;
 	uint64_t pos64 = alloc->pos64;
 
 	// clear remote IO BARs
-	// FIXME check for master correctly
 	if (!node->config->master)
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
 
-	// FIXME sort
-	// std::sort(bars_nonpref32.begin(), bars_nonpref32.end(), compare1);
+	bars_nonpref32.sort();
 	for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++) {
 		uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
 		(*bar)->assign(addr);
 	}
 
-	// FIXME sort
-	// std::sort(bars_pref32.begin(), bars_pref32.end(), compare2);
+	bars_pref32.sort();
 	for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++) {
 		uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
 		(*bar)->assign(addr);
 	}
 
-	// FIXME sort
-	// std::sort(bars_pref64.begin(), bars_pref64.end(), compare1);
+	bars_pref64.sort();
 	for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++) {
 		uint64_t addr = alloc->alloc((*bar)->s64, (*bar)->pref, (*bar)->len, (*bar)->vfs);
 		(*bar)->assign(addr);

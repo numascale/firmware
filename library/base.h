@@ -180,12 +180,12 @@ public:
 		limit = &elements[used];
 	}
 
-	void sort(bool (*compfn)(const T &a, const T &b))
+	void sort()
 	{
 		// bubblesort
 		for (unsigned i = 0; i < used; i++) {
 			for (unsigned j = 0; j < used; j++) {
-				if (compfn(elements[i], elements[j])) {
+				if (elements[i] < elements[j]) {
 					T temp = elements[j];
 					elements[j] = elements[i];
 					elements[i] = temp;

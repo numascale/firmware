@@ -62,6 +62,10 @@ public:
 		addr = _addr;
 	}
 	void print(void) const;
+	bool operator<(const BAR &rhs) const
+	{
+		return len < rhs.len;
+	}
 };
 
 class Device
@@ -93,7 +97,7 @@ public:
 	}
 
 	void classify();
-	void assign() const;
+	void assign();
 	void print() const;
 };
 
