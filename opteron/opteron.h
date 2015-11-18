@@ -27,17 +27,19 @@ class Opteron {
 	public:
 		const unsigned ranges;
 		void print(const unsigned range);
+		void print();
 		MmioMap(Opteron &_opteron, const unsigned _ranges): opteron(_opteron), ranges(_ranges) {};
 		virtual void remove(const unsigned range);
+		void remove(const uint64_t base, const uint64_t limit);
 		virtual bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
-		virtual void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
+		virtual void set(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		void add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link);
 	};
 public:
 	class MmioMap15: public MmioMap {
 	public:
 		explicit MmioMap15(Opteron &_opteron): MmioMap(_opteron, 12) {};
-		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
+		void set(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
 		void remove(const unsigned range);
 	};
@@ -45,7 +47,7 @@ public:
 	class MmioMap10: public MmioMap {
 	public:
 		explicit MmioMap10(Opteron &_opteron): MmioMap(_opteron, 8 + 16) {};
-		void add(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
+		void set(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro=0);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest, link_t *link, bool *lock) nonnull;
 		void remove(const unsigned range);
 	};
@@ -58,7 +60,8 @@ private:
 		void remove(const unsigned range);
 		bool read(const unsigned range, uint64_t *base, uint64_t *limit, ht_t *dest) nonnull;
 		void print(const unsigned range);
-		void add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest);
+		void print();
+		void set(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest);
 	};
 
 	uint32_t scrub;
@@ -163,6 +166,8 @@ public:
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;
 	static const uint32_t MMIO_VGA_BASE    = 0xa0000;
 	static const uint32_t MMIO_VGA_LIMIT   = 0xbffff;
+	static const uint32_t MMIO32_LIMIT     = 0xfe000000;
+	static const unsigned DRAM_RANGES      = 8;
 
 	uint64_t dram_base, dram_size;
 	uint64_t trace_base, trace_limit;

@@ -21,18 +21,18 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-Numachip2::MmioMap::MmioMap(Numachip2 &_numachip): numachip(_numachip)
+Numachip2::MmioMap::MmioMap(Numachip2 &_numachip): numachip(_numachip), used(0)
 {
 }
 
-void Numachip2::MmioMap::add(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht)
+void Numachip2::MmioMap::set(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht)
 {
 	if (options->debug.maps)
 		printf("Adding NC MMIO range %d on %s: 0x%08"PRIx64":0x%08"PRIx64" to %d\n",
 			range, numachip.config->hostname, base, limit, dht);
 
 	xassert(limit > base);
-	xassert(range < 8);
+	xassert(range < Numachip2::MMIO_RANGES);
 	xassert((base & 0xffff) == 0);
 	xassert((limit & 0xffff) == 0xffff);
 
@@ -49,12 +49,19 @@ void Numachip2::MmioMap::add(const unsigned range, const uint64_t base, const ui
 	xassert(numachip.read32(MMIO_MAP_HIGH) == c);
 }
 
+void Numachip2::MmioMap::add(const uint64_t base, const uint64_t limit, const uint8_t dht)
+{
+	xassert(used < Numachip2::MMIO_RANGES);
+	set(used, base, limit, dht);
+	used++;
+}
+
 void Numachip2::MmioMap::del(const unsigned range)
 {
 	if (options->debug.maps)
 		printf("Deleting NC MMIO range %u on %s\n", range, numachip.config->hostname);
 
-	xassert(range < 8);
+	xassert(range < Numachip2::MMIO_RANGES);
 
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(MMIO_MAP_BASE, 0);
@@ -64,7 +71,7 @@ void Numachip2::MmioMap::del(const unsigned range)
 
 bool Numachip2::MmioMap::read(const unsigned range, uint64_t *base, uint64_t *limit, uint8_t *dht)
 {
-	xassert(range < 8);
+	xassert(range < Numachip2::MMIO_RANGES);
 
 	numachip.write32(MAP_INDEX, range);
 	const uint32_t a = numachip.read32(MMIO_MAP_BASE);
@@ -89,21 +96,27 @@ void Numachip2::MmioMap::print(const unsigned range)
 	uint8_t dht;
 
 	if (read(range, &base, &limit, &dht))
-		printf("MMIO range %u on %s: 0x%08"PRIx64":0x%08"PRIx64" to %d\n", range, numachip.config->hostname, base, limit, dht);
+		printf("NC MMIO range %u on %s: 0x%08"PRIx64":0x%08"PRIx64" to %d\n", range, numachip.config->hostname, base, limit, dht);
+}
+
+void Numachip2::MmioMap::print()
+{
+	for (unsigned range = 0; range < Numachip2::MMIO_RANGES; range++)
+		print(range);
 }
 
 Numachip2::DramMap::DramMap(Numachip2 &_numachip): numachip(_numachip)
 {
 }
 
-void Numachip2::DramMap::add(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht)
+void Numachip2::DramMap::set(const unsigned range, const uint64_t base, const uint64_t limit, const uint8_t dht)
 {
 	if (options->debug.maps)
 		printf("Adding NC DRAM range %u on %s: 0x%012"PRIx64":0x%012"PRIx64" to %d\n",
 			range, numachip.config->hostname, base, limit, dht);
 
 	xassert(limit > base);
-	xassert(range < 8);
+	xassert(range < Numachip2::DRAM_RANGES);
 	xassert((base & 0xffffff) == 0);
 	xassert((limit & 0xffffff) == 0xffffff);
 
@@ -122,7 +135,7 @@ void Numachip2::DramMap::del(const unsigned range)
 	if (options->debug.maps)
 		printf("Deleting NC DRAM range %u on %s\n", range, numachip.config->hostname);
 
-	xassert(range < 8);
+	xassert(range < Numachip2::DRAM_RANGES);
 
 	numachip.write32(MAP_INDEX, range);
 	numachip.write32(DRAM_MAP_BASE, 0);
@@ -131,6 +144,8 @@ void Numachip2::DramMap::del(const unsigned range)
 
 bool Numachip2::DramMap::read(const unsigned range, uint64_t *base, uint64_t *limit, uint8_t *dht)
 {
+	xassert(range < Numachip2::DRAM_RANGES);
+
 	numachip.write32(MAP_INDEX, range);
 	uint32_t a = numachip.read32(DRAM_MAP_BASE);
 	uint32_t b = numachip.read32(DRAM_MAP_LIMIT);
@@ -152,4 +167,10 @@ void Numachip2::DramMap::print(const unsigned range)
 
 	if (read(range, &base, &limit, &dht))
 		printf("NC DRAM range %u on %s: 0x%012"PRIx64":0x%012"PRIx64" to %d\n", range, numachip.config->hostname, base, limit, dht);
+}
+
+void Numachip2::DramMap::print()
+{
+	for (unsigned range = 0; range < Numachip2::DRAM_RANGES; range++)
+		print(range);
 }

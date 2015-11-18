@@ -391,8 +391,6 @@ void pci_realloc()
 		(*br)->assign();
 		Device::alloc->round_node();
 
-		printf("\n");
-
 		if (Device::alloc->pos32_pref != pos32_pref) {
 			(*br)->node->mmio32_base = pos32_pref;
 			(*br)->node->mmio32_limit = Device::alloc->pos32_pref;
@@ -414,7 +412,7 @@ void pci_realloc()
 		}
 
 		if ((*src)->mmio64_limit)
-			(*src)->numachip->mmiomap.add(3, (*src)->mmio64_base, (*src)->mmio64_limit - 1, (*src)->opterons[0]->ioh_ht);
+			(*src)->numachip->mmiomap.set(3, (*src)->mmio64_base, (*src)->mmio64_limit - 1, (*src)->opterons[0]->ioh_ht);
 	}
 
 	if (options->debug.remote_io) {

@@ -45,8 +45,14 @@ void Opteron::MmioMap10::remove(const unsigned range)
 
 void Opteron::MmioMap15::remove(const unsigned range)
 {
-	if (options->debug.maps)
-		printf("Deleting NB MMIO range %u on %03x#%d\n", range, opteron.sci, opteron.ht);
+	if (options->debug.maps) {
+		uint64_t base, limit;
+		ht_t dest;
+		link_t link;
+		bool lock;
+		read(range, &base, &limit, &dest, &link, &lock);
+		printf("Deleting NB MMIO range %u (0x%llx:0x%llx to %u.%u) on %03x#%d\n", range, base, limit, dest, link, opteron.sci, opteron.ht);
+	}
 
 	xassert(range < ranges);
 
@@ -140,16 +146,18 @@ void Opteron::MmioMap::print(const unsigned range)
 		  range, opteron.sci, opteron.ht, base, limit, dest, link);
 }
 
+void Opteron::MmioMap::print()
+{
+	for (unsigned range = 0; range < ranges; range++)
+		print(range);
+}
+
 unsigned Opteron::MmioMap::unused(void)
 {
 	uint64_t base, limit;
 	ht_t dest;
 	link_t link;
 	bool lock;
-
-	printf("NB MMIO ranges:\n");
-	for (unsigned range = 0; range < ranges; range++)
-		print(range);
 
 	for (unsigned range = 0; range < ranges; range++)
 		if (!read(range, &base, &limit, &dest, &link, &lock))
@@ -158,7 +166,7 @@ unsigned Opteron::MmioMap::unused(void)
 	fatal("No free NB MMIO ranges");
 }
 
-void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
+void Opteron::MmioMap15::set(const unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
 {
 	const bool ovw = 1;
 
@@ -211,7 +219,7 @@ void Opteron::MmioMap15::add(unsigned range, uint64_t base, uint64_t limit, cons
 	opteron.write32(MMIO_MAP_BASE + loff + range * 8, val2);
 }
 
-void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
+void Opteron::MmioMap10::set(unsigned range, uint64_t base, uint64_t limit, const ht_t dest, const link_t link, const bool ro)
 {
 	const bool ovw = 1;
 
@@ -283,7 +291,27 @@ void Opteron::MmioMap10::add(unsigned range, uint64_t base, uint64_t limit, cons
 void Opteron::MmioMap::add(const uint64_t base, const uint64_t limit, const ht_t dest, const link_t link)
 {
 	const unsigned range = unused();
-	add(range, base, limit, dest, link);
+	set(range, base, limit, dest, link);
+}
+
+void Opteron::MmioMap::remove(const uint64_t base, const uint64_t limit)
+{
+	for (unsigned range = 0; range < ranges; range++) {
+		uint64_t rbase, rlimit;
+		ht_t ht;
+		link_t link;
+		bool lock;
+
+		read(range, &rbase, &rlimit, &ht, &link, &lock);
+
+		if (rbase != base || rlimit != limit)
+			continue;
+
+		remove(range);
+		return;
+	}
+
+	fatal("Unable to remove MMIO range");
 }
 
 void Opteron::DramMap::remove(unsigned range)
@@ -345,7 +373,13 @@ void Opteron::DramMap::print(const unsigned range)
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 }
 
-void Opteron::DramMap::add(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest)
+void Opteron::DramMap::print()
+{
+	for (unsigned range = 0; range < 8; range++)
+		print(range);
+}
+
+void Opteron::DramMap::set(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest)
 {
 	if (options->debug.maps)
 		printf("Adding NB DRAM range %u on %03x#%d: 0x%012"PRIx64":0x%012"PRIx64" to %d\n",

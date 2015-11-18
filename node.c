@@ -156,7 +156,7 @@ Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci
 		for (range = 0; range < (*nb)->mmiomap->ranges; range++) {
 			if ((*nb)->mmiomap->read(range, &base, &limit, &dest, &link, &lock)) {
 				if ((base <= Numachip2::LOC_BASE) && (limit >= Numachip2::LOC_LIM)) {
-					(*nb)->mmiomap->add(range, Numachip2::LOC_LIM + 1, limit, dest, link);
+					(*nb)->mmiomap->set(range, Numachip2::LOC_LIM + 1, limit, dest, link);
 					break;
 				}
 			}
@@ -170,7 +170,7 @@ Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci
 		xassert(range > 0);
 
 		// add local mapping
-		(*nb)->mmiomap->add(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, numachip->ht, 0);
+		(*nb)->mmiomap->set(range, Numachip2::LOC_BASE, Numachip2::LOC_LIM, numachip->ht, 0);
 	}
 
 	init();

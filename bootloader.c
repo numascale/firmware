@@ -104,8 +104,8 @@ static void add(const Node &node)
 	// 8. set Opteron maps to forward VGA and MMIO32 regions to NumaChip (which then forwards according to MMIO32 ATT)
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		range = 0;
-		(*nb)->mmiomap->add(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
-		(*nb)->mmiomap->add(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
+		(*nb)->mmiomap->set(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
+		(*nb)->mmiomap->set(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
 
 		while (range < 8)
 			(*nb)->mmiomap->remove(range++);
@@ -124,7 +124,7 @@ static void add(const Node &node)
 		range = 0;
 
 		// 10. add below-node DRAM ranges
-		(*nb)->drammap.add(range++, local_node->opterons[0]->dram_base, node.dram_base - 1, node.numachip->ht);
+		(*nb)->drammap.set(range++, local_node->opterons[0]->dram_base, node.dram_base - 1, node.numachip->ht);
 
 		// 11. clear remaining entries
 		while (range < 8)
@@ -146,10 +146,10 @@ static void add(const Node &node)
 		uint64_t base = node.opterons[range]->dram_base;
 		uint64_t limit = base + node.opterons[range]->dram_size - 1;
 
-		node.numachip->drammap.add(range, base, limit, node.opterons[range]->ht);
+		node.numachip->drammap.set(range, base, limit, node.opterons[range]->ht);
 
 		for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++)
-			(*nb)->drammap.add(range + 1, base, limit, range);
+			(*nb)->drammap.set(range + 1, base, limit, range);
 
 		range++;
 	}
@@ -157,7 +157,7 @@ static void add(const Node &node)
 	// 14. redirect above last local DRAM address to NumaChip
 	if (&node < nodes[nnodes - 1])
 		for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++)
-			(*nb)->drammap.add(range + 1, node.dram_end + 1, dram_top - 1, node.numachip->ht);
+			(*nb)->drammap.set(range + 1, node.dram_end + 1, dram_top - 1, node.numachip->ht);
 
 	// 15. point IO and config maps to Numachip
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
@@ -184,7 +184,7 @@ static void setup_gsm_early(void)
 		// setup read-only map on observer
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++) {
 			uint64_t base = 1ULL << Numachip2::GSM_SHIFT;
-			(*nb)->mmiomap->add(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0, 1);
+			(*nb)->mmiomap->set(9, base, base + (1ULL << Numachip2::GSM_SIZE_SHIFT) - 1, local_node->numachip->ht, 0, 1);
 		}
 	}
 }
@@ -321,7 +321,7 @@ static void remap(void)
 				ht_t dst;
 
 				if ((*nb)->drammap.read(range, &orig_base, &orig_limit, &dst) && dst == i) {
-					(*nb)->drammap.add(range, base, limit, i);
+					(*nb)->drammap.set(range, base, limit, i);
 					break;
 				}
 			}
@@ -335,12 +335,12 @@ static void remap(void)
 	// 2. setup local NumaChip DRAM ranges
 	unsigned range = 0;
 	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
-		local_node->numachip->drammap.add(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
+		local_node->numachip->drammap.set(range++, (*nb)->dram_base, (*nb)->dram_base + (*nb)->dram_size - 1, (*nb)->ht);
 
 	// 3. route higher access to NumaChip
 	if (nnodes > 1)
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
-			(*nb)->drammap.add(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
+			(*nb)->drammap.set(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
 
 	// 4. setup NumaChip DRAM registers
 	local_node->numachip->write32(Numachip2::DRAM_SHARED_BASE, local_node->dram_base >> 24);
@@ -359,8 +359,8 @@ static void remap(void)
 	push_msr(MSR_TOPMEM, topmem);
 
 	// 7. add NumaChip MMIO32 ranges
-	local_node->numachip->mmiomap.add(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
-	local_node->numachip->mmiomap.add(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
+	local_node->numachip->mmiomap.set(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
+	local_node->numachip->mmiomap.set(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
 
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
 		add(**node);
@@ -1270,7 +1270,7 @@ int main(const int argc, char *const argv[])
 
 	// add global MCFG maps
 	for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
-		(*nb)->mmiomap->add(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
+		(*nb)->mmiomap->set(8, Numachip2::MCFG_BASE, Numachip2::MCFG_LIM, local_node->numachip->ht, 0);
 
 	// reserve HT decode and MCFG address range so Linux accepts it
 	e820->add(Opteron::HT_BASE, Opteron::HT_LIMIT - Opteron::HT_BASE, E820::RESERVED);
@@ -1393,9 +1393,18 @@ int main(const int argc, char *const argv[])
 	}
 
 	scan();
-	remap();
 	if (options->remote_io)
 		pci_realloc();
+	remap();
+
+	printf("MAPS:\n");
+	foreach_node(node) {
+		(*node)->opterons[0]->drammap.print();
+		(*node)->numachip->drammap.print();
+		(*node)->opterons[0]->mmiomap->print();
+		(*node)->numachip->mmiomap.print();
+	}
+
 	copy_inherit();
 	clear_dram();
 	if (options->tracing)
