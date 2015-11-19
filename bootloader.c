@@ -95,27 +95,8 @@ static void scan(void)
 
 static void add(const Node &node)
 {
-	unsigned range;
-
-	// 7. setup MMIO32 ATT to master
-	// forward everything for now, even regions that map to dram (in case of non-coherent accesses to dram)
-	node.numachip->mmioatt.range(0, 0xffffffff, local_node->config->id);
-
-	// 8. set Opteron maps to forward VGA and MMIO32 regions to NumaChip (which then forwards according to MMIO32 ATT)
-	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
-		range = 0;
-		(*nb)->mmiomap->set(range++, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, node.numachip->ht, 0);
-		(*nb)->mmiomap->set(range++, (uint32_t)lib::rdmsr(MSR_TOPMEM), 0xffffffff, node.numachip->ht, 0);
-
-		while (range < 8)
-			(*nb)->mmiomap->remove(range++);
-
-		(*nb)->write32(Opteron::VGA_ENABLE, 0);
-		if ((*nb)->read32(Opteron::VGA_ENABLE))
-			warning_once("Legacy VGA access is locked to local server; some video card BIOSs may cause any X servers to fail to complete initialisation");
-	}
-
 	uint32_t memhole = local_node->opterons[0]->read32(Opteron::DRAM_HOLE);
+	unsigned range;
 
 	for (Opteron *const *nb = &node.opterons[0]; nb < &node.opterons[node.nopterons]; nb++) {
 		// 9. setup DRAM hole
@@ -358,10 +339,6 @@ static void remap(void)
 	uint64_t topmem = lib::rdmsr(MSR_TOPMEM);
 	push_msr(MSR_TOPMEM, topmem);
 
-	// 7. add NumaChip MMIO32 ranges
-	local_node->numachip->mmiomap.set(0, Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, local_node->opterons[0]->ioh_ht);
-	local_node->numachip->mmiomap.set(1, lib::rdmsr(MSR_TOPMEM), 0xffffffff, local_node->opterons[0]->ioh_ht);
-
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++)
 		add(**node);
 
@@ -388,10 +365,6 @@ static void remap(void)
 	// FIXME: reserve 8MB at top of DRAM to prevent igb tx queue hangs
 	uint64_t len = 8ULL << 20;
 	e820->add(dram_top - len, len, E820::RESERVED);
-
-	// 9. setup IOH limits
-	foreach_node(node)
-		(*node)->iohub->limits(dram_top - 1);
 }
 
 #define MTRR_TYPE(x) (x) == 0 ? "uncacheable" : (x) == 1 ? "write-combining" : (x) == 4 ? "write-through" : (x) == 5 ? "write-protect" : (x) == 6 ? "write-back" : "unknown"

@@ -177,7 +177,8 @@ public:
 	static uint8_t mc_banks;
 	sci_t sci;
 	const ht_t ht;
-	ht_t ioh_ht, ioh_link;
+	ht_t ioh_ht;
+	link_t ioh_link;
 	unsigned cores;
 	MmioMap *mmiomap;
 	DramMap drammap;

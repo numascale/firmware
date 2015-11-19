@@ -22,6 +22,11 @@
 
 #include "../node.h"
 #include "../library/base.h"
+#include "../platform/options.h"
+#include "../opteron/opteron.h"
+
+#define ALLOC_UNALLOCATED 0xffff
+#define ALLOC_LOCAL       0xfffe // LAPIC etc
 
 /*
 SETUP PHASES
@@ -46,16 +51,16 @@ NORTHBRIDGE MMIO MAP
 
 class Allocator
 {
-	const uint64_t start32, end32, start64;
+	sci_t *map32;
+	unsigned blocks;
 public:
+	const uint64_t start32, end32, start64;
 	uint64_t pos32_pref, pos32_nonpref, pos64;
 
-	Allocator(const uint64_t _start32, const uint64_t _start64):
-		start32(_start32), end32(0xfe000000), start64(_start64), pos32_pref(_start32), pos32_nonpref(end32), pos64(start64)
-	{}
-	void reserve(const uint32_t addr, const uint32_t len)
-	{}
+	Allocator(const uint64_t _start32, const uint64_t _start64);
+	void reserve(const uint64_t addr, const uint64_t len, const sci_t sci);
 	uint64_t alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs);
+	void maps32(Node *const node);
 	void round_node();
 };
 

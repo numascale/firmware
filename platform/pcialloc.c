@@ -24,20 +24,74 @@
 #include "../opteron/msrs.h"
 #include "../numachip2/numachip.h"
 #include "../platform/devices.h"
-#include "../platform/options.h"
 
 Allocator *Device::alloc;
-#ifdef UNUSED
-static bool compare1(const BAR* lhs, const BAR* rhs)
+
+Allocator::Allocator(const uint64_t _start32, const uint64_t _start64):
+	start32(_start32), end32(Opteron::MMIO32_LIMIT), start64(_start64), pos32_pref(_start32), pos32_nonpref(end32), pos64(start64)
 {
-	return lhs->len < rhs->len;
+	blocks = (end32 - start32) >> Numachip2::MMIO32_ATT_SHIFT;
+	map32 = (sci_t *)malloc(blocks * sizeof(*map32));
+
+	for (unsigned i = 0; i < blocks; i++)
+		map32[i] = 0x000; // FIXME: ALLOC_UNALLOCATED;
 }
 
-static bool compare2(const BAR* lhs, const BAR* rhs)
+void Allocator::reserve(const uint64_t base, const uint64_t limit, const sci_t sci)
 {
-	return lhs->len > rhs->len;
+	printf("Reserving 0x%llx:0x%llx to %03x\n", base, limit, sci);
+
+	uint32_t mask = (1 << Numachip2::MMIO32_ATT_SHIFT) - 1;
+	xassert(!(base & mask));
+	xassert(!(limit & mask));
+
+	xassert(base >= start32);
+	xassert(limit <= 0x100000000);
+
+	for (unsigned i = (base - start32) >> Numachip2::MMIO32_ATT_SHIFT; i < (limit - start32) >> Numachip2::MMIO32_ATT_SHIFT; i++)
+		map32[i] = sci;
 }
-#endif
+
+// setup map entries from one node's PoV
+void Allocator::maps32(Node *const node)
+{
+	printf("Maps on %03x:\n", node->config->id);
+	sci_t dest = map32[0];
+	uint64_t addr = start32;
+	unsigned i;
+
+	// FIXME: coallesce MMIO32 ranges to remote nodes
+	for (i = 1; i < blocks; i++) {
+		if (map32[i] == dest)
+			continue;
+
+		uint64_t limit = (i << Numachip2::MMIO32_ATT_SHIFT) + start32 - 1;
+		ht_t dht = dest == node->numachip->config->id ? node->opterons[0]->ioh_ht : node->numachip->ht;
+		link_t dlink = dest == node->numachip->config->id ? node->opterons[0]->ioh_link : 0;
+
+		if (dest != ALLOC_UNALLOCATED && dest != ALLOC_LOCAL) {
+			node->numachip->mmioatt.range(addr, limit, dest);
+			foreach_nb(&node, nb)
+				(*nb)->mmiomap->add(addr, limit, dht, dlink);
+		}
+
+		dest = map32[i];
+		addr = (i << Numachip2::MMIO32_ATT_SHIFT) + start32;
+	}
+
+	if (dest != ALLOC_UNALLOCATED && dest != ALLOC_LOCAL) {
+		// final entry needed
+		uint64_t limit = (i << Numachip2::MMIO32_ATT_SHIFT) + start32 - 1;
+		ht_t dht = dest == node->numachip->config->id ? node->opterons[0]->ioh_ht : node->numachip->ht;
+		link_t dlink = dest == node->numachip->config->id ? node->opterons[0]->ioh_link : 0;
+
+		node->numachip->mmioatt.range(addr, limit, dest);
+		foreach_nb(&node, nb)
+			(*nb)->mmiomap->add(addr, limit, dht, dlink);
+	}
+	printf("\n");
+}
+
 uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs = 0)
 {
 	if (s64 && pref) {
@@ -136,10 +190,14 @@ void Device::assign()
 	uint64_t pos32_nonpref = alloc->pos32_nonpref;
 	uint64_t pos64 = alloc->pos64;
 
-	// clear remote IO BARs
-	if (!node->config->master)
+	if (!node->config->master) {
+		// disable I/O, DMA and legacy interrupts; enable memory decode
+		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, 0x0402);
+
+		// clear IO BARs
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
+	}
 
 	bars_nonpref32.sort();
 	for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++) {
@@ -162,15 +220,11 @@ void Device::assign()
 	for (Device **d = children.elements; d < children.limit; d++)
 		(*d)->assign();
 
-	// disable I/O, DMA and legacy interrupts; enable memory decode
-	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, 0x0402);
-
 	// assign bridge windows
 	if (bridge) {
-		printf("BRIDGE %03x:%02x:%02x.%u %s %s %s\n", node->config->id, bus, dev, fn,
-			   lib::pr_size(alloc->pos32_pref - pos32_pref),
-			   lib::pr_size(pos32_nonpref - alloc->pos32_nonpref),
-			   lib::pr_size(alloc->pos64 - pos64));
+		printf("bridge %03x:%02x:%02x.%u pref32@0x%llx:0x%llx nonpref32@0x%llx:0x%llx pref64@0x%llx-0x%llx\n",
+			node->config->id, bus, dev, fn, pos32_pref, alloc->pos32_pref,
+			alloc->pos32_nonpref, pos32_nonpref, pos64, alloc->pos64);
 
 		// zero IO BARs on slaves only
 		if (!node->config->master) {
@@ -361,6 +415,11 @@ static void pci_prepare(const Node *const node)
 		lib::mcfg_write32(node->config->id, 1, 4, 0, 4, 0x0400);
 		val = lib::mcfg_read32(node->config->id, 0, 20, 4, 0x5c);
 		lib::mcfg_write32(node->config->id, 0, 20, 4, 0x5c, val & ~0xffff0000);
+
+		// disable IOAPIC memory decode and IOAPIC
+		val = lib::mcfg_read32(node->config->id, 0, 0x14, 0, 0x64);
+		lib::mcfg_write32(node->config->id, 0, 0x14, 0, 0x64, val & ~(1 << 3));
+		// ioh_ioapicind_write(node->sci, 0, 0);
 	}
 }
 
@@ -403,20 +462,64 @@ void pci_realloc()
 			(*br)->node->mmio32_limit = pos32_nonpref;
 		}
 
-		(*br)->node->mmio64_limit = Device::alloc->pos64;
-		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
+		Device::alloc->reserve((*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->config->id);
 
+		(*br)->node->mmio64_limit = Device::alloc->pos64;
+		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
 	}
 
-	// setup ATTs and maps
-	foreach_node(src) {
-		foreach_node(dst) {
-			(*src)->numachip->mmioatt.range((*dst)->mmio32_base, (*dst)->mmio32_limit - 1, (*dst)->config->id);
-			(*src)->numachip->dramatt.range((*dst)->mmio64_base, (*dst)->mmio64_limit - 1, (*dst)->config->id);
+	// phase 4
+	foreach_node(node) {
+		foreach_nb(node, nb) {
+			// remove existing MMIO32 range
+			(*nb)->mmiomap->remove(lib::rdmsr(MSR_TOPMEM), 0xdfffffff); // FIXME use legacy MCFG start
+
+			if (!(*node)->config->master) {
+				// read-add VGA console pointing to master
+				(*nb)->mmiomap->remove(Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT);
+				(*nb)->mmiomap->add(Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, (*node)->numachip->ht, 0);
+			}
 		}
 
-		if ((*src)->mmio64_limit)
-			(*src)->numachip->mmiomap.set(3, (*src)->mmio64_base, (*src)->mmio64_limit - 1, (*src)->opterons[0]->ioh_ht);
+		// VGA console decode
+		if ((*node)->config->master)
+			(*node)->numachip->mmiomap.add(Opteron::MMIO_VGA_BASE, Opteron::MMIO_VGA_LIMIT, (*node)->opterons[0]->ioh_ht);
+		else {
+			// adapt to ATT granularity
+			uint64_t base = Opteron::MMIO_VGA_BASE & ~((1ULL << Numachip2::MMIO32_ATT_SHIFT) - 1);
+			uint64_t limit = Opteron::MMIO_VGA_LIMIT | ((1ULL << Numachip2::MMIO32_ATT_SHIFT) - 1);
+			(*node)->numachip->mmioatt.range(base, limit, (*node)->config->id);
+		}
+
+		// MMIO decode
+		(*node)->numachip->mmiomap.add(lib::rdmsr(MSR_TOPMEM), 0xffffffff, (*node)->opterons[0]->ioh_ht);
+
+		Device::alloc->maps32(*node);
+
+		foreach_nb(node, nb) {
+			link_t link = node == &node[0] ? (*node)->opterons[0]->ioh_link : 0;
+
+			// remote MMIO64 below
+			if ((*node)->mmio64_base > Device::alloc->start64)
+				(*nb)->mmiomap->add(Device::alloc->start64, (*node)->mmio64_base - 1, (*node)->numachip->ht, 0);
+
+			// local MMIO64
+			if ((*node)->mmio64_limit > (*node)->mmio64_base)
+				(*nb)->mmiomap->add((*node)->mmio64_base, (*node)->mmio64_limit - 1, (*node)->opterons[0]->ioh_ht, link);
+
+			// remote MMIO64 above
+			if (Device::alloc->pos64 > (*node)->mmio64_limit)
+				(*nb)->mmiomap->add((*node)->mmio64_limit, Device::alloc->pos64 - 1, (*node)->numachip->ht, 0);
+		}
+
+		if ((*node)->mmio64_limit > (*node)->mmio64_base) {
+			(*node)->numachip->mmiomap.add((*node)->mmio64_base, (*node)->mmio64_limit - 1, (*node)->opterons[0]->ioh_ht);
+
+			foreach_node(dnode)
+				(*dnode)->numachip->dramatt.range((*node)->mmio64_base, (*node)->mmio64_limit - 1, (*node)->config->id);
+		}
+
+		(*node)->iohub->limits(Device::alloc->pos64 - 1);
 	}
 
 	if (options->debug.remote_io) {
