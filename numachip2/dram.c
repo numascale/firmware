@@ -89,13 +89,13 @@ void Numachip2::dram_init(void)
 
 	// test memory
 	write32(MCTR_BIST_ADDR, 0);
-	if (options->dimmtest > 0) {
-		const char *baton = "-\\|/";
+	if (options->dimmtest) {
+		const char baton[] = "-\\|/";
 		write32(MCTR_BIST_CTRL, ((options->dimmtest & 0xff) << 16) | ((dram_total_shift - 3) << 3) | (1<<2) | (1<<1) | (1<<0));
 		printf("<testing ");
 		while (read32(MCTR_BIST_CTRL) & 1) {
-			printf("%c\b", baton[i++%4]);
-			lib::udelay(20000);
+			printf("%c\b", baton[i++ % (sizeof(baton) - 1)]);
+			lib::udelay(1000000);
 		}
 		printf("\b>");
 		assertf(((read32(MCTR_BIST_CTRL) >> 9) & 3) == 3, "NumaConnect DIMM failure");
