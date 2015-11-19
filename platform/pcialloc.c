@@ -121,7 +121,7 @@ void Device::classify()
 
 	// if there are 64-bit prefetchable BARs and 32-bit ones, assign 64-bit ones in 32-bit space, as bridge only supports one prefetchable range
 	if (bars_pref64.size() && bars_pref32.size()) {
-		printf("demoting 64-bit perf BARs\n");
+		printf("demoting 64-bit pref BARs\n");
 		while (bars_pref64.size()) {
 			BAR *bar = bars_pref64.pop();
 			bars_pref32.push_back(bar);
@@ -238,7 +238,9 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 	uint32_t mask = io ? 1 : 15;
 	uint64_t assigned = save & ~mask;
 	bool s64 = ((save >> 1) & 3) == 2;
-	bool pref = (save >> 3) & 1;
+
+	// follow Linux in marking PCI endpoint and bridge expansion ROMs as prefetchable
+	bool pref = (offset == 0x30 || offset == 0x38) ? 1 : ((save >> 3) & 1);
 
 	lib::mcfg_write32(sci, bus, dev, fn, offset, 0xffffffff);
 	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, offset);
