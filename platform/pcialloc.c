@@ -43,6 +43,7 @@ uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, c
 	if (s64 && pref) {
 		uint64_t ret = pos64;
 		pos64 += len;
+		printf("<64P 0x%llx>", ret);
 		return ret;
 	}
 
@@ -58,6 +59,7 @@ uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, c
 		}
 
 		pos32_pref = pos32_pref2;
+		printf("<32P 0x%llx>", ret);
 		return ret;
 	}
 
@@ -71,6 +73,7 @@ uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, c
 	}
 
 	pos32_nonpref = pos32_nonpref2;
+	printf("<32NP 0x%llx>", pos32_nonpref);
 	return pos32_nonpref;
 }
 
@@ -79,11 +82,6 @@ void Allocator::round_node()
 	pos32_pref = roundup(pos32_pref, 1 << Numachip2::MMIO32_ATT_SHIFT);
 	pos32_nonpref = pos32_nonpref &~ ((1 << Numachip2::MMIO32_ATT_SHIFT) - 1);
 	pos64 = roundup(pos64, 1ULL << Numachip2::SIU_ATT_SHIFT);
-}
-
-void Allocator::report() const
-{
-	printf("%s of %s MMIO32 allocated\n", lib::pr_size(pos32_nonpref - pos32_pref), lib::pr_size(0x100000000 - lib::rdmsr(MSR_TOPMEM)));
 }
 
 void BAR::print() const
@@ -95,6 +93,9 @@ void BAR::print() const
 
 void Device::add(BAR *bar)
 {
+#ifdef DEBUG
+	printf("- %s BAR%s%s%s\n", lib::pr_size(bar->len), bar->io ? " IO" : "", bar->s64 ? " 64bit" : "", bar->pref ? " pref" : "");
+#endif
 	// store in parent if non-root
 	Device *target = parent ? parent : this;
 
@@ -202,10 +203,11 @@ void Device::assign()
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, 0x00000000);
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, 0x00000000);
 		}
-	} else
+	} else {
 		if (!node->config->master)
 			// set Interrupt Line register to 0 (unallocated)
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0);
+	}
 }
 
 void Device::print() const
@@ -422,6 +424,4 @@ void pci_realloc()
 		for (Bridge **br = roots.elements; br < roots.limit; br++)
 			(*br)->print();
 	}
-
-	Device::alloc->report();
 }

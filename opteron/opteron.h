@@ -166,7 +166,7 @@ public:
 	static const uint64_t HT_LIMIT         = 0x10000000000ULL;
 	static const uint32_t MMIO_VGA_BASE    = 0xa0000;
 	static const uint32_t MMIO_VGA_LIMIT   = 0xbffff;
-	static const uint32_t MMIO32_LIMIT     = 0xfe000000;
+	static const uint32_t MMIO32_LIMIT     = 0xe0000000;
 	static const unsigned DRAM_RANGES      = 8;
 
 	uint64_t dram_base, dram_size;

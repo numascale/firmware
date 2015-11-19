@@ -24,10 +24,24 @@
 #include "../library/base.h"
 
 /*
- - phase 1: the tree is built with all BARs added to 32-bit pref, 32-bit non-pref and 64-bit pref lists in the parent bridge
- - phase 2: at every bridge, the path to the root bridge is searched for 32-bit prefetchable BARs
+SETUP PHASES
+ 1. the tree is built with all BARs added to 32-bit pref, 32-bit non-pref and 64-bit pref lists in the parent bridge
+ 2. at every bridge, the path to the root bridge is searched for 32-bit prefetchable BARs
   > if any 32-bit pref are found, the subtree and parent BARs are moved from 64-bit to 32-bit
- - phase 3: BARs are sorted and assigned addresses, and bridges ranges assigned
+ 3. BARs are sorted and assigned addresses, and bridges ranges assigned
+ 4. setup maps and decode ranges
+
+NORTHBRIDGE MMIO MAP
+ 1. legacy VGA decode (0xa0000:0xbffff to 0.1)
+ 2. remote non-prefetchable bottom (starting 0x40000000 to 6.0)
+ 3. local non-prefetchable mid (to 0.1)
+ 4. remote non-prefetchable top and remote prefetchable bottom (to 6.0)
+ 5. local prefetchable mid (to 0.1)
+ 6. remote prefetchable top (ending 0xdfffffff to 6.0)
+ 7. legacy MCFG range for SMM (0xe0000000:0xefffffff to 0.1)
+ 8. NumaChip local (0xf0000000:0xf0ffffff to 6.0)
+ 9. top of MMIO space (0xf1000000:0xffffffff to 0.1)
+ 10. global config space (0x3f0000000000:0x3fffffffffff to 6.0)
 */
 
 class Allocator
@@ -43,7 +57,6 @@ public:
 	{}
 	uint64_t alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs);
 	void round_node();
-	void report() const;
 };
 
 class BAR
@@ -105,14 +118,23 @@ class Endpoint: public Device
 {
 public:
 	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 0)
-	{}
+	{
+#ifdef DEBUG
+		printf("device @ %02x:%02x.%x\n", _bus, _dev, _fn);
+#endif
+
+	}
 };
 
 class Bridge: public Device
 {
 public:
 	Bridge(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 1)
-	{}
+	{
+#ifdef DEBUG
+		printf("bridge @ %02x:%02x.%x\n", _bus, _dev, _fn);
+#endif
+	}
 };
 
 extern void pci_realloc();
