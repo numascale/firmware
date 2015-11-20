@@ -91,11 +91,11 @@ void Allocator::maps32(Node *const node)
 	}
 }
 
-uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs = 0)
+uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs = 1)
 {
 	if (s64 && pref) {
 		uint64_t ret = pos64;
-		pos64 += len;
+		pos64 += len * vfs;
 		printf("<64P 0x%llx>", ret);
 		return ret;
 	}
@@ -291,7 +291,7 @@ void Device::print() const
 }
 
 // returns offset to skip for 64-bit BAR
-unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Device *pdev, const uint16_t vfs = 0)
+unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Device *pdev, const uint16_t vfs = 1)
 {
 	uint32_t cmd = lib::mcfg_read32(sci, bus, dev, fn, 4);
 	lib::mcfg_write32(sci, bus, dev, fn, 4, 0);
