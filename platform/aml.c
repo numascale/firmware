@@ -536,9 +536,9 @@ char *remote_aml(uint32_t *len)
 			  DWordMemory::ReadWrite,
 			  0x00000000,
 			  (*node)->mmio32_base,
-			  (*node)->mmio32_limit,
+			  (*node)->mmio32_limit - 1,
 			  0x00000000,
-			  (*node)->mmio32_limit - (*node)->mmio32_base + 1));
+			  (*node)->mmio32_limit - (*node)->mmio32_base));
 
 		if ((*node)->mmio64_limit > (*node)->mmio64_base)
 			package->children.push_back(new QWordMemory(
@@ -549,9 +549,9 @@ char *remote_aml(uint32_t *len)
 			  QWordMemory::ReadWrite,
 			  0x00000000,
 			  (*node)->mmio64_base,
-			  (*node)->mmio64_limit,
+			  (*node)->mmio64_limit - 1,
 			  0x00000000,
-			  (*node)->mmio64_limit - (*node)->mmio64_base + 1));
+			  (*node)->mmio64_limit - (*node)->mmio64_base));
 
 		bus->children.push_back(new Name("_CRS", package));
 
