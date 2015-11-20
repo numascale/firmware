@@ -66,19 +66,20 @@ public:
 
 class BAR
 {
+	const sci_t sci;
+	const uint8_t bus, dev, fn;
+	const uint8_t offset;
 	uint64_t addr;
 public:
 	const bool io, s64, pref;
 	const uint64_t len;
 	const unsigned vfs;
 
-	BAR(const bool _io, const bool _s64, const bool _pref, const uint64_t _len, const uint64_t _addr, const unsigned _vfs):
-		addr(_addr), io(_io), s64(_s64), pref(_pref), len(_len), vfs(_vfs)
+	BAR(const sci_t _sci, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const uint8_t _offset,
+		const bool _io, const bool _s64, const bool _pref, const uint64_t _len, const uint64_t _addr, const unsigned _vfs):
+		sci(_sci), bus(_bus), dev(_dev), fn(_fn), offset(_offset), addr(_addr), io(_io), s64(_s64), pref(_pref), len(_len), vfs(_vfs)
 	{}
-	void assign(const uint64_t _addr)
-	{
-		addr = _addr;
-	}
+	void assign(const uint64_t assigned);
 	void print(void) const;
 	bool operator<(const BAR &rhs) const
 	{

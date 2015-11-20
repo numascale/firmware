@@ -55,7 +55,7 @@ void Allocator::reserve(const uint64_t base, const uint64_t limit, const sci_t s
 // setup map entries from one node's PoV
 void Allocator::maps32(Node *const node)
 {
-	printf("Maps on %03x:\n", node->config->id);
+	printf("\nMMIO32 routing on %03x:\n", node->config->id);
 	sci_t dest = map32[0];
 	uint64_t addr = start32;
 	unsigned i;
@@ -89,7 +89,6 @@ void Allocator::maps32(Node *const node)
 		foreach_nb(&node, nb)
 			(*nb)->mmiomap->add(addr, limit, dht, dlink);
 	}
-	printf("\n");
 }
 
 uint64_t Allocator::alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs = 0)
@@ -138,9 +137,18 @@ void Allocator::round_node()
 	pos64 = roundup(pos64, 1ULL << Numachip2::SIU_ATT_SHIFT);
 }
 
+void BAR::assign(const uint64_t _addr)
+{
+	addr = _addr;
+
+	lib::mcfg_write32(sci, bus, dev, fn, offset, addr);
+	if (s64)
+		lib::mcfg_write32(sci, bus, dev, fn, offset + 4, addr >> 32);
+}
+
 void BAR::print() const
 {
-	printf(" %s,%s,%u", lib::pr_size(len), io ? "I" : pref ? "P" : "NP", s64 ? 64 : 32);
+	printf(" %s,%s,%u@%02x:%02x.%x", lib::pr_size(len), io ? "I" : pref ? "P" : "NP", s64 ? 64 : 32, bus, dev, fn);
 	if (addr)
 		printf(",0x%llx", addr);
 }
@@ -191,12 +199,15 @@ void Device::assign()
 	uint64_t pos64 = alloc->pos64;
 
 	if (!node->config->master) {
-		// disable I/O, DMA and legacy interrupts; enable memory decode
+		// disable IO, DMA and legacy interrupts; enable memory decode
 		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, 0x0402);
 
 		// clear IO BARs
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
+
+		// set Interrupt Line register to 0 (unallocated)
+		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0);
 	}
 
 	bars_nonpref32.sort();
@@ -257,10 +268,6 @@ void Device::assign()
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, 0x00000000);
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, 0x00000000);
 		}
-	} else {
-		if (!node->config->master)
-			// set Interrupt Line register to 0 (unallocated)
-			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0);
 	}
 }
 
@@ -284,7 +291,7 @@ void Device::print() const
 }
 
 // returns offset to skip for 64-bit BAR
-unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Endpoint *ep, const uint16_t vfs = 0)
+unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Device *pdev, const uint16_t vfs = 0)
 {
 	uint32_t cmd = lib::mcfg_read32(sci, bus, dev, fn, 4);
 	lib::mcfg_write32(sci, bus, dev, fn, 4, 0);
@@ -314,8 +321,8 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 		}
 
 		len &= ~(len - 1);
-		BAR *bar = new BAR(io, s64, pref, len, assigned, vfs);
-		ep->add(bar);
+		BAR *bar = new BAR(sci, bus, dev, fn, offset, io, s64, pref, len, assigned, vfs);
+		pdev->add(bar);
 	}
 
 	lib::mcfg_write32(sci, bus, dev, fn, offset, save);
@@ -325,14 +332,14 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 	return s64 ? 4 : 0;
 }
 
-void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, Endpoint *ep)
+void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, Device *pdev)
 {
 	for (unsigned offset = 0x10; offset <= 0x30; offset += 4) {
 		// skip gap between last BAR and expansion ROM address
 		if (offset == 0x28)
 			offset = 0x30;
 
-		offset += probe_bar(sci, bus, dev, fn, offset, ep);
+		offset += probe_bar(sci, bus, dev, fn, offset, pdev);
 	}
 
 	// assign BARs in capabilities
@@ -342,7 +349,7 @@ void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const ui
 		const uint16_t vfs = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x0c) >> 16;
 
 		for (unsigned offset = 0x24; offset <= 0x38; offset += 4)
-			offset += probe_bar(sci, bus, dev, fn, cap + offset, ep, vfs);
+			offset += probe_bar(sci, bus, dev, fn, cap + offset, pdev, vfs);
 	}
 }
 

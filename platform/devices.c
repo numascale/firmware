@@ -180,7 +180,7 @@ void pci_disable_device(const uint16_t sci, const uint8_t bus, const uint8_t dev
 		lib::mcfg_write32(sci, bus, dev, fn, cap + 0x4, val | 3);
 	}
 
-	/* Disable I/O, memory, DMA and interrupts */
+	/* Disable IO, memory, DMA and interrupts */
 	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0);
 
 // FIXME for bridges
