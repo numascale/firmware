@@ -43,15 +43,15 @@ void ddr3_spd_check(const struct ddr3_spd_eeprom *spd)
 {
 	char *p = (char *)spd;
 	int csum16, len;
-	char crc_lsb;	/* byte 126 */
-	char crc_msb;	/* byte 127 */
+	uint8_t crc_lsb;	/* byte 126 */
+	uint8_t crc_msb;	/* byte 127 */
 
 	/* SPD byte0[7] is CRC coverage: 0 = bytes 0-125, 1 = bytes 0-116 */
 	len = !(spd->info_size_crc & 0x80) ? 126 : 117;
 	csum16 = crc16(p, len);
 
-	crc_lsb = (char)(csum16 & 0xff);
-	crc_msb = (char)(csum16 >> 8);
+	crc_lsb = (uint8_t)(csum16 & 0xff);
+	crc_msb = (uint8_t)(csum16 >> 8);
 
 	if (spd->crc[0] != crc_lsb || spd->crc[1] != crc_msb)
 		fatal("SPD checksum 0x%02x%02x differs from expected 0x%02x%02x",
@@ -59,4 +59,3 @@ void ddr3_spd_check(const struct ddr3_spd_eeprom *spd)
 
 	xassert(spd->spd_rev >= 0x10);
 }
-
