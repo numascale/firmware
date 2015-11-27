@@ -158,8 +158,9 @@ Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), co
 		{"tracing",         &Options::parse_int64,  &tracing},         // memory per NUMA node reserved for HT tracing
 		{"memlimit",        &Options::parse_int64,  &memlimit},        // per-server memory limit
 		{"flash",           &Options::parse_string, &flash},           // path to image file to flash
-		{"dimmtest",        &Options::parse_int,    &dimmtest},        // Run memory controller BIST for DIMM
+		{"dimmtest",        &Options::parse_int,    &dimmtest},        // run memory controller BIST for DIMM
 		{"test.manufacture",&Options::parse_bool,   &test_manufacture},// perform manufacture testing; requires a cable between each port pair
+		{"test.boardinfo",  &Options::parse_bool,   &test_boardinfo},  // update board info
 	};
 
 	unsigned errors = 0;

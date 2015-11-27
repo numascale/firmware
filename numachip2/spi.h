@@ -19,12 +19,22 @@
 
 #include <stdint.h>
 
-#define SPI_HEADER_BASE   0
-#define SPI_LOG_BASE      (16 << 20)
-#define SPI_LOG_SIZE      (16 << 20)
+#define SPI_HEADER_BASE       0
+#define SPI_BOARD_INFO_BASE   128
+#define SPI_LOG_BASE          (16 << 20)
+#define SPI_LOG_SIZE          (16 << 20)
 
 struct spi_header {
 	char name[64];
 	uint32_t flashed; // seconds since epoch
 	uint32_t checksum;
+};
+
+struct spi_board_info {
+	char part_no[8];
+	char pcb_type[8];
+	char pcb_rev;
+	char eco_level;
+	char model;
+	char serial_no[8];
 };

@@ -150,6 +150,52 @@ void Numachip2::check(void) const
 	dram_check();
 }
 
+void Numachip2::update_board_info(void)
+{
+	char sernostr[50];
+	int idx = 0;
+	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
+		sprintf(sernostr, "%sP%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
+		printf ("The serial number is %s.\nPlease press CR for no change, or enter new serial number: ", sernostr);
+	}
+	else
+		printf ("Please enter the serial number: ");
+	sernostr[idx]='\0';
+	while(!sernostr[idx]) {
+		if (fgets(&sernostr[idx], 2, stdin)!=NULL) {
+			// Handle backspace. Remove previous char from string and screen
+			if (sernostr[idx] == '\b' || sernostr[idx] == 0x7F) {
+				if (idx>0) {
+					printf ("\b \b");
+					sernostr[--idx]='\0';
+				}
+				else
+					sernostr[idx]='\0';
+			}
+			// All other chars except CR, add to string. If CR continue (break out of while loop since serno[idx]!='\0'
+			else if(sernostr[idx] != '\r') {
+				if (idx<16)
+					printf("%c", sernostr[idx++]);
+				sernostr[idx]='\0';
+			}
+		}
+	}
+	printf("\n");
+	sernostr[idx] = '\0';
+	sernostr[16]  = '\0';
+	if (idx!=0) {
+		strcpy(board_info.serial_no, &sernostr[10]);
+		board_info.model     = sernostr[9];
+		board_info.eco_level = sernostr[8];
+		board_info.pcb_rev   = sernostr[7];
+		sernostr[7] = '\0';
+		strcpy(board_info.pcb_type, &sernostr[4]);
+		sernostr[4] = '\0';
+		strcpy(board_info.part_no, &sernostr[0]);
+		spi_write(SPI_BOARD_INFO_BASE, sizeof(board_info), (unsigned char *)&board_info);
+	}
+}
+
 Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id):
   local(_local), config(_config), ht(_ht), mmiomap(*this), drammap(*this), dramatt(*this), mmioatt(*this)
 {
@@ -167,30 +213,51 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	uint32_t vendev = read32(VENDEV);
 	xassert(vendev == VENDEV_NC2);
 #endif
-
-	printf("NumaChip2 [");
 	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000); // XXX: Should probably check a chip-rev reg instead...
+	assertf(is_stratixv, "FPGA platform not supported");
+
+	if (options->test_boardinfo)
+		update_board_info();
+
+	spi_read(SPI_BOARD_INFO_BASE, sizeof(board_info), (unsigned char *)&board_info);
+	printf ("********** Numaconnect Board Information ************\n");
+	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
+		printf ("* Part number     : %s\n",  board_info.part_no);
+		printf ("* PCB type        : P%s\n", board_info.pcb_type);
+		printf ("* PCB rev         : %c\n",  board_info.pcb_rev);
+		printf ("* ECO level       : %c\n",  board_info.eco_level);
+		printf ("* Model           : %c\n",  board_info.model);
+		printf ("* Serial number   : %s\n",  board_info.serial_no);
+	}
+	else
+		printf ("* No valid serial number found\n");
+
+	write32(IMG_PROP_TEMP, 1 << 31);
+	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+
+	uint16_t spd_temp;
+	i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
+	int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
+
+	// date string is stored last byte first, so we read dwords backwards and byte-swap them
+	char buildtime[17];
+	const unsigned buildlen = ((sizeof(buildtime) - 1) / sizeof(uint32_t));
+	for (unsigned i = 0; i < buildlen; i++)
+		*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
+	buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
+
 	struct spi_header hdr;
 	spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
-	if (is_stratixv) {
-		uint16_t spd_temp;
-		i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
-		int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
 
-		write32(IMG_PROP_TEMP, 1 << 31);
-		int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+	printf ("* FPGA image      : %s\n", hdr.name);
+	printf ("* FPGA checksum   : %u\n", hdr.checksum);
+	printf ("* Image build time: %s\n", buildtime);
+	printf ("* Assigned to HT  : %u\n", ht);
+	printf ("* FPGA temperature: %d C\n", fpga_temp);
+	printf ("* DIMM temperature: %d C\n", dimm_temp);
+	printf ("*****************************************************\n");
 
-		// date string is stored last byte first, so we read dwords backwards and byte-swap them
-		char buildtime[17];
-		const unsigned buildlen = ((sizeof(buildtime) - 1) / sizeof(uint32_t));
-		for (unsigned i = 0; i < buildlen; i++)
-			*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
-		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
-
-		printf("%dC fpga, %dC dimm, %s, cksum %u, built %s] assigned HT%u\n", fpga_temp, dimm_temp, hdr.name, hdr.checksum, buildtime, ht);
-		assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
-	} else
-		printf("Virtex assigned HT%u\n", ht);
+	assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 
 	printf("Testing CSR response");
 	for (unsigned i = 0x0000; i < 0x4000; i += 4)
@@ -198,7 +265,6 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	printf("\n");
 
 	if (options->flash) { // flashing supported on Altera only
-		assertf(is_stratixv, "Flashing not supported on this platform");
 		size_t len = 0;
 		char *buf = os->read_file(options->flash, &len);
 		assertf(buf && len > 0, "Image %s not found or permission issues", options->flash);
@@ -226,7 +292,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 			warning("Image already loaded");
 	}
 
-	if (is_stratixv && read32(FLASH_REG0) >> 28 != 0xa) {
+	if (read32(FLASH_REG0) >> 28 != 0xa) {
 		warning("Non-application image detected; forcing init-only option");
 		options->init_only = 1;
 	}

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "spd.h"
+#include "spi.h"
 #include "../library/base.h"
 #include "../platform/config.h"
 
@@ -72,6 +73,9 @@ class Numachip2 {
 	uint8_t nlcs;
 	const bool local;
 	unsigned dram_total_shift;
+	struct spi_board_info board_info;
+
+	void update_board_info(void);
 
 	/* i2c-master.c */
 	void i2c_master_init(void);

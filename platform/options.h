@@ -34,6 +34,7 @@ public:
 	bool fastboot;
 	bool remote_io;
 	bool test_manufacture;
+	bool test_boardinfo;
 	int dimmtest;
 	uint64_t memlimit;
 	uint64_t tracing;
