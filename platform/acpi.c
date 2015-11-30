@@ -190,12 +190,9 @@ uint32_t ACPI::slack(const acpi_sdt *parent)
 
 bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt *const parent, const unsigned ptrsize)
 {
-	uint64_t newp, childp;
-	acpi_sdt *table;
+	uint64_t newp = 0, childp;
 
 	assert_checksum(replacement, replacement->len);
-
-	newp = 0;
 	memcpy(&newp, &replacement, sizeof(replacement));
 	int i;
 
@@ -209,12 +206,23 @@ bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt 
 			continue;
 		}
 
+		acpi_sdt *table;
 		memcpy(&table, &childp, sizeof(table));
 		assert_checksum(table, table->len);
 
+		// DSDT is special-cased
+		if (table->sig.l == STR_DW_H("FACP") && !strncmp(sig, "DSDT", 4)) {
+			struct acpi_fadt *fadt = (struct acpi_fadt *)&table->data;
+			fadt->Dsdt = (uint32_t)replacement;
+			if (ptrsize == 8)
+				fadt->X_Dsdt = (uint64_t)replacement;
+			table->checksum = 0;
+			table->checksum = checksum((const char *)table, table->len);
+			return 1;
+		}
+
 		if (table->sig.l == STR_DW_H(sig)) {
 			memcpy(&parent->data[i], &newp, ptrsize);
-
 			// check if writing succeeded
 			if (memcmp(&parent->data[i], &newp, ptrsize))
 				goto again;
