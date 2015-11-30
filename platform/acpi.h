@@ -99,7 +99,7 @@ public:
 	char *payload;
 	unsigned allocated, used;
 
-	AcpiTable(const char *name, const unsigned rev) nonnull;
+	AcpiTable(const char *name, const unsigned rev, const bool copy = 0) nonnull;
 	void append(const char *data, const unsigned len) nonnull;
 	char *reserve(const unsigned len);
 };

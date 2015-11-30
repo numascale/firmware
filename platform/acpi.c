@@ -614,7 +614,7 @@ ACPI::ACPI(void): bios_shadowed(0)
 	get_cores();
 }
 
-AcpiTable::AcpiTable(const char *name, const unsigned rev): payload(0), allocated(0), used(0)
+AcpiTable::AcpiTable(const char *name, const unsigned rev, const bool copy): payload(0), allocated(0), used(0)
 {
 	memset(&header, 0, sizeof(header));
 	memcpy(&header.sig.s, name, 4);
@@ -626,6 +626,12 @@ AcpiTable::AcpiTable(const char *name, const unsigned rev): payload(0), allocate
 	memcpy(&header.creatorid, "1B47", 4);
 	header.creatorrev = 1;
 	header.checksum = 0;
+
+	if (copy) {
+		acpi_sdt *table = acpi->find_sdt(name);
+		xassert(table);
+		append(table->data, table->len - sizeof(struct acpi_sdt));
+	}
 }
 
 void AcpiTable::extend(const unsigned len)
