@@ -245,6 +245,38 @@ public:
 	}
 };
 
+class WordIO: public Container {
+	const ResourceUsage usage;
+	const MinType mint;
+	const MaxType maxt;
+	const Decode decode;
+	const RangeType ranget;
+	const uint16_t gran, mina, maxa, trans, size;
+public:
+	WordIO(const ResourceUsage _usage, const MinType _mint, const MaxType _maxt,
+	  const Decode _decode, const RangeType _ranget, const uint32_t _gran, const uint32_t _mina,
+	  const uint32_t _maxa, const uint32_t _trans, const uint32_t _size):
+	  usage(_usage), mint(_mint), maxt(_maxt), decode(_decode), ranget(_ranget),
+	  gran(_gran), mina(_mina), maxa(_maxa), trans(_trans), size(_size) {}
+
+	int build(void) {
+		xassert(children.size() == 0);
+
+		pack((uint8_t)0x88);
+		pack((uint16_t)0x000d); /* Minimum length (13) */
+		pack((uint8_t)ResourceTypeIO);
+		pack((uint8_t)((decode << 1) | (mint << 2) | (maxt << 3)));
+		pack((uint8_t)ranget); /* Type-specific flags */
+		pack(gran);
+		pack(mina);
+		pack(maxa);
+		pack(trans);
+		pack(size);
+
+		return offset;
+	}
+};
+
 class DWordIO: public Container {
 	const ResourceUsage usage;
 	const MinType mint;
