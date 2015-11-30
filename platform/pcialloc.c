@@ -367,8 +367,8 @@ static void populate(Bridge *br, const uint8_t bus)
 			// recurse down bridges
 			if ((type & 0x7f) == 0x01) {
 				Bridge *sub = new Bridge(br->node, br, bus, dev, fn);
-				probe_bar(br->node->config->id, bus, dev, fn, 0x10, sub);
-				probe_bar(br->node->config->id, bus, dev, fn, 0x14, sub);
+				if (probe_bar(br->node->config->id, bus, dev, fn, 0x10, sub) == 4)
+					probe_bar(br->node->config->id, bus, dev, fn, 0x14, sub);
 				probe_bar(br->node->config->id, bus, dev, fn, 0x38, sub);
 
 				uint8_t sec = (lib::mcfg_read32(br->node->config->id, bus, dev, fn, 0x18) >> 8) & 0xff;
