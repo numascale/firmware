@@ -171,11 +171,14 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	printf("NumaChip2 [");
 	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000); // XXX: Should probably check a chip-rev reg instead...
 	struct spi_header hdr;
+	spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
 	if (is_stratixv) {
-		spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+		uint16_t spd_temp;
+		i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
+		int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
 
 		write32(IMG_PROP_TEMP, 1 << 31);
-		int temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+		int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
 
 		// date string is stored last byte first, so we read dwords backwards and byte-swap them
 		char buildtime[17];
@@ -184,8 +187,8 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 			*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
 		buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-		printf("%dC, %s, cksum %u, built %s] assigned HT%u\n", temp, hdr.name, hdr.checksum, buildtime, ht);
-		assertf(temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+		printf("%dC fpga, %dC dimm, %s, cksum %u, built %s] assigned HT%u\n", fpga_temp, dimm_temp, hdr.name, hdr.checksum, buildtime, ht);
+		assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 	} else
 		printf("Virtex assigned HT%u\n", ht);
 
