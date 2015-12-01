@@ -1132,6 +1132,7 @@ static void wait_for_master(void)
 	int go_ahead = 0;
 	uint32_t last_cmd = ~0;
 	uint32_t ip;
+	enum node_state last_state = RSP_NONE;
 
 	os->udp_open();
 
@@ -1147,7 +1148,11 @@ static void wait_for_master(void)
 	while (!go_ahead) {
 		if (++count >= backoff) {
 			local_node->check();
-			printf("Replying with %s\n", node_state_name[rsp.state]);
+			if (last_state != rsp.state) {
+				printf("Replying with %s", node_state_name[rsp.state]);
+				last_state = rsp.state;
+			} else
+				printf(".");
 			os->udp_write(&rsp, sizeof(rsp), 0xffffffff);
 			lib::udelay(100 * backoff);
 
@@ -1184,6 +1189,8 @@ static void wait_for_master(void)
 				count = 0;
 				backoff = 1;
 
+				if (cmd.state != CMD_STARTUP)
+					printf("\n");
 				if (handle_command(cmd.state, &rsp.state)) {
 					rsp.tid = cmd.tid;
 				} else if (cmd.state == CMD_CONTINUE) {
