@@ -19,12 +19,12 @@
 
 #include <stdint.h>
 
-#define SPI_HEADER_BASE       0
+#define SPI_IMAGE_INFO_BASE   0
 #define SPI_BOARD_INFO_BASE   128
 #define SPI_LOG_BASE          (16 << 20)
 #define SPI_LOG_SIZE          (16 << 20)
 
-struct spi_header {
+struct spi_image_info {
 	char name[64];
 	uint32_t flashed; // seconds since epoch
 	uint32_t checksum;

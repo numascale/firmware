@@ -233,8 +233,8 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 	printf(" at HT%u\n", ht);
 
-	struct spi_header hdr;
-	spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+	struct spi_image_info image_info;
+	spi_read(SPI_IMAGE_INFO_BASE, sizeof(image_info), (unsigned char *)&image_info);
 
 	// date string is stored last byte first, so we read dwords backwards and byte-swap them
 	char buildtime[17];
@@ -243,7 +243,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 		*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
 	buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-	printf("- image %s, checksum %u, built %s\n", hdr.name, hdr.checksum, buildtime);
+	printf("- image %s, checksum %u, built %s\n", image_info.name, image_info.checksum, buildtime);
 
 	write32(IMG_PROP_TEMP, 1 << 31);
 	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
@@ -267,21 +267,21 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 		assertf(buf && len > 0, "Image %s not found or permission issues", options->flash);
 
 		uint32_t checksum = lib::checksum((unsigned char *)buf, len);
-		if (hdr.checksum != checksum || (read32(FLASH_REG0) >> 28) != 0xa) {
+		if (image_info.checksum != checksum || (read32(FLASH_REG0) >> 28) != 0xa) {
 			printf("Flashing %uMB image %s with checksum %u\n", len >> 20, options->flash, checksum);
 			flash(buf, len);
 
 			// store filename for printing
-			memset(&hdr, 0, sizeof(hdr));
+			memset(&image_info, 0, sizeof(image_info));
 
 			// drop file extension
 			char *suffix = strrchr(options->flash, '.');
 			if (suffix)
 				*suffix = '\0';
 
-			strncpy(hdr.name, options->flash, sizeof(hdr.name));
-			hdr.checksum = checksum;
-			spi_write(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+			strncpy(image_info.name, options->flash, sizeof(image_info.name));
+			image_info.checksum = checksum;
+			spi_write(SPI_IMAGE_INFO_BASE, sizeof(image_info), (unsigned char *)&image_info);
 
 			printf("Power cycling");
 			ipmi->powercycle();
