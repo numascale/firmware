@@ -57,6 +57,18 @@ void SR56x0::htiu_write(const uint8_t reg, const uint32_t val)
 	write32(0x98, val);
 }
 
+uint32_t SR56x0::ioapicind_read(const uint8_t reg)
+{
+	write32(0xf8, reg);
+	return read32(0xfc);
+}
+
+void SR56x0::ioapicind_write(const uint8_t reg, const uint32_t val)
+{
+	write32(0xf8, reg);
+	write32(0xfc, val);
+}
+
 bool SR56x0::probe(const sci_t sci)
 {
 	uint32_t vendev = lib::mcfg_read32(sci, 0, 0, 0, 0);

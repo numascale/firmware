@@ -430,7 +430,7 @@ static void pci_prepare(const Node *const node)
 		// disable IOAPIC memory decode and IOAPIC
 		val = lib::mcfg_read32(node->config->id, 0, 0x14, 0, 0x64);
 		lib::mcfg_write32(node->config->id, 0, 0x14, 0, 0x64, val & ~(1 << 3));
-		// ioh_ioapicind_write(node->sci, 0, 0);
+		node->iohub->ioapicind_write(0, 0);
 	}
 }
 

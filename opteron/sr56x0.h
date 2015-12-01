@@ -43,4 +43,6 @@ public:
 	void smi_enable(void);
 	void limits(const uint64_t limit);
 	void ldtstop(void);
+	uint32_t ioapicind_read(const uint8_t reg);
+	void ioapicind_write(const uint8_t reg, const uint32_t val);
 };
