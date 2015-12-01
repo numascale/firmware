@@ -155,11 +155,12 @@ void Numachip2::update_board_info(void)
 	char sernostr[50];
 	int idx = 0;
 	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
-		sprintf(sernostr, "%sP%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
+		sprintf(sernostr, "%s%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
 		printf ("The serial number is %s.\nPlease press CR for no change, or enter new serial number: ", sernostr);
 	}
 	else
 		printf ("Please enter the serial number: ");
+
 	sernostr[idx]='\0';
 	while(!sernostr[idx]) {
 		if (fgets(&sernostr[idx], 2, stdin)!=NULL) {
@@ -220,24 +221,20 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 		update_board_info();
 
 	spi_read(SPI_BOARD_INFO_BASE, sizeof(board_info), (unsigned char *)&board_info);
-	printf ("********** Numaconnect Board Information ************\n");
+
+	printf("NumaConnect2 ");
 	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
-		printf ("* Part number     : %s\n",  board_info.part_no);
-		printf ("* PCB type        : P%s\n", board_info.pcb_type);
-		printf ("* PCB rev         : %c\n",  board_info.pcb_rev);
-		printf ("* ECO level       : %c\n",  board_info.eco_level);
-		printf ("* Model           : %c\n",  board_info.model);
-		printf ("* Serial number   : %s\n",  board_info.serial_no);
+		printf("%s%s%c%c%c%s",
+		       board_info.part_no, board_info.pcb_type, board_info.pcb_rev,
+		       board_info.eco_level, board_info.model, board_info.serial_no);
 	}
 	else
-		printf ("* No valid serial number found\n");
+		printf ("(board info not available)");
 
-	write32(IMG_PROP_TEMP, 1 << 31);
-	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+	printf(" at HT%u\n", ht);
 
-	uint16_t spd_temp;
-	i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
-	int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
+	struct spi_header hdr;
+	spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
 
 	// date string is stored last byte first, so we read dwords backwards and byte-swap them
 	char buildtime[17];
@@ -246,16 +243,16 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 		*(uint32_t *)(buildtime + i * 4) = lib::bswap32(rom_read(IMG_PROP_STRING + buildlen - 1 - i));
 	buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
-	struct spi_header hdr;
-	spi_read(SPI_HEADER_BASE, sizeof(hdr), (unsigned char *)&hdr);
+	printf("- image %s, checksum %u, built %s\n", hdr.name, hdr.checksum, buildtime);
 
-	printf ("* FPGA image      : %s\n", hdr.name);
-	printf ("* FPGA checksum   : %u\n", hdr.checksum);
-	printf ("* Image build time: %s\n", buildtime);
-	printf ("* Assigned to HT  : %u\n", ht);
-	printf ("* FPGA temperature: %d C\n", fpga_temp);
-	printf ("* DIMM temperature: %d C\n", dimm_temp);
-	printf ("*****************************************************\n");
+	write32(IMG_PROP_TEMP, 1 << 31);
+	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+
+	uint16_t spd_temp;
+	i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
+	int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
+
+	printf("- core @ %2dC, DIMM @ %2dC\n", fpga_temp, dimm_temp);
 
 	assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 
