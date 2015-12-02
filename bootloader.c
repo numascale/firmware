@@ -292,8 +292,6 @@ static void setup_info(void)
 		infop->neigh_ht = nodes[n]->neigh_ht;
 		infop->neigh_link = nodes[n]->neigh_link;
 		infop->linkmask = nodes[n]->numachip->linkmask;
-		if (sizeof(VER) > sizeof(infop->firmware))
-			warning("Bootloader version string too long for info packet");
 		strncpy(infop->firmware, VER, sizeof(infop->firmware));
 #ifdef DEBUG
 		printf("Firmware %s, self %03x, partition %u, master %03x, "
