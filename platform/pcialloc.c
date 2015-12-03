@@ -291,7 +291,7 @@ void Device::print() const
 }
 
 // returns offset to skip for 64-bit BAR
-unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const unsigned offset, Device *pdev, const uint16_t vfs = 1)
+unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint16_t offset, Device *pdev, const uint16_t vfs = 1)
 {
 	uint32_t cmd = lib::mcfg_read32(sci, bus, dev, fn, 4);
 	lib::mcfg_write32(sci, bus, dev, fn, 4, 0);
@@ -334,7 +334,7 @@ unsigned probe_bar(const sci_t sci, const uint8_t bus, const uint8_t dev, const 
 
 void scan_device(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, Device *pdev)
 {
-	for (unsigned offset = 0x10; offset <= 0x30; offset += 4) {
+	for (uint16_t offset = 0x10; offset <= 0x30; offset += 4) {
 		// skip gap between last BAR and expansion ROM address
 		if (offset == 0x28)
 			offset = 0x30;
