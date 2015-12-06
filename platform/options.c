@@ -140,7 +140,7 @@ void Options::parse_flags(const char *val, void *data)
 
 Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
 	ht_slowmode(0), boot_wait(0), handover_acpi(0),
-	fastboot(0), remote_io(0), dimmtest(2), memlimit(~0), tracing(0)
+	fastboot(0), remote_io(1), dimmtest(2), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
