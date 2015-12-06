@@ -34,7 +34,7 @@
 void ACPI::shadow_bios(void)
 {
 	printf("Shadowing BIOS");
-	int *area = (int *)malloc(SHADOW_LEN);
+	void *area = malloc(SHADOW_LEN);
 	xassert(area);
 	memcpy(area, (void *)SHADOW_BASE, SHADOW_LEN);
 
@@ -91,7 +91,6 @@ acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const unsign
 {
 	uint64_t childp;
 	acpi_sdt *table;
-	int i;
 
 	// DSDT is linked from FACP table
 	if (!strcmp("DSDT", sig)) {
@@ -101,7 +100,7 @@ acpi_sdt *ACPI::find_child(const char *sig, const acpi_sdt *parent, const unsign
 		return dsdt;
 	}
 
-	for (i = 0; i + sizeof(*parent) < parent->len; i += ptrsize) {
+	for (unsigned i = 0; i + sizeof(*parent) < parent->len; i += ptrsize) {
 		childp = 0;
 		memcpy(&childp, &parent->data[i], ptrsize);
 
@@ -127,7 +126,7 @@ uint32_t ACPI::slack(const acpi_sdt *parent)
 	acpi_sdt *next_table = (acpi_sdt *)0xffffffff;
 	uint32_t *rsdt_entries = (uint32_t *) & (rsdt->data);
 
-	for (int i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
+	for (unsigned i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
 		acpi_sdt *table = (acpi_sdt *)rsdt_entries[i];
 		assert_checksum(table, table->len);
 
@@ -152,7 +151,7 @@ uint32_t ACPI::slack(const acpi_sdt *parent)
 
 	uint64_t *xsdt_entries = (uint64_t *) & (xsdt->data);
 
-	for (int i = 0; i * 8 + sizeof(*xsdt) < xsdt->len; i++) {
+	for (unsigned i = 0; i * 8 + sizeof(*xsdt) < xsdt->len; i++) {
 		uint64_t childp = xsdt_entries[i];
 		acpi_sdt *table;
 
@@ -194,7 +193,7 @@ bool ACPI::replace_child(const char *sig, const acpi_sdt *replacement, acpi_sdt 
 
 	assert_checksum(replacement, replacement->len);
 	memcpy(&newp, &replacement, sizeof(replacement));
-	int i;
+	unsigned i;
 
 	for (i = 0; i + sizeof(*parent) < parent->len; i += ptrsize) {
 		childp = 0;
@@ -275,7 +274,7 @@ void ACPI::add_child(const acpi_sdt *replacement, acpi_sdt *const parent, const 
 	assert_checksum(replacement, replacement->len);
 	uint64_t newp = 0;
 	memcpy(&newp, &replacement, sizeof replacement);
-	int i = parent->len - sizeof(*parent);
+	unsigned i = parent->len - sizeof(*parent);
 	memcpy(&parent->data[i], &newp, ptrsize);
 	if (memcmp(&parent->data[i], &newp, ptrsize))
 		goto again;
@@ -380,15 +379,15 @@ void ACPI::dump(const acpi_sdt *table, const unsigned limit)
 	printf("\n");
 }
 
-bool ACPI::append(const acpi_sdt *parent, const unsigned ptrsize, const char *sig, const unsigned char *extra, const uint32_t extra_len)
+bool ACPI::append(const char *sig, const char *extra, const uint32_t extra_len)
 {
-	// check if enough space to append to SSDT
-	acpi_sdt *table = find_child(sig, parent, ptrsize);
+	// check if enough space to append
+	acpi_sdt *table = find_child(sig, rsdt, 4);
 
 	if (!table || slack(table) < extra_len)
 		return 0;
 
-	memcpy((unsigned char *)table + table->len, extra, extra_len);
+	memcpy((char *)table + table->len, extra, extra_len);
 	table->len += extra_len;
 	table->checksum += checksum((const char *)table, table->len);
 
@@ -427,7 +426,7 @@ void ACPI::check(void)
 
 	uint32_t *rsdt_entries = (uint32_t *)&(rsdt->data);
 
-	for (int i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
+	for (unsigned i = 0; i * 4 + sizeof(*rsdt) < rsdt->len; i++) {
 		acpi_sdt *table = (acpi_sdt *)rsdt_entries[i];
 		assert_checksum(table, table->len);
 
@@ -447,7 +446,7 @@ void ACPI::check(void)
 					dsdt, dsdt->sig.l, dsdt->sig.s, dsdt->oemid,
 					dsdt->oemtableid, dsdt->checksum, dsdt->revision, dsdt->len);
 
-			for (int j = 0; j < 4; j++) {
+			for (unsigned j = 0; j < 4; j++) {
 				char c = (dsdt->sig.l >> (j * 8)) & 0xff;
 				assertf(c >= 65 && c <= 90, "Non-printable characters in table name");
 			}
@@ -478,7 +477,7 @@ void ACPI::check(void)
 
 			uint64_t *xsdt_entries = (uint64_t *)&(xsdtp->data);
 
-			for (int i = 0; i * 8 + sizeof(*xsdtp) < xsdtp->len; i++) {
+			for (unsigned i = 0; i * 8 + sizeof(*xsdtp) < xsdtp->len; i++) {
 				acpi_sdt *table;
 				memcpy(&table, &xsdt_entries[i], sizeof(table));
 				assert_checksum(table, table->len);
@@ -519,7 +518,7 @@ void ACPI::handover(void)
 	acpi_sdt *fadt = find_sdt("FACP");
 	xassert(fadt);
 
-	unsigned char *val = &fadt->data[48 - 36];
+	char *val = &fadt->data[48 - 36];
 	const uint32_t smi_cmd = *(uint32_t *)val;
 	const uint8_t acpi_enable = fadt->data[52 - 36];
 
@@ -538,7 +537,7 @@ void ACPI::handover(void)
 	}
 
 	outb(acpi_enable, smi_cmd);
-	int limit = 1000;
+	unsigned limit = 1000;
 
 	do {
 		lib::udelay(1000);
@@ -579,7 +578,7 @@ void ACPI::get_cores(void)
 			break;
 		}
 		default:
-			fatal("Unexpected SRAT entry %u", srat->data[i]);
+			fatal("Unexpected SRAT entry %d", srat->data[i]);
 		}
 	}
 }
