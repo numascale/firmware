@@ -116,16 +116,14 @@ struct devspec {
 	const uint32_t classtype;
 	const uint8_t classlen;
 	const uint8_t type;
-	void (*handler)(const uint16_t, const uint8_t, const uint8_t, const uint8_t);
+	void (*handler)(const uint16_t, const int, const int, const int);
 };
 
-void pci_search(const sci_t sci, const struct devspec *list, const uint8_t bus) nonnull;
-void stop_acpi(const sci_t sci);
-void disable_kvm_ports(const sci_t sci, const uint8_t port);
+void pci_search(const struct devspec *list, const sci_t sci, const int bus);
+void stop_acpi(void);
+void disable_kvm_ports(const int port);
 void handover_legacy(const sci_t sci);
 void pci_setup(const sci_t sci);
-void pci_dma_disable_all(const sci_t sci);
-void pci_dma_enable_all(const sci_t sci);
-void pci_disable_device(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn);
-void pci_disable_all(const sci_t sci);
-uint16_t extcapability(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint16_t cap);
+void disable_device(const sci_t sci, const int bus, const int dev, const int fn);
+void disable_bridge(const sci_t sci, const int bus, const int dev, const int fn);
+checked uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const int dev, const int fn);

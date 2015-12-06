@@ -52,12 +52,12 @@ void Devices::IOAPIC::restore(void)
 		write64(i * 8 + 0x10, vectors[i]);
 }
 
-void pci_search(const sci_t sci, const struct devspec *list, const uint8_t bus)
+void pci_search(const struct devspec *list, const sci_t sci, const int bus)
 {
 	const struct devspec *listp;
 
-	for (uint8_t dev = 0; dev < 32; dev++) {
-		for (uint8_t fn = 0; fn < 8; fn++) {
+	for (int dev = 0; dev < (bus == 0 ? 24 : 32); dev++) {
+		for (int fn = 0; fn < 8; fn++) {
 			uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0xc);
 			/* PCI device functions are not necessarily contiguous */
 			if (val == 0xffffffff)
@@ -72,9 +72,9 @@ void pci_search(const sci_t sci, const struct devspec *list, const uint8_t bus)
 						listp->handler(sci, bus, dev, fn);
 
 			/* Recurse down bridges */
-			if ((type & 0x7f) == 0x01) {
-				uint8_t sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
-				pci_search(sci, list, sec);
+			if ((type & 0x7f) == PCI_TYPE_BRIDGE) {
+				int sec = (lib::mcfg_read32(sci, bus, dev, fn, 0x18) >> 8) & 0xff;
+				pci_search(list, sci, sec);
 			}
 
 			/* If not multi-function, break out of function loop */
@@ -84,19 +84,18 @@ void pci_search(const sci_t sci, const struct devspec *list, const uint8_t bus)
 	}
 }
 
-static void pci_search_start(const sci_t sci, const struct devspec *list)
+static void pci_search_start(const struct devspec *list, const sci_t sci)
 {
-	pci_search(sci, list, 0);
+	pci_search(list, sci, 0);
 }
 
-void disable_kvm_ports(const sci_t sci, const unsigned port)
-{
+void disable_kvm_ports(const int port) {
 	/* Disable AMI Virtual Keyboard and Mouse ports, since they generate a lot of interrupts */
-	uint32_t val = lib::mcfg_read32(sci, 0, 19, 0, 0x40);
-	lib::mcfg_write32(sci, 0, 19, 0, 0x40, val | (1 << (port + 16)));
+	uint32_t val = lib::mcfg_read32(0xfff0, 0, 19, 0, 0x40);
+	lib::mcfg_write32(0xfff0, 0, 19, 0, 0x40, val | (1 << (port + 16)));
 }
 
-static uint16_t capability(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint8_t cap)
+static uint16_t capability(const uint8_t cap, const sci_t sci, const int bus, const int dev, const int fn)
 {
 	/* Check for capability list */
 	if (!(lib::mcfg_read32(sci, bus, dev, fn, 0x4) & (1 << 20)))
@@ -120,8 +119,13 @@ static uint16_t capability(const sci_t sci, const uint8_t bus, const uint8_t dev
 	return PCI_CAP_NONE;
 }
 
-uint16_t extcapability(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn, const uint16_t cap)
+uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const int dev, const int fn)
 {
+	uint16_t cap2 = capability(PCI_CAP_PCIE, sci, bus, dev, fn);
+
+	if (cap2 == PCI_CAP_NONE)
+		return PCI_CAP_NONE;
+
 	uint8_t visited[0x1000];
 	uint16_t offset = 0x100;
 
@@ -141,84 +145,87 @@ uint16_t extcapability(const sci_t sci, const uint8_t bus, const uint8_t dev, co
 	return PCI_CAP_NONE;
 }
 
-static void pci_dma_disable(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void disable_common(const sci_t sci, const int bus, const int dev, const int fn)
 {
-	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val & ~(1 << 2)); // Bus Master
-}
-
-static void pci_dma_enable(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
-{
-	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x4);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, val | (1 << 2)); // Bus Master
-}
-
-void pci_dma_disable_all(const sci_t sci)
-{
-	const struct devspec devices[] = {
-		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_dma_disable},
-		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
-	};
-	pci_search_start(sci, devices);
-}
-
-void pci_dma_enable_all(const sci_t sci)
-{
-	const struct devspec devices[] = {
-		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_dma_enable},
-		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
-	};
-	pci_search_start(sci, devices);
-}
-
-void pci_disable_device(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
-{
-	// put device into D3 if possible
-	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_POWER);
+	/* Disable MSI interrupt */
+	uint16_t cap = capability(PCI_CAP_MSI, sci, bus, dev, fn);
 	if (cap != PCI_CAP_NONE) {
-		uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x4);
-		lib::mcfg_write32(sci, bus, dev, fn, cap + 0x4, val | 3);
+		bool s64 = lib::mcfg_read32(sci, bus, dev, fn, cap + 0) & (1 << 7);
+		for (unsigned offset = 0x0; offset <= (s64 ? 0xc : 0x8); offset += 4)
+			lib::mcfg_write32(sci, bus, dev, fn, cap + offset, 0);
 	}
+}
 
-	/* Disable IO, memory, DMA and interrupts */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0);
-
-// FIXME for bridges
+void disable_device(const sci_t sci, const int bus, const int dev, const int fn)
+{
+	/* Disable I/O, DMA and legacy interrupts; enable memory decode */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0x0402);
 
 	/* Clear BARs */
-	for (int i = 0x10; i <= 0x24; i += 4)
+	for (unsigned i = 0x10; i <= 0x24; i += 4)
 		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
 
 	/* Clear expansion ROM base address */
 	lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
+
+	/* The Interrupt Line register cannot be cleared, since the Nvidia driver refuses to initialise */
+
+	/* Disable SR-IOV BARs */
+	uint16_t cap = extcapability(PCI_ECAP_SRIOV, sci, bus, dev, fn);
+	if (cap != PCI_CAP_NONE)
+		for (unsigned offset = 0x24; offset <= 0x38; offset += 4)
+			lib::mcfg_write32(sci, bus, dev, fn, cap + offset, 0);
+
+	disable_common(sci, bus, dev, fn);
+}
+
+void disable_bridge(const sci_t sci, const int bus, const int dev, const int fn)
+{
+	/* Disable I/O, DMA and legacy interrupts; enable memory decode */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0x0402);
+
+	/* Clear BARs */
+	for (unsigned i = 0x10; i <= 0x14; i += 4)
+		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
+
+	/* Disable IO and memory ranges */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x1c, 0x000000f0);
+	lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fff0);
+	lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fff0);
+
+	/* Clear upper bits */
+	for (unsigned i = 0x28; i <= 0x30; i += 4)
+		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
+
+	/* Clear expansion ROM base address */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x38, 0);
+
 	/* Set Interrupt Line register to 0 (unallocated) */
 	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
+
+	disable_common(sci, bus, dev, fn);
 }
 
-void pci_disable_all(const sci_t sci)
-{
-	const struct devspec devices[] = {
-		{PCI_CLASS_ANY, 0, PCI_TYPE_ENDPOINT, pci_disable_device},
-		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
-	};
-	pci_search_start(sci, devices);
-}
-
-static void completion_timeout(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void completion_timeout(const uint16_t sci, const int bus, const int dev, const int fn)
 {
 	uint32_t val;
 	printf("PCI device @ %02x:%02x.%x: ", bus, dev, fn);
 
-	uint16_t cap = capability(sci, bus, dev, fn, PCI_CAP_PCIE);
+	/* For legacy devices */
+	val = lib::mcfg_read32(sci, bus, dev, fn, 4);
+	lib::mcfg_write32(sci, bus, dev, fn, 4, val & ~(1 << 8));
+	printf("disabled SERR");
+
+	uint16_t cap = capability(PCI_CAP_PCIE, sci, bus, dev, fn);
 	if (cap != PCI_CAP_NONE) {
 		/* Device Control */
 		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x8);
 		lib::mcfg_write32(sci, bus, dev, fn, cap + 0x8, val | (1 << 4) | (1 << 8) | (1 << 11));
 		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x8);
 		if (val & (1 << 4))
-			printf("Relaxed Ordering enabled");
+			printf("; Relaxed Ordering enabled");
 		else
-			printf("failed to enable Relaxed Ordering");
+			printf("; failed to enable Relaxed Ordering");
 
 		if (val & (1 << 8))
 			printf("; Extended Tag enabled");
@@ -256,14 +263,9 @@ static void completion_timeout(const sci_t sci, const uint8_t bus, const uint8_t
 			printf("; Completion Timeout disabled");
 		} else
 			printf("; Disabling Completion Timeout unsupported");
-	} else {
-		/* For legacy devices */
-		val = lib::mcfg_read32(sci, bus, dev, fn, 4);
-		lib::mcfg_write32(sci, bus, dev, fn, 4, val & ~(1 << 8));
-		printf("disabled SERR");
 	}
 
-	cap = extcapability(sci, bus, dev, fn, PCI_ECAP_AER);
+	cap = extcapability(PCI_ECAP_AER, sci, bus, dev, fn);
 	if (cap != PCI_CAP_NONE) {
 		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x0c);
 		if (val & (1 << 14)) {
@@ -275,81 +277,122 @@ static void completion_timeout(const sci_t sci, const uint8_t bus, const uint8_t
 				printf("; failed to set Completion Timeout as non-fatal");
 		} else
 			printf("; Completion Timeout already non-fatal");
+
+		/* Mask root complex error reporting */
+		val = lib::mcfg_read32(sci, bus, dev, fn, cap + 0x2c);
+		lib::mcfg_write32(sci, bus, dev, fn, cap + 0x2c, val | ~7);
 	} else
 		printf("; no AER");
 
 	printf("\n");
 }
 
-static void stop_ohci(const sci_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void adjust_bridge(const uint16_t sci, const int bus, const int dev, const int fn)
 {
-	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
-	if ((bar0 == 0xffffffff) || (bar0 == 0))
-		return;
-
-	uint32_t val = lib::mem_read32(bar0 + HcControl);
-	if (!(val & OHCI_CTRL_IR))
-		return;
-
-	// interrupt routing enabled, we must request change of ownership
-
-	/* This timeout is arbitrary.  we make it long, so systems
-	 * depending on usb keyboards may be usable even if the
-	 * BIOS/SMM code seems pretty broken
-	 */
-	uint32_t temp = 100;	/* Arbitrary: five seconds */
-	lib::mem_write32(bar0 + HcInterruptEnable, OHCI_INTR_OC); /* Enable OwnershipChange interrupt */
-	lib::mem_write32(bar0 + HcCommandStatus, OHCI_OCR); /* Request OwnershipChange */
-
-	while (lib::mem_read32(bar0 + HcControl) & OHCI_CTRL_IR) {
-		lib::udelay(100);
-
-		if (--temp == 0)
-			fatal("OHCI controller @ %02x:%02x.%x handover timed out", bus, dev, fn);
-	}
-
-	// shutdown
-	lib::mem_write32(bar0 + HcInterruptDisable, OHCI_INTR_MIE);
-	val = lib::mem_read32(bar0 + HcControl);
-	val &= OHCI_CTRL_RWC;
-	lib::mem_write32(bar0 + HcControl, val);
-	// flush the writes
-	val = lib::mem_read32(bar0 + HcControl);
+	uint32_t val = lib::mcfg_read32(sci, bus, dev, fn, 0x3c);
+	val &= ~(1 << 17); /* Disable SERR# Enable */
+	val &= ~(1 << 24); /* Set primary Discard Timer to 2^15 cycles */
+	val &= ~(1 << 25); /* Set secondary Discard Timer to 2^15 cycles */
+	val &= ~(1 << 27); /* Disable Discard Timer SERR# Enable */
+	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, val);
 }
 
-static void stop_ehci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void stop_ohci(const uint16_t sci, const int bus, const int dev, const int fn)
 {
-	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
-	if (bar0 == 0)
+	uint32_t val, bar0;
+	printf("OHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
+	bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
+	if ((bar0 == 0xffffffff) || (bar0 == 0)) {
+		printf("BAR not configured\n");
 		return;
+	}
+
+	val = lib::mem_read32(bar0 + HcControl);
+	if (val & OHCI_CTRL_IR) { /* Interrupt routing enabled, we must request change of ownership */
+		uint32_t temp;
+		/* This timeout is arbitrary.  we make it long, so systems
+		 * depending on usb keyboards may be usable even if the
+		 * BIOS/SMM code seems pretty broken
+		 */
+		temp = 1000;
+		lib::mem_write32(bar0 + HcInterruptEnable, OHCI_INTR_OC); /* Enable OwnershipChange interrupt */
+		lib::mem_write32(bar0 + HcCommandStatus, OHCI_OCR); /* Request OwnershipChange */
+
+		while (lib::mem_read32(bar0 + HcControl) & OHCI_CTRL_IR) {
+			lib::udelay(1000);
+
+			if (--temp == 0)
+				fatal("legacy handover timed out\n");
+		}
+
+		/* Shutdown */
+		lib::mem_write32(bar0 + HcInterruptDisable, OHCI_INTR_MIE);
+		val = lib::mem_read32(bar0 + HcControl);
+		val &= OHCI_CTRL_RWC;
+		lib::mem_write32(bar0 + HcControl, val);
+		/* Flush the writes */
+		val = lib::mem_read32(bar0 + HcControl);
+		printf("legacy handover succeeded\n");
+	} else {
+		printf("legacy support not enabled\n");
+	}
+
+	val = lib::mem_read32(bar0 + HcRevision);
+
+	if (val & (1 << 8)) { /* Legacy emulation is supported */
+		val = lib::mem_read32(bar0 + HceControl);
+
+		if (val & (1 << 0)) {
+			printf("legacy support enabled\n");
+		}
+	}
+}
+
+static void stop_ehci(const uint16_t sci, const int bus, const int dev, const int fn)
+{
+	printf("EHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
+	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
+
+	if (bar0 == 0) {
+		printf("BAR not configured\n");
+		return;
+	}
 
 	/* Get EHCI Extended Capabilities Pointer */
 	uint32_t ecp = (lib::mem_read32(bar0 + 0x8) >> 8) & 0xff;
-	if (ecp == 0)
+
+	if (ecp == 0) {
+		printf("extended capabilities absent\n");
 		return;
+	}
 
 	/* Check legacy support register shows BIOS ownership */
 	uint32_t legsup = lib::mcfg_read32(sci, bus, dev, fn, ecp);
-	if ((legsup & 0x10100ff) != 0x0010001)
+
+	if ((legsup & 0x10100ff) != 0x0010001) {
+		printf("legacy support not enabled\n");
 		return;
+	}
 
 	/* Set OS owned semaphore */
 	legsup |= 1 << 24;
 	lib::mcfg_write32(sci, bus, dev, fn, ecp, legsup);
-	int limit = 100;
+	int limit = 1000;
 
 	do {
-		lib::udelay(100);
+		lib::udelay(1000);
 		legsup = lib::mcfg_read32(sci, bus, dev, fn, ecp);
 
-		if ((legsup & (1 << 16)) == 0)
+		if ((legsup & (1 << 16)) == 0) {
+			printf("legacy handover succeeded\n");
 			return;
+		}
 	} while (--limit);
 
-	fatal("EHCI controller @ %02x:%02x.%x handover timed out", bus, dev, fn);
+	fatal("legacy handover timed out\n");
 }
 
-static void stop_xhci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void stop_xhci(const uint16_t sci, const int bus, const int dev, const int fn)
 {
 	printf("XHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
 	uint32_t bar0 = lib::mcfg_read32(sci, bus, dev, fn, 0x10) & ~0xf;
@@ -378,10 +421,10 @@ static void stop_xhci(const uint16_t sci, const uint8_t bus, const uint8_t dev, 
 	/* Set OS owned semaphore */
 	legsup |= 1 << 24;
 	lib::mem_write32(bar0 + ecp, legsup);
-	int limit = 100;
+	int limit = 1000;
 
 	do {
-		lib::udelay(100);
+		lib::udelay(1000);
 		legsup = lib::mem_read32(bar0 + ecp);
 
 		if ((legsup & (1 << 16)) == 0) {
@@ -390,10 +433,10 @@ static void stop_xhci(const uint16_t sci, const uint8_t bus, const uint8_t dev, 
 		}
 	} while (--limit);
 
-	printf("legacy handover timed out\n");
+	fatal("legacy handover timed out\n");
 }
 
-static void stop_ahci(const uint16_t sci, const uint8_t bus, const uint8_t dev, const uint8_t fn)
+static void stop_ahci(const uint16_t sci, const int bus, const int dev, const int fn)
 {
 	printf("AHCI controller @ %02x:%02x.%x: ", bus, dev, fn);
 	/* BAR5 (ABAR) contains legacy control registers */
@@ -422,10 +465,10 @@ static void stop_ahci(const uint16_t sci, const uint8_t bus, const uint8_t dev, 
 	/* Set OS owned semaphore */
 	legsup |= (1 << 1);
 	lib::mem_write32(bar5 + 0x28, legsup);
-	int limit = 100;
+	int limit = 1000;
 
 	do {
-		lib::udelay(100);
+		lib::udelay(1000);
 		legsup = lib::mem_read32(bar5 + 0x28);
 
 		if ((legsup & 1) == 0) {
@@ -434,7 +477,7 @@ static void stop_ahci(const uint16_t sci, const uint8_t bus, const uint8_t dev, 
 		}
 	} while (--limit);
 
-	printf("legacy handover timed out\n");
+	fatal("legacy handover timed out\n");
 }
 
 void handover_legacy(const sci_t sci)
@@ -447,17 +490,17 @@ void handover_legacy(const sci_t sci)
 		{PCI_CLASS_STORAGE_RAID,    2, PCI_TYPE_ENDPOINT, stop_ahci},
 		{PCI_CLASS_FINAL, 0, PCI_TYPE_ANY, NULL}
 	};
-	pci_search_start(sci, devices);
+	pci_search_start(devices, sci);
 }
 
 void pci_setup(const sci_t sci)
 {
 	const struct devspec devices[] = {
 		{PCI_CLASS_ANY,             0, PCI_TYPE_ANY, completion_timeout},
+		{PCI_CLASS_ANY,             0, PCI_TYPE_BRIDGE, adjust_bridge},
 		{PCI_CLASS_FINAL,           0, PCI_TYPE_ANY, NULL}
 	};
 
 	printf("Adjusting PCI parameters:\n");
-	pci_search_start(sci, devices);
+	pci_search_start(devices, sci);
 }
-

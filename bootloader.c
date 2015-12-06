@@ -1301,6 +1301,9 @@ int main(const int argc, char *const argv[])
 			acpi->handover();
 		handover_legacy(local_node->config->id);
 
+		// hide SMBus for remote-IO
+//		lib::pmio_write8(0xba, 64); // FIXME: check?
+
 		// read from master after mapped
 		printf("Waiting for %s", config->master->hostname);
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
@@ -1314,7 +1317,7 @@ int main(const int argc, char *const argv[])
 
 		printf("\n");
 		local_node->iohub->smi_disable();
-		pci_disable_all(local_node->config->id);
+		pci_setup(local_node->config->id);
 
 		// clear BSP flag
 		uint64_t val = lib::rdmsr(MSR_APIC_BAR);
