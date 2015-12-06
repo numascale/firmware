@@ -54,13 +54,13 @@ class Allocator
 	sci_t *map32;
 	unsigned blocks;
 public:
-	const uint64_t start32, end32, start64;
-	uint64_t pos32_pref, pos32_nonpref, pos64;
+	uint64_t start32, end32, pos32;
+	const uint64_t start64;
+	uint64_t pos64;
 
-	Allocator(const uint64_t _start32, const uint64_t _start64);
-	void reserve(const uint64_t addr, const uint64_t len, const sci_t sci);
-	uint64_t alloc(const bool s64, const bool pref, const uint64_t len, const unsigned vfs);
-	void maps32(Node *const node);
+	Allocator();
+	uint64_t alloc32(const uint64_t len, const unsigned vfs);
+	uint64_t alloc64(const uint64_t len, const unsigned vfs);
 	void round_node();
 };
 
@@ -68,10 +68,11 @@ class BAR
 {
 	const sci_t sci;
 	const uint8_t bus, dev, fn;
-	const uint8_t offset;
-	uint64_t addr;
+	const uint16_t offset;
 public:
-	const bool io, s64, pref;
+	uint64_t addr;
+	const bool io, s64;
+	bool pref; // may be reassigned later during classification
 	const uint64_t len;
 	const unsigned vfs;
 
@@ -94,6 +95,7 @@ class Device
 	Vector<BAR *> bars_pref32;
 	Vector<BAR *> bars_pref64;
 	Vector<BAR *> bars_io;
+
 	const bool bridge;
 public:
 	Node *node;
@@ -116,7 +118,9 @@ public:
 	}
 
 	void classify();
-	void assign();
+	void scope();
+	void assign_pref();
+	void assign_nonpref();
 	void print() const;
 };
 
