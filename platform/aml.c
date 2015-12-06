@@ -463,15 +463,23 @@ public:
 /* ArgObject := TermArg => DataRefObject */
 class Return: public Container {
 	static const uint8_t ReturnOp = 0xa4;
+	char name[5];
 public:
 	Return(Container *c) {
 		children.push_back(c);
 	}
 
+	Return(const char *_name) {
+		strncpy(name, _name, sizeof(name));
+	}
+
 	int build(void) {
-		xassert(children.size() == 1);
+		xassert(children.size() < 2);
 
 		pack(ReturnOp);
+		if (!children.size())
+			pack(name);
+
 		Container::build();
 		Container::insert();
 
@@ -526,7 +534,7 @@ char *remote_aml(uint32_t *len)
 
 	unsigned numa = 0;
 
-	/* For the master's PCI bus, add a proximity object */
+	// for the master's PCI bus, add a proximity object
 	Container *rbus = new Scope("PCI0");
 	rbus->children.push_back(new Name("_PXM", new Constant(numa))); // FIXME: lookup from proximity table
 	sb->children.push_back(rbus);
@@ -535,7 +543,6 @@ char *remote_aml(uint32_t *len)
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++) {
 		char name[5];
 		snprintf(name, sizeof(name), "X%03u", node - &nodes[0]);
-
 		Container *bus = new Device(name);
 
 		bus->children.push_back(new Name("_HID", new EisaId(EisaId::PNP0A08)));
@@ -555,7 +562,7 @@ char *remote_aml(uint32_t *len)
 		  WordBusNumber::PosDecode,
 		  0x0000,
 		  0x0000,
-		  0x00FF,
+		  0x00ff,
 		  0x0000,
 		  0x0100));
 
