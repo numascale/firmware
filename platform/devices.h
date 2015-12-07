@@ -121,9 +121,6 @@ struct devspec {
 
 void pci_search(const struct devspec *list, const sci_t sci, const int bus);
 void stop_acpi(void);
-void disable_kvm_ports(const int port);
 void handover_legacy(const sci_t sci);
 void pci_setup(const sci_t sci);
-void disable_device(const sci_t sci, const int bus, const int dev, const int fn);
-void disable_bridge(const sci_t sci, const int bus, const int dev, const int fn);
 checked uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const int dev, const int fn);

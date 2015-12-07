@@ -89,12 +89,6 @@ static void pci_search_start(const struct devspec *list, const sci_t sci)
 	pci_search(list, sci, 0);
 }
 
-void disable_kvm_ports(const int port) {
-	/* Disable AMI Virtual Keyboard and Mouse ports, since they generate a lot of interrupts */
-	uint32_t val = lib::mcfg_read32(0xfff0, 0, 19, 0, 0x40);
-	lib::mcfg_write32(0xfff0, 0, 19, 0, 0x40, val | (1 << (port + 16)));
-}
-
 static uint16_t capability(const uint8_t cap, const sci_t sci, const int bus, const int dev, const int fn)
 {
 	/* Check for capability list */
@@ -143,67 +137,6 @@ uint16_t extcapability(const uint16_t cap, const sci_t sci, const int bus, const
 	} while (offset > 0xff && visited[offset]++ == 0);
 
 	return PCI_CAP_NONE;
-}
-
-static void disable_common(const sci_t sci, const int bus, const int dev, const int fn)
-{
-	/* Disable MSI interrupt */
-	uint16_t cap = capability(PCI_CAP_MSI, sci, bus, dev, fn);
-	if (cap != PCI_CAP_NONE) {
-		bool s64 = lib::mcfg_read32(sci, bus, dev, fn, cap + 0) & (1 << 7);
-		for (unsigned offset = 0x0; offset <= (s64 ? 0xc : 0x8); offset += 4)
-			lib::mcfg_write32(sci, bus, dev, fn, cap + offset, 0);
-	}
-}
-
-void disable_device(const sci_t sci, const int bus, const int dev, const int fn)
-{
-	/* Disable I/O, DMA and legacy interrupts; enable memory decode */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0x0402);
-
-	/* Clear BARs */
-	for (unsigned i = 0x10; i <= 0x24; i += 4)
-		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
-
-	/* Clear expansion ROM base address */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x30, 0);
-
-	/* The Interrupt Line register cannot be cleared, since the Nvidia driver refuses to initialise */
-
-	/* Disable SR-IOV BARs */
-	uint16_t cap = extcapability(PCI_ECAP_SRIOV, sci, bus, dev, fn);
-	if (cap != PCI_CAP_NONE)
-		for (unsigned offset = 0x24; offset <= 0x38; offset += 4)
-			lib::mcfg_write32(sci, bus, dev, fn, cap + offset, 0);
-
-	disable_common(sci, bus, dev, fn);
-}
-
-void disable_bridge(const sci_t sci, const int bus, const int dev, const int fn)
-{
-	/* Disable I/O, DMA and legacy interrupts; enable memory decode */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x4, 0x0402);
-
-	/* Clear BARs */
-	for (unsigned i = 0x10; i <= 0x14; i += 4)
-		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
-
-	/* Disable IO and memory ranges */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x1c, 0x000000f0);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fff0);
-	lib::mcfg_write32(sci, bus, dev, fn, 0x20, 0x0000fff0);
-
-	/* Clear upper bits */
-	for (unsigned i = 0x28; i <= 0x30; i += 4)
-		lib::mcfg_write32(sci, bus, dev, fn, i, 0);
-
-	/* Clear expansion ROM base address */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x38, 0);
-
-	/* Set Interrupt Line register to 0 (unallocated) */
-	lib::mcfg_write32(sci, bus, dev, fn, 0x3c, 0);
-
-	disable_common(sci, bus, dev, fn);
 }
 
 static void completion_timeout(const uint16_t sci, const int bus, const int dev, const int fn)
