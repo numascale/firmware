@@ -148,18 +148,6 @@ void Device::assign_pref()
 	const uint64_t start32 = alloc->pos32;
 	const uint64_t start64 = alloc->pos64;
 
-	uint32_t val = lib::mcfg_read32(node->config->id, bus, dev, fn, 0x4);
-	val |= 1 << 10; // disable legacy interrupts
-	val &= ~1; // IO space
-	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, val);
-
-	// clear IO BARs
-	for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
-		(*bar)->assign(0);
-
-	// set Interrupt Line register to 0 (unallocated)
-	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0xff00);
-
 	// FIXME: bars_pref32.sort();
 	for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++) {
 		xassert((*bar)->pref);
@@ -182,37 +170,52 @@ void Device::assign_pref()
 
 	alloc->pos32 = roundup(alloc->pos32, 1 << Numachip2::MMIO32_ATT_SHIFT);
 
-	// assign bridge windows
-	if (bridge) {
-		// clear IO and upper IO registers
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x1c, 0x00ff);
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x30, 0x0000ffff);
+	// for endpoints or non-root bridges
+	if (type != TypeHost) {
+		uint32_t val = lib::mcfg_read32(node->config->id, bus, dev, fn, 0x4);
+		val |= 1 << 10; // disable legacy interrupts
+		val &= ~1; // IO space
+		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, val);
 
-		// clear 32-bit window
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x20, 0x0000ffff);
+		// clear IO BARs
+		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
+			(*bar)->assign(0);
 
-		// clear 64-bit pref window
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, 0x0000ffff);
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, 0xffffffff);
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, 0x00000000);
+		// set Interrupt Line register to 0 (unallocated)
+		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0xff00);
 
-		uint64_t start, end;
+		// assign bridge windows
+		if (type == TypeBridge) {
+			// clear IO and upper IO registers
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x1c, 0x00ff);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x30, 0x0000ffff);
 
-		if (alloc->pos32 > start32) {
-			start = start32;
-			end = alloc->pos32;
-			xassert(alloc->pos64 == start64);
-		} else {
-			start = start64;
-			end = alloc->pos64;
-			xassert(alloc->pos32 == start32);
-		}
+			// clear 32-bit window
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x20, 0x0000ffff);
 
-		if (end > start) {
-			val = (start >> 16) | ((end - 1) & 0xffff0000);
-			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, val);
-			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, start >> 32);
-			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, (end - 1) >> 32);
+			// clear 64-bit pref window
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, 0x0000ffff);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, 0xffffffff);
+			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, 0x00000000);
+
+			uint64_t start, end;
+
+			if (alloc->pos32 > start32) {
+				start = start32;
+				end = alloc->pos32;
+				xassert(alloc->pos64 == start64);
+			} else {
+				start = start64;
+				end = alloc->pos64;
+				xassert(alloc->pos32 == start32);
+			}
+
+			if (end > start) {
+				val = (start >> 16) | ((end - 1) & 0xffff0000);
+				lib::mcfg_write32(node->config->id, bus, dev, fn, 0x24, val);
+				lib::mcfg_write32(node->config->id, bus, dev, fn, 0x28, start >> 32);
+				lib::mcfg_write32(node->config->id, bus, dev, fn, 0x2c, (end - 1) >> 32);
+			}
 		}
 	}
 }
@@ -235,7 +238,7 @@ void Device::assign_nonpref()
 	alloc->pos32 = roundup(alloc->pos32, 1 << Numachip2::MMIO32_ATT_SHIFT);
 
 	// assign bridge windows
-	if (bridge && alloc->pos32 > start32) {
+	if (type == TypeBridge && alloc->pos32 > start32) {
 		uint32_t val = (start32 >> 16) | ((alloc->pos32 - 1) & 0xffff0000);
 		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x20, val);
 	}
@@ -415,7 +418,7 @@ void pci_realloc()
 	foreach_node(node) {
 		pci_prepare(*node);
 
-		Bridge* b0 = new Bridge(*node, NULL, 0, 0, 0); // host bridge
+		Bridge *b0 = new Bridge(*node, NULL, 0, 0, 0, Device::TypeHost); // host bridge
 		populate(b0, 0);
 		roots.push_back(b0);
 	}

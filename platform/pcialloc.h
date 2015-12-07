@@ -95,16 +95,16 @@ class Device
 	Vector<BAR *> bars_pref32;
 	Vector<BAR *> bars_pref64;
 	Vector<BAR *> bars_io;
-
-	const bool bridge;
 public:
+	enum Type {TypeHost, TypeBridge, TypeEndpoint};
+	const Type type;
 	Node *node;
 	Device *parent; // only a bridge in practise
 	uint8_t bus, dev, fn;
 	static Allocator *alloc;
 
-	Device(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const bool _bridge):
-		bridge(_bridge), node(_node), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
+	Device(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const Type _type):
+		type(_type), node(_node), parent(_parent), bus(_bus), dev(_dev), fn(_fn)
 	{
 		// add as parent's child
 		if (parent)
@@ -127,7 +127,7 @@ public:
 class Endpoint: public Device
 {
 public:
-	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 0)
+	Endpoint(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, TypeEndpoint)
 	{
 #ifdef DEBUG
 		printf("device @ %02x:%02x.%x\n", _bus, _dev, _fn);
@@ -139,7 +139,7 @@ public:
 class Bridge: public Device
 {
 public:
-	Bridge(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn): Device(_node, _parent, _bus, _dev, _fn, 1)
+	Bridge(Node *const _node, Device *_parent, const uint8_t _bus, const uint8_t _dev, const uint8_t _fn, const Type _type=TypeBridge): Device(_node, _parent, _bus, _dev, _fn, _type)
 	{
 #ifdef DEBUG
 		printf("bridge @ %02x:%02x.%x\n", _bus, _dev, _fn);
