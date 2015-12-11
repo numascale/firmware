@@ -1373,10 +1373,14 @@ int main(const int argc, char *const argv[])
 		pci_realloc();
 	remap();
 
-	printf("\nMaps:\n");
+	printf("\nDRAM maps:\n");
 	foreach_node(node) {
 		(*node)->opterons[0]->drammap.print();
 		(*node)->numachip->drammap.print();
+	}
+
+	printf("\nMMIO maps:\n");
+	foreach_node(node) {
 		(*node)->opterons[0]->mmiomap->print();
 		(*node)->numachip->mmiomap.print();
 	}

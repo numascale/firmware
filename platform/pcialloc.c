@@ -501,6 +501,7 @@ void pci_realloc()
 
 			if (!(*node)->config->master) {
 				(*nb)->mmiomap->add((*node)->mmio32_limit, 0xdfffffff, (*node)->numachip->ht, 0);
+				(*nb)->mmiomap->remove(0xf1000000, 0xffffffff);
 				(*nb)->mmiomap->add(0xf1000000, 0xffffffff, (*node)->numachip->ht, 0);
 			}
 		}
