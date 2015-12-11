@@ -17,6 +17,11 @@ all: bootloader.c32
 upload: bootloader.c32
 	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
 
+.PHONY: publish
+publish: bootloader.c32
+	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(shell git describe).c32
+	rsync -z bootloader.c32 resources@resources:resources/bootloader/validating/nc2-bootloader-$(shell git describe).c32
+
 .PHONY: check
 check:
 	cppcheck -q --suppress=unusedStructMember --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
