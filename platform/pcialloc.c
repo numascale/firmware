@@ -513,7 +513,7 @@ void pci_realloc()
 				(*dnode)->numachip->dramatt.range((*node)->mmio64_base, (*node)->mmio64_limit - 1, (*node)->config->id);
 		}
 
-		if ((*node)->mmio32_limit > (*node)->mmio32_base) {
+		if (!(*node)->config->master && (*node)->mmio32_limit > (*node)->mmio32_base) {
 			(*node)->numachip->mmiomap.add((*node)->mmio32_base, (*node)->mmio32_limit - 1, (*node)->opterons[0]->ioh_ht);
 
 			foreach_node(dnode)
