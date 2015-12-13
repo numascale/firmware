@@ -81,8 +81,6 @@ bool Opteron::MmioMap15::read(unsigned range, uint64_t *base, uint64_t *limit, h
 	*dest = b & 7;
 	*link = (b >> 4) & 3;
 
-	// ensure read and write bits are consistent
-	xassert(!(a & 1) == !(a & 2));
 	*lock = a & 8;
 	return a & 3;
 }
