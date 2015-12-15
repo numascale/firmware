@@ -182,10 +182,9 @@ public:
 
 	void sort()
 	{
-		// bubblesort
 		for (unsigned i = 0; i < used; i++) {
 			for (unsigned j = 0; j < used; j++) {
-				if (elements[i] < elements[j]) {
+				if (elements[j]->less(*elements[i])) {
 					T temp = elements[j];
 					elements[j] = elements[i];
 					elements[i] = temp;

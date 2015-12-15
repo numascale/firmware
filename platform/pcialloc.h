@@ -82,7 +82,7 @@ public:
 	{}
 	void assign(const uint64_t assigned);
 	void print(void) const;
-	bool operator<(const BAR &rhs) const
+	bool less(const BAR &rhs) const
 	{
 		return len < rhs.len;
 	}

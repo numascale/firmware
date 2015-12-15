@@ -149,7 +149,7 @@ void Device::assign_pref()
 	const uint64_t start32 = alloc->pos32;
 	const uint64_t start64 = alloc->pos64;
 
-	// FIXME: bars_pref32.sort();
+	bars_pref32.sort();
 	for (BAR **bar = bars_pref32.elements; bar < bars_pref32.limit; bar++) {
 		xassert((*bar)->pref);
 		xassert(!(*bar)->io);
@@ -157,7 +157,7 @@ void Device::assign_pref()
 		(*bar)->assign(addr);
 	}
 
-	// FIXME: bars_pref64.sort();
+	bars_pref64.sort();
 	for (BAR **bar = bars_pref64.elements; bar < bars_pref64.limit; bar++) {
 		xassert((*bar)->pref);
 		xassert((*bar)->s64);
@@ -226,7 +226,7 @@ void Device::assign_nonpref()
 {
 	const uint64_t start32 = alloc->pos32;
 
-	// FIXME: bars_nonpref32.sort();
+	bars_nonpref32.sort();
 	for (BAR **bar = bars_nonpref32.elements; bar < bars_nonpref32.limit; bar++) {
 		xassert(!(*bar)->io);
 		uint64_t addr = alloc->alloc32((*bar)->len, (*bar)->vfs);
