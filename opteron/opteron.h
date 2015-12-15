@@ -69,7 +69,6 @@ private:
 	static void platform_reset_cold(void);
 	static void platform_reset_warm(void);
 	static void cht_print(const ht_t neigh, const link_t link);
-	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
 	static void optimise_linkbuffers(const ht_t ht, const int link);
 public:
 	static const uint32_t VENDEV_MCP55     = 0x036910de;
@@ -182,6 +181,7 @@ public:
 	friend class MmioMap15;
 	friend class DramMap;
 
+	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
 	void check(void);
 	uint64_t read64(const reg_t reg) const;
 	uint32_t read32(const reg_t reg) const;

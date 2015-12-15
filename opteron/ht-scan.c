@@ -398,9 +398,6 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		while ((2U << link) < rqrt)
 			link ++;
-
-		/* Chip already found; make sure the desired width/frequency is set */
-		ht_optimize_link(nc, neigh, link);
 	} else {
 		/* Last node wasn't our VID/DID, try to look for it */
 		int rt;
@@ -490,9 +487,6 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 
 		uint16_t rev = lib::cht_read32(nc, Numachip2::CLASS_CODE_REV) & 0xffff;
 		printf("NumaChip2 rev %d found on HT%u.%u\n", rev, neigh, link);
-
-		/* Ramp up link speed and width before adding to coherent fabric */
-		ht_optimize_link(nc, neigh, link);
 
 		/* Add NC to coherent fabric */
 		ht_reconfig(neigh, link, hts);

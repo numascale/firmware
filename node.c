@@ -142,6 +142,8 @@ Node::Node(Config::node *_config, const sci_t _master_sci): local(1), master_sci
 	numachip = new Numachip2(config, nc, local, master_sci);
 	xassert(nopterons == nc);
 
+	Opteron::ht_optimize_link(nc, neigh_ht, neigh_link);
+
 	// add MMIO range for local CSR space
 	for (Opteron *const *nb = &opterons[0]; nb < &opterons[nopterons]; nb++) {
 		uint64_t base, limit;
