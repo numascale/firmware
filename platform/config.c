@@ -239,7 +239,7 @@ Config::Config(const char *filename)
 #endif
 
 	json_t *root = NULL;
-	enum json_error err = json_parse_document(&root, data);
+	enum json_error err = json_parse_document(&root, (const char *)data);
 	assertf(err == JSON_OK, "Fabric configuration file malformed (%s)", json_errors[err]);
 
 	parse_json(root);
