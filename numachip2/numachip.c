@@ -223,13 +223,12 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	spi_read(SPI_BOARD_INFO_BASE, sizeof(board_info), (unsigned char *)&board_info);
 
 	printf("NumaConnect2 ");
-	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
+	if ((board_info.part_no[0] == 'N') && (board_info.part_no[1] == '3')) {
 		printf("%s%s%c%c%c%s",
 		       board_info.part_no, board_info.pcb_type, board_info.pcb_rev,
 		       board_info.eco_level, board_info.model, board_info.serial_no);
-	}
-	else
-		printf ("(board info not available)");
+	} else
+		printf("(board info not available)");
 
 	printf(" at HT%u\n", ht);
 
