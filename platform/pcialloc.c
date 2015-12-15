@@ -70,7 +70,8 @@ void BAR::assign(const uint64_t _addr)
 	if (s64)
 		lib::mcfg_write32(sci, bus, dev, fn, offset + 4, addr >> 32);
 
-	print();
+	if (options->debug.remote_io)
+		print();
 }
 
 void BAR::print() const
@@ -439,11 +440,14 @@ void pci_realloc()
 			(*br)->scope();
 			(*br)->node->mmio32_base = Device::alloc->end32;
 			(*br)->node->mmio32_limit = 0xe0000000;
-			printf("usable 0x%08llx-0x%08llx; master MMIO32 0x%llx-0x%llx\n", Device::alloc->start32, Device::alloc->end32, (*br)->node->mmio32_base, (*br)->node->mmio32_limit);
+			if (options->debug.remote_io)
+				printf("usable 0x%08llx-0x%08llx; master MMIO32 0x%llx-0x%llx\n", Device::alloc->start32, Device::alloc->end32, (*br)->node->mmio32_base, (*br)->node->mmio32_limit);
 		} else {
-			printf("assigning prefetchable on %03x\n", (*br)->node->config->id);
+			if (options->debug.remote_io)
+				printf("%03x prefetchable:\n", (*br)->node->config->id);
 			(*br)->assign_pref();
-			printf("\nassigning nonprefetchable on %03x\n", (*br)->node->config->id);
+			if (options->debug.remote_io)
+				printf("%03x nonprefetchable:\n", (*br)->node->config->id);
 			(*br)->assign_nonpref();
 		}
 
@@ -453,7 +457,8 @@ void pci_realloc()
 			(*br)->node->mmio32_limit = Device::alloc->pos32;
 		(*br)->node->mmio64_limit = Device::alloc->pos64;
 
-		printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
+		if (options->debug.remote_io)
+			printf("%03x: 0x%llx-0x%llx 0x%llx-0x%llx\n", (*br)->node->config->id, (*br)->node->mmio32_base, (*br)->node->mmio32_limit, (*br)->node->mmio64_base, (*br)->node->mmio64_limit);
 	}
 
 	// prevent hole in MMIO32 area
