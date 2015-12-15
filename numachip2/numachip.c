@@ -265,7 +265,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 	if (options->flash) { // flashing supported on Altera only
 		size_t len = 0;
-		char *buf = os->read_file(options->flash, &len);
+		uint8_t *buf = os->read_file(options->flash, &len);
 		assertf(buf && len > 0, "Image %s not found or permission issues", options->flash);
 
 		uint32_t checksum = lib::checksum((unsigned char *)buf, len);

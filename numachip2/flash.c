@@ -56,7 +56,7 @@ namespace
 	}
 }
 
-void Numachip2::flash(const char *image, const size_t len)
+void Numachip2::flash(const uint8_t *image, const size_t len)
 {
 	const int offset = 0x1000000;
 	unsigned pos = 0;
@@ -124,5 +124,24 @@ void Numachip2::flash(const char *image, const size_t len)
 			break;
 		cpu_relax();
 	}
+	printf("\n");
+
+	printf("Verifying  0%%");
+	for (unsigned i = 0; i < len; i++) {
+		write32(FLASH_REG1, offset + i);
+		write32(FLASH_REG0, ASMI_CMD_READ);
+
+		while (1) {
+			if (!(read32(FLASH_REG0) & 0x1))
+				break;
+			cpu_relax();
+		}
+
+		uint8_t val = reverse_bits(read32(FLASH_REG2) & 0xff);
+		xassert(val == image[i]);
+
+		progress(i, len);
+	}
+
 	printf("\n");
 }

@@ -148,9 +148,9 @@ int OS::udp_read(void *buf, const size_t len, uint32_t *from_ip)
 	return ret;
 }
 
-char *OS::read_file(const char *filename, size_t *const len)
+uint8_t *OS::read_file(const char *filename, size_t *const len)
 {
-	char *buf;
+	uint8_t *buf;
 	if (loadfile(filename, (void **)&buf, len) < 0)
 		return NULL;
 	return buf;

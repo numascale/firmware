@@ -44,7 +44,7 @@ public:
 	void udp_open(void);
 	void udp_write(const void *buf, const size_t len, uint32_t to_ip);
 	int udp_read(void *buf, const size_t len, uint32_t *from_ip);
-	char *read_file(const char *filename, size_t *const len) nonnull;
+	uint8_t *read_file(const char *filename, size_t *const len) nonnull;
 	void exec(const char *label) nonnull;
 	void memmap_start(void);
 	bool memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type) nonnull;

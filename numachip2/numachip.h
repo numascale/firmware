@@ -240,7 +240,7 @@ public:
 	void fabric_reset(void);
 	void dram_check(void) const;
 	void check(void) const;
-	void flash(const char *buf, const size_t len);
+	void flash(const uint8_t *buf, const size_t len);
 };
 
 extern Numachip2 *numachip;
