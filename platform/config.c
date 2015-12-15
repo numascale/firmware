@@ -230,7 +230,7 @@ Config::Config(const char *filename)
 {
 	size_t len;
 	printf("Config %s", filename);
-	const char *data = os->read_file(filename, &len);
+	const uint8_t *data = os->read_file(filename, &len);
 	assertf(data && len > 0, "Failed to open file");
 
 #ifdef DEBUG
