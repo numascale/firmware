@@ -113,6 +113,7 @@ public:
 	static const reg_t DRAM_LIMIT          = 0x1124;
 	static const reg_t DRAM_MAP_BASE_HIGH  = 0x1140;
 	static const reg_t DRAM_MAP_LIMIT_HIGH = 0x1144;
+	static const reg_t DRAM_CS_BASE        = 0x2040;
 	static const reg_t TRACE_BUF_BASELIM   = 0x20b8;
 	static const reg_t TRACE_BUF_ADDR      = 0x20bc;
 	static const reg_t TRACE_BUF_CTRL      = 0x20c0;

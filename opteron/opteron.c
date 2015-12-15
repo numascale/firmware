@@ -319,6 +319,28 @@ void Opteron::init(void)
 	ioh_ht = (read32(HT_NODE_ID) >> 8) & 7;
 	ioh_link = (read32(UNIT_ID) >> 8) & 7; // only valid for NB with IOH link
 
+	unsigned controllers = family >= 0x15 ? 2 : 1;
+	// check for failed DIMMs and no per-NUMA-node memory
+	for (unsigned dct = 0; dct < controllers; dct++) {
+		if (family >= 0x15)
+			write32(DCT_CONF_SEL, dct);
+		unsigned en = 0;
+
+		for (unsigned dimm = 0; dimm < 8; dimm++) {
+			val = read32(DRAM_CS_BASE + dimm * 4);
+			if (val & (1 << 2)) {
+				error("Failed DIMM detected on %03x#%u; performance will be degraded", sci, ht);
+				lib::wait_key("");
+			}
+			en += val & 1;
+		}
+
+		if (!en) {
+			error("No DRAM available on %03x#%u DCT%u; performance will be degraded", sci, ht, dct);
+			lib::wait_key("");
+		}
+	}
+
 	// detect amount of memory
 	dram_base = (uint64_t)(read32(DRAM_BASE) & 0x1fffff) << 27;
 	uint64_t dram_limit = ((uint64_t)(read32(DRAM_LIMIT) & 0x1fffff) << 27) | 0x7ffffff;
