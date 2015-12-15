@@ -256,10 +256,12 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 	assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
 
-	printf("Testing CSR response");
-	for (unsigned i = 0x0000; i < 0x4000; i += 4)
-		read32(i);
-	printf("\n");
+	if (options->debug.access) {
+		printf("Testing CSR response");
+		for (unsigned i = 0x0000; i < 0x4000; i += 4)
+			read32(i);
+		printf("\n");
+	}
 
 	if (options->flash) { // flashing supported on Altera only
 		size_t len = 0;
