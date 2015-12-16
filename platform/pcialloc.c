@@ -171,13 +171,14 @@ void Device::assign_pref()
 
 	alloc->pos32 = roundup(alloc->pos32, 1 << Numachip2::MMIO32_ATT_SHIFT);
 
+	uint32_t val = lib::mcfg_read32(node->config->id, bus, dev, fn, 0x4);
+	val |= 1 << 10; // disable legacy interrupts
+	val &= ~(1 << 2); // DMA cycles
+	val &= ~(1 << 0); // IO space
+	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, val);
+
 	// for endpoints or non-root bridges
 	if (type != TypeHost) {
-		uint32_t val = lib::mcfg_read32(node->config->id, bus, dev, fn, 0x4);
-		val |= 1 << 10; // disable legacy interrupts
-		val &= ~1; // IO space
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, val);
-
 		// clear IO BARs
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
