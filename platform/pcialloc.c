@@ -36,7 +36,6 @@ uint64_t Allocator::alloc64(const uint64_t len, const unsigned vfs = 1)
 {
 	uint64_t ret = pos64;
 	pos64 += len * vfs;
-	printf("<64P 0x%llx>", ret);
 	return ret;
 }
 
@@ -115,7 +114,8 @@ void Device::classify()
 
 	// if there are both 64-bit and 32-bit prefetchable BARs, demote the 32-bit BARs to non-prefetchable, so the 64-bit BARs can be in high memory
 	if (bars_pref64.size() && bars_pref32.size()) {
-		printf("demoting 32-bit pref BARs to non-pref @ %03x %02x:%02x.%x (%u %u %u)\n", node->config->id, bus, dev, fn, bars_pref64.size(), bars_pref32.size(), bars_nonpref32.size());
+		if (options->debug.remote_io)
+			printf("demoting 32-bit pref BARs to non-pref @ %03x %02x:%02x.%x\n", node->config->id, bus, dev, fn);
 		while (bars_pref32.size()) {
 			BAR *bar = bars_pref32.pop();
 			bars_nonpref32.push_back(bar);
