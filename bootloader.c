@@ -283,7 +283,8 @@ static void setup_info(void)
 					break;
 			}
 
-			infop->next = cur->id;
+			// last node in partition has next as 0xfff
+			infop->next = (n == (nnodes - 1)) ? 0xfff : cur->id;
 		}
 
 		infop->hts = nodes[n]->numachip->ht + 1;
