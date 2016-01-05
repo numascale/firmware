@@ -39,7 +39,7 @@ public:
 	uint64_t memlimit;
 	uint64_t tracing;
 	struct debug_flags {
-		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge, nowdt, cores, mctr;
+		uint8_t config, access, acpi, ht, fabric, maps, remote_io, e820, northbridge, nowdt, cores, mctr, wdtinfo;
 	} debug;
 
 	Options(const int argc, char *const argv[]) nonnull;

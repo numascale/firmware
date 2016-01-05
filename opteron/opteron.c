@@ -371,7 +371,8 @@ void Opteron::init(void)
 	write32(MC_NB_CTRL, val | (1 << 12));
 
 	// upon WDT, use address field for other decoding
-//	clear32(MC_NB_CONF_EXT, 1 << 24);
+	if (options->debug.wdtinfo)
+		clear32(MC_NB_CONF_EXT, 1 << 24);
 
 	if (options->debug.northbridge)
 		disable_syncflood();
