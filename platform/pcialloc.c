@@ -423,6 +423,10 @@ void pci_realloc()
 		Bridge *b0 = new Bridge(*node, NULL, 0, 0, 0, Device::TypeHost); // host bridge
 		populate(b0, 0);
 		roots.push_back(b0);
+
+		// default slaves to route MMIO cycles to master
+		if (!(*node)->config->master)
+			(*node)->numachip->mmioatt.range(0x0, 0xffffffff, nodes[0]->config->id);
 	}
 	lib::critical_leave();
 
@@ -481,8 +485,6 @@ void pci_realloc()
 		// VGA console decode
 		if ((*node)->config->master)
 			(*node)->numachip->mmiomap.add(0x0, 0xffffffff, (*node)->opterons[0]->ioh_ht);
-		else
-			(*node)->numachip->mmioatt.range(0x0, 0xffffffff, nodes[0]->config->id);
 
 		foreach_nb(node, nb) {
 			link_t link = node == &node[0] ? (*node)->opterons[0]->ioh_link : 0;
