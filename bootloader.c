@@ -1374,8 +1374,7 @@ int main(const int argc, char *const argv[])
 	}
 
 	scan();
-	if (options->remote_io)
-		pci_realloc();
+	pci_realloc();
 	remap();
 
 	if (options->debug.maps) {
