@@ -77,6 +77,11 @@ static void scan(void)
 	foreach_node(node) {
 		// trim nodes that are over sized and not according to granularity
 		(*node)->trim_dram_maps();
+
+		// if node DRAM range overlaps HT decode range, move up
+		if ((dram_top < Opteron::HT_LIMIT) && ((dram_top + (*node)->dram_size) > Opteron::HT_BASE))
+			dram_top = Opteron::HT_LIMIT;
+
 		(*node)->dram_base = dram_top;
 
 		for (Opteron *const *nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
