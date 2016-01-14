@@ -274,6 +274,10 @@ void E820::test_location(const uint64_t addr, const test_state state)
 		return;
 	}
 
+	// prevent access to HT decode range
+	if (addr >= Opteron::HT_BASE && addr < Opteron::HT_LIMIT)
+		return;
+
 	uint64_t hash, val;
 
 	switch (state) {

@@ -1190,7 +1190,9 @@ static void test_map(void)
 
 	printf("Testing memory map");
 	for (uint64_t pos = 0; pos < dram_top + stride * 16; pos += stride)
-		lib::mem_read32(pos);
+		if (pos < Opteron::HT_BASE || pos >= Opteron::HT_LIMIT)
+			lib::mem_read32(pos);
+
 	printf("\n");
 }
 
@@ -1396,12 +1398,12 @@ int main(const int argc, char *const argv[])
 	if (options->tracing)
 		setup_gsm();
 	setup_info();
-	e820->test();
+//	e820->test();
 	setup_cores();
 	acpi_tables();
 	tracing_arm();
 	if (!options->fastboot)
 		test_cores();
-	test_map();
+//	test_map();
 	finished(options->next_label);
 }
