@@ -174,7 +174,6 @@ void Device::assign_pref()
 	uint32_t val = lib::mcfg_read32(node->config->id, bus, dev, fn, 0x4);
 	val |= 1 << 10; // disable legacy interrupts
 	val &= ~(1 << 2); // DMA cycles
-	val &= ~(1 << 1); // memory cycles
 	val &= ~(1 << 0); // IO space
 	lib::mcfg_write32(node->config->id, bus, dev, fn, 0x4, val);
 
