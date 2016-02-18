@@ -240,7 +240,7 @@ public:
 	void late_init(void);
 	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id);
-	void fabric_train(void);
+	bool fabric_train(void);
 	void fabric_routing(void);
 	void fabric_check(void) const;
 	void fabric_reset(void);

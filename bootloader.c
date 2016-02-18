@@ -932,8 +932,10 @@ static bool handle_command(const enum node_state cstate, enum node_state *rstate
 			*rstate = RSP_RESET_COMPLETE;
 			return 1;
 		case CMD_TRAIN_FABRIC:
-			local_node->numachip->fabric_train();
-			*rstate = RSP_PHY_TRAINED;
+			if (local_node->numachip->fabric_train())
+				*rstate = RSP_PHY_TRAINED;
+			else
+				*rstate = RSP_PHY_NOT_TRAINED;
 			return 1;
 		case CMD_VALIDATE_RINGS:
 			/* Need anything here ?? */
@@ -1273,10 +1275,14 @@ int main(const int argc, char *const argv[])
 	}
 
 	if (options->test_manufacture) {
-		for (unsigned i = 0; i < 10; i++)
-			local_node->numachip->fabric_train();
-
-		printf("MANUFACTURE TEST PASSED\n");
+		int i = 0;
+		for (i = 10; i > 0; i--)
+			if (!local_node->numachip->fabric_train())
+				break;
+		if (i==0)
+			printf("MANUFACTURE TEST PASSED\n");
+		else
+			printf("MANUFACTURE TEST FAILED\n");
 		halt();
 	}
 

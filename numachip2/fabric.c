@@ -86,85 +86,83 @@ void Numachip2::fabric_check(void) const
 }
 
 // goal: read all phy status successfully 5M times; if any error encountered, reset and restart
-void Numachip2::fabric_train(void)
+bool Numachip2::fabric_train(void)
 {
 	int i = 0;
-	bool errors = 1;
 
 	printf("Fabric connected:");
 
 	fabric_reset();
 
-	do {
-		// clear link errors
+	// clear link errors
+	foreach_lc(lc)
+		(*lc)->clear();
+
+	// wait until all links are up
+	for (i = fabric_training_period; i > 0; i--) {
+		bool allup = 1;
+
 		foreach_lc(lc)
-			(*lc)->clear();
+			allup &= (*lc)->is_up();
 
-		// wait until all links are up
-		for (i = fabric_training_period; i > 0; i--) {
-			bool allup = 1;
+		// exit early if all up
+		if (allup)
+			break;
+		cpu_relax();
+	}
 
-			foreach_lc(lc)
-				allup &= (*lc)->is_up();
-
-			// exit early if all up
-			if (allup)
-				break;
-			cpu_relax();
-		}
-
-		// not all links are up; restart training if we have errors
-		if (i == 0) {
-			if (options->debug.fabric) {
-				printf("<links not up:");
-				foreach_lc(lc)
-					printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
-				printf(">");
-			}
-			errors = 1;
-			continue;
-		}
-
+	// not all links are up; restart training if we have errors
+	if (i == 0) {
 		if (options->debug.fabric) {
-			printf("<up:");
+			printf("<links not up:");
 			foreach_lc(lc)
 				printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
 			printf(">");
 		}
+		return 0;
+	}
 
-		// clear link errors
+	if (options->debug.fabric) {
+		printf("<up:");
 		foreach_lc(lc)
-			(*lc)->clear();
+			printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
+		printf(">");
+	}
 
-		// check for errors over period
-		for (i = stability_period; i; i--) {
-			errors = 0;
+	// clear link errors
+	foreach_lc(lc)
+		(*lc)->clear();
 
-			foreach_lc(lc)
-				errors |= (*lc)->status() > 0;
+	// check for errors over period
+	for (i = stability_period; i; i--) {
+		bool errors = 0;
 
-			// exit early if errors detected
-			if (errors) {
-				if (options->debug.fabric) {
-					printf("<errors:");
-					foreach_lc(lc)
-						printf(" %016" PRIx64, (*lc)->status());
-					printf(">");
-				}
-				break;
+		foreach_lc(lc)
+			errors |= (*lc)->status() > 0;
+
+		// exit early if errors detected
+		if (errors) {
+			if (options->debug.fabric) {
+				printf("<errors:");
+				foreach_lc(lc)
+					printf(" %016" PRIx64, (*lc)->status());
+				printf(">");
 			}
-		}
-
-		// no errors found, exit
-		if (i == 0)
 			break;
-	} while (errors);
+		}
+	}
+
+	// we didn't finish stability period; restart training
+	if (i > 0)
+		return 0;
 
 	foreach_lc(lc)
 		printf(" %u", (*lc)->index);
 	printf("\n");
 
 	fabric_trained = 1;
+
+	return 1;
 }
 
 // on LC 'in', route packets to SCI 'dest' via LC 'out'
