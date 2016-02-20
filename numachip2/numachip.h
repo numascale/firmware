@@ -78,6 +78,7 @@ class Numachip2 {
 	const bool local;
 	unsigned dram_total_shift;
 	struct spi_board_info board_info;
+	uint64_t prev_tval;
 
 	void update_board_info(void);
 
@@ -111,7 +112,10 @@ public:
 	static const uint64_t MCFG_LIM         = 0x3fffffffffff;
 	static const uint64_t LOC_BASE         = 0xf0000000;
 	static const uint64_t LOC_LIM          = 0xf0ffffff;
-	static const uint64_t PIU_APIC_ICR     = 0xf0100000;
+	static const uint64_t PIU_APIC_ICR     = LOC_BASE + 0x100000;
+	static const uint64_t PIU_TIMER_NOW    = LOC_BASE + 0x200018;
+	static const uint64_t PIU_TIMER_RESET  = LOC_BASE + 0x200020;
+	static const uint64_t PIU_TIMER_COMP   = LOC_BASE + 0x200028;
 
 	/* Registers; function in bits 15:12 */
 	static const reg_t VENDEV            = 0x0000;

@@ -984,6 +984,7 @@ static void wait_for_slaves(void)
 		size_t len;
 
 		if (++count >= backoff) {
+			local_node->check();
 			os->udp_write(&cmd, sizeof(cmd), 0xffffffff);
 
 			lib::udelay(100 * backoff);
@@ -1339,9 +1340,9 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system\n"
+		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system, t = %"PRId64"ms\n"
 		       "Refer to the console on %s", config->local_node->hostname,
-		       nnodes, config->master->hostname);
+		       nnodes, lib::mem_read64(Numachip2::PIU_TIMER_NOW) / 1000000, config->master->hostname);
 
 		caches(0);
 

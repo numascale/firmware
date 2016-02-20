@@ -134,6 +134,9 @@ void Numachip2::late_init(void)
 	fabric_init();
 	pe_init();
 
+	lib::mem_write64(PIU_TIMER_RESET, 0);
+
+	prev_tval = lib::mem_read64(PIU_TIMER_NOW);
 //	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 }
