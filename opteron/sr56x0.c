@@ -181,12 +181,15 @@ void SR56x0::watchdog_stop(void)
 void SR56x0::watchdog_setup(void)
 {
 	// enable watchdog timer
-	pmio_clear8(0x69, 1);
-	// enable watchdog decode
-	uint32_t val2 = mcfg_read32(0, 20, 0, 0x41);
-	mcfg_write32(0xfff0, 0, 20, 0, 0x41, val2 | (1 << 3));
+	uint32_t val = lib::pmio_read8(0x69);
+	val &= ~1;
+	lib::pmio_write8(0x69, val);
 
-	watchdog_base = WATCHDOG_BASE;
-	// write watchdog base address */
-	pmio_write32(0x6c, (unsigned int)watchdog_base);
+	// enable watchdog decode
+	uint32_t val2 = lib::mcfg_read32(sci, 0, 20, 0, 0x41);
+	lib::mcfg_write32(sci, 0, 20, 0, 0x41, val2 | (1 << 3));
+
+	// write watchdog base address
+	watchdog_base = (uint32_t *)WATCHDOG_BASE;
+	lib::pmio_write32(0x6c, (unsigned int)watchdog_base);
 }

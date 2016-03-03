@@ -27,8 +27,11 @@ class SR56x0 {
 	static const reg_t HTIU_TOM2LO         = 0x30;
 	static const reg_t HTIU_TOM2HI         = 0x31;
 	static const reg_t MISC_TOM3           = 0x4e;
+	static const uint32_t WATCHDOG_BASE    = 0xfec000f0;
+
 	const sci_t sci;
 	const bool local;
+	volatile uint32_t *watchdog_base;
 
 	uint32_t read32(const uint16_t reg);
 	void write32(const uint16_t reg, const uint32_t val);
@@ -36,6 +39,7 @@ class SR56x0 {
 	void nbmiscind_write(const uint8_t reg, const uint32_t val);
 	uint32_t htiu_read(const uint8_t reg);
 	void htiu_write(const uint8_t reg, const uint32_t val);
+	void watchdog_write(const uint8_t reg, const uint32_t val);
 public:
 	static bool probe(const sci_t sci);
 	SR56x0(const sci_t sci, const bool local);
@@ -45,4 +49,7 @@ public:
 	void ldtstop(void);
 	uint32_t ioapicind_read(const uint8_t reg);
 	void ioapicind_write(const uint8_t reg, const uint32_t val);
+	void watchdog_run(const unsigned centisecs);
+	void watchdog_stop(void);
+	void watchdog_setup(void);
 };
