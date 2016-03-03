@@ -39,7 +39,7 @@ void E820::dump(void)
 	uint64_t last_base = map->base, last_length = map->length;
 
 	for (int i = 0; i < *used; i++) {
-		printf(" %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s\n",
+		printf(" %011" PRIx64 ":%011" PRIx64 " (%011" PRIx64 ") %s\n",
 		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
 		if (i) {
@@ -63,7 +63,7 @@ struct e820entry *E820::position(const uint64_t addr)
 	if (options->debug.e820) {
 		if (i < *used) {
 			if (options->debug.e820 > 1)
-				printf("Position at %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s",
+				printf("Position at %011" PRIx64 ":%011" PRIx64 " (%011" PRIx64 ") %s",
 				  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 		} else {
 			if (options->debug.e820 > 1)
@@ -109,7 +109,7 @@ bool E820::overlap(const uint64_t a1, const uint64_t a2, const uint64_t b1, cons
 void E820::add(const uint64_t base, const uint64_t length, const uint32_t type)
 {
 	if (options->debug.e820)
-		printf("Adding e820 %011"PRIx64":%011"PRIx64" (%011"PRIx64") %s\n", base, base + length, length, names[type]);
+		printf("Adding e820 %011" PRIx64 ":%011" PRIx64 " (%011" PRIx64 ") %s\n", base, base + length, length, names[type]);
 
 	xassert(base < (base + length));
 
@@ -193,7 +193,7 @@ uint64_t E820::expand(const uint64_t type, const uint64_t size)
 		}
 	}
 
-	fatal("Insufficient space to expand %s region by %"PRIu64" bytes", names[type], size);
+	fatal("Insufficient space to expand %s region by %" PRIu64 " bytes", names[type], size);
 out:
 	if (options->debug.e820)
 		printf("Expanding: ");
@@ -207,9 +207,9 @@ E820::E820(void)
 	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);
 	// see http://groups.google.com/group/comp.lang.asm.x86/msg/9b848f2359f78cdf
 	uint32_t tom_lower = *((uint16_t *)0x413) << 10;
-	asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfff);
+	asm_relocated = (char *)((tom_lower - relocate_size) & ~0xfffUL);
 	if (options->debug.e820)
-		printf("Trampoline at 0x%x:0x%x\n", (unsigned)asm_relocated, (unsigned)(asm_relocated + relocate_size));
+		printf("Trampoline at 0x%p:0x%p\n", asm_relocated, asm_relocated + relocate_size);
 
 	// copy trampoline data
 	memcpy(asm_relocated, &asm_relocate_start, relocate_size);
@@ -239,8 +239,8 @@ E820::E820(void)
 	volatile uint32_t *int_vecs = 0x0;
 	xassert(!((unsigned long)REL32(old_int15_vec) & 3)); // ensure alignment
 	*REL32(old_int15_vec) = int_vecs[0x15];
-	int_vecs[0x15] = (((uint32_t)asm_relocated) << 12) |
-	  ((uint32_t)(&new_e820_handler_relocate - &asm_relocate_start));
+	int_vecs[0x15] = (((unsigned long)asm_relocated) << 12) |
+	  ((unsigned long)(&new_e820_handler_relocate - &asm_relocate_start));
 }
 
 uint64_t E820::memlimit(void)
@@ -262,7 +262,7 @@ void E820::test_address(const uint64_t addr, const uint64_t val)
 
 	if (val2 != val) {
 		test_errors++;
-		warning("Readback of 0x%"PRIx64" after writing 0x%016"PRIx64" gives 0x%016"PRIx64, addr, val, val2);
+		warning("Readback of 0x%" PRIx64 " after writing 0x%016" PRIx64 " gives 0x%016" PRIx64, addr, val, val2);
 	}
 }
 
@@ -285,7 +285,7 @@ void E820::test_location(const uint64_t addr, const test_state state)
 		// memory was zeroed ealier; verify
 		val = lib::mem_read64(addr);
 		if (val != 0) {
-			printf("address 0x%llx was 0x%016llx but should have been 0 (seed)\n", addr, val);
+			printf("address 0x%" PRIx64 " was 0x%016" PRIx64 " but should have been 0 (seed)\n", addr, val);
 			test_errors++;
 		}
 
@@ -295,7 +295,7 @@ void E820::test_location(const uint64_t addr, const test_state state)
 		val = lib::mem_read64(addr);
 		hash = lib::hash64(addr);
 		if (val != hash) {
-			printf("address 0x%llx was 0x%016llx but should have been 0x%016llx (seed)\n", addr, val, hash);
+			printf("address 0x%" PRIx64 " was 0x%016" PRIx64 " but should have been 0x%016" PRIx64 " (seed)\n", addr, val, hash);
 			test_errors++;
 		}
 
@@ -306,7 +306,7 @@ void E820::test_location(const uint64_t addr, const test_state state)
 		// verify zeroing
 		val = lib::mem_read64(addr);
 		if (val != 0) {
-			printf("address 0x%llx was 0x%016llx but should have been 0 (rezero)\n", addr, val);
+			printf("address 0x%" PRIx64 " was 0x%016" PRIx64 " but should have been 0 (rezero)\n", addr, val);
 			test_errors++;
 		}
 		break;
@@ -359,7 +359,7 @@ void E820::test(void)
 			left = os->memmap_entry(&base, &length, &type);
 
 			if (options->debug.e820)
-				printf("\n%011"PRIx64":%011"PRIx64" (%011"PRIx64") %s", base, base + length, length, names[type]);
+				printf("\n%011" PRIx64 ":%011" PRIx64 " (%011" PRIx64 ") %s", base, base + length, length, names[type]);
 
 			if (type == RAM)
 				test_range(base, base + length, phase);
@@ -375,5 +375,5 @@ void E820::test(void)
 
 	printf("\n");
 	if (test_errors)
-		warning("%"PRIu64" errors", test_errors);
+		warning("%" PRIu64 " errors", test_errors);
 }

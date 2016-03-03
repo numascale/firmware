@@ -43,7 +43,7 @@ void Node::init(void)
 
 	if (local)
 		printf("%03x", config->id);
-	printf(" (%"PRIu64"GB, %u cores)\n", dram_size >> 30, cores);
+	printf(" (%" PRIu64 "GB, %u cores)\n", dram_size >> 30, cores);
 }
 
 void Node::check(void)
@@ -81,7 +81,7 @@ void Node::trim_dram_maps(void)
 	if (over <= 0)
 		return;
 
-	printf("Trimming %03x maps by %"PRIu64"MB\n", config->id, over >> 20);
+	printf("Trimming %03x maps by %" PRIu64 "MB\n", config->id, over >> 20);
 
 	while (over > 0) {
 		uint64_t max = 0;

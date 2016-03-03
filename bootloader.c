@@ -93,7 +93,7 @@ static void scan(void)
 		(*node)->dram_end = dram_top - 1;
 
 		if (options->debug.maps)
-			printf("%03x dram_base=0x%"PRIx64" dram_size=0x%"PRIx64" dram_end=0x%"PRIx64"\n",
+			printf("%03x dram_base=0x%" PRIx64 " dram_size=0x%" PRIx64 " dram_end=0x%" PRIx64 "\n",
 				(*node)->config->id, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 }
@@ -198,7 +198,7 @@ static void setup_gsm(void)
 			ht_t ht = Numachip2::probe(config->nodes[n].id);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\n%s: DRAM ATT 0x%"PRIx64":0x%"PRIx64" to %03x", config->nodes[n].hostname, base, limit, dest);
+					printf("\n%s: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %03x", config->nodes[n].hostname, base, limit, dest);
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -469,7 +469,7 @@ static void setup_cores(void)
 	printf("Fixed MTRRs:\n");
 	for (unsigned i = 0; fixed_mtrr_regs[i] != 0xffffffff; i++) {
 		mtrr_fixed[i] = lib::rdmsr(fixed_mtrr_regs[i]);
-		printf("- 0x%016"PRIx64"\n", mtrr_fixed[i]);
+		printf("- 0x%016" PRIx64 "\n", mtrr_fixed[i]);
 	}
 
 	// read variable MSRs
@@ -488,7 +488,7 @@ static void setup_cores(void)
 		mtrr_var_mask[i] = lib::rdmsr(MSR_MTRR_PHYS_MASK0 + i * 2);
 
 		if (mtrr_var_mask[i] & 0x800ULL)
-			printf("- 0x%011"PRIx64":0x%011"PRIx64" %s\n", mtrr_var_base[i] & ~0xfffULL,
+			printf("- 0x%011" PRIx64 ":0x%011" PRIx64 " %s\n", mtrr_var_base[i] & ~0xfffULL,
 			  mtrr_var_mask[i] & ~0xfffULL, MTRR_TYPE(mtrr_var_base[i] & 0xffULL));
 	}
 #endif
@@ -1340,7 +1340,7 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system, t = %"PRId64"ms\n"
+		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system, t = %" PRId64 "ms\n"
 		       "Refer to the console on %s", config->local_node->hostname,
 		       nnodes, lib::mem_read64(Numachip2::PIU_TIMER_NOW) / 1000000, config->master->hostname);
 

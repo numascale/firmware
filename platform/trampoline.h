@@ -87,7 +87,7 @@ static inline bool trampoline_sem_wait(void)
 static inline void push_msr(const uint32_t num, const uint64_t val)
 {
 	if (options->debug.cores)
-		printf("Global MSR%08x -> %016llx\n", num, val);
+		printf("Global MSR%08x -> %016" PRIx64 "\n", num, val);
 	xassert(asm_relocated);
 	struct msr_ent *msrp = (struct msr_ent *)REL32(msrs);
 	xassert(!((unsigned long)msrp & 3)); // ensure alignment

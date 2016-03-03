@@ -78,9 +78,9 @@ namespace lib
 		}
 
 		if (units[i])
-			snprintf(pretty[index], PRETTY_SIZE, "%"PRIu64"%cB", size, units[i]);
+			snprintf(pretty[index], PRETTY_SIZE, "%" PRIu64 "%cB", size, units[i]);
 		else
-			snprintf(pretty[index], PRETTY_SIZE, "%"PRIu64"B", size);
+			snprintf(pretty[index], PRETTY_SIZE, "%" PRIu64 "B", size);
 
 		const char *ret = pretty[index];
 		index = (index + 1) % PRETTY_COUNT;

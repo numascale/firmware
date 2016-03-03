@@ -51,7 +51,7 @@ void Opteron::MmioMap15::remove(const unsigned range)
 		link_t link;
 		bool lock;
 		read(range, &base, &limit, &dest, &link, &lock);
-		printf("Deleting NB MMIO range %u (0x%llx:0x%llx to %u.%u) on %03x#%d\n", range, base, limit, dest, link, opteron.sci, opteron.ht);
+		printf("Deleting NB MMIO range %u (0x%" PRIx64 ":0x%" PRIx64 " to %u.%u) on %03x#%d\n", range, base, limit, dest, link, opteron.sci, opteron.ht);
 	}
 
 	xassert(range < ranges);
@@ -142,7 +142,7 @@ void Opteron::MmioMap::print(const unsigned range)
 	xassert(range < ranges);
 
 	if (read(range, &base, &limit, &dest, &link, &lock))
-		printf("NB MMIO range %u on %03x#%d: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d\n",
+		printf("NB MMIO range %u on %03x#%d: 0x%08" PRIx64 ":0x%08" PRIx64 " to %d.%d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest, link);
 }
 
@@ -171,7 +171,7 @@ void Opteron::MmioMap15::set(const unsigned range, uint64_t base, uint64_t limit
 	const bool ovw = 1;
 
 	if (options->debug.maps)
-		printf("Adding NB MMIO range %u on %03x#%x: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d\n",
+		printf("Adding NB MMIO range %u on %03x#%x: 0x%08" PRIx64 ":0x%08" PRIx64 " to %d.%d\n",
 			range, opteron.sci, opteron.ht, base, limit, dest, link);
 
 	xassert(range < ranges);
@@ -192,7 +192,7 @@ void Opteron::MmioMap15::set(const unsigned range, uint64_t base, uint64_t limit
 		link_t link2;
 		bool lock2;
 		read(range, &base2, &limit2, &dest2, &link2, &lock2);
-		fatal("Overwriting NB MMIO range %u 0x%08"PRIx64":0x%08"PRIx64" on %03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
+		fatal("Overwriting NB MMIO range %u 0x%08" PRIx64 ":0x%08" PRIx64 " on %03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 	}
 
 	uint32_t val2 = ((base >> 16) << 8) | (!ro << 1) | 1;
@@ -209,7 +209,7 @@ void Opteron::MmioMap15::set(const unsigned range, uint64_t base, uint64_t limit
 		bool old_lock;
 
 		read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-		warning("Unable to overwrite locked NB MMIO range %u on %03x#%d 0x%"PRIx64":0x%"PRIx64" to %d.%d with 0x%"PRIx64":0x%"PRIx64" to %d.%d",
+		warning("Unable to overwrite locked NB MMIO range %u on %03x#%d 0x%" PRIx64 ":0x%" PRIx64 " to %d.%d with 0x%" PRIx64 ":0x%" PRIx64 " to %d.%d",
 			range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
 		return;
 	}
@@ -224,7 +224,7 @@ void Opteron::MmioMap10::set(unsigned range, uint64_t base, uint64_t limit, cons
 	const bool ovw = 1;
 
 	if (options->debug.maps)
-		printf("Adding NB MMIO range %u on %03x#%x: 0x%08"PRIx64":0x%08"PRIx64" to %d.%d\n",
+		printf("Adding NB MMIO range %u on %03x#%x: 0x%08" PRIx64 ":0x%08" PRIx64 " to %d.%d\n",
 			range, opteron.sci, opteron.ht, base, limit, dest, link);
 
 	xassert(range < ranges);
@@ -241,7 +241,7 @@ void Opteron::MmioMap10::set(unsigned range, uint64_t base, uint64_t limit, cons
 			link_t link2;
 			bool lock2;
 			read(range, &base2, &limit2, &dest2, &link2, &lock2);
-			fatal("Overwriting NB MMIO range %u 0x%08"PRIx64":0x%08"PRIx64" on %03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
+			fatal("Overwriting NB MMIO range %u 0x%08" PRIx64 ":0x%08" PRIx64 " on %03x#%d to %d.%d%s", range, base2, limit2, opteron.sci, opteron.ht, dest2, link2, lock2 ? " locked" : "");
 		}
 
 		uint32_t val2 = ((base >> 16) << 8) | (!ro << 1) | 1;
@@ -256,7 +256,7 @@ void Opteron::MmioMap10::set(unsigned range, uint64_t base, uint64_t limit, cons
 			bool old_lock;
 
 			read(range, &old_base, &old_limit, &old_dest, &old_link, &old_lock);
-			warning("Unable to overwrite locked NB MMIO range %u on %03x#%d 0x%"PRIx64":0x%"PRIx64" to %d.%d with 0x%"PRIx64":0x%"PRIx64" to %d.%d",
+			warning("Unable to overwrite locked NB MMIO range %u on %03x#%d 0x%" PRIx64 ":0x%" PRIx64 " to %d.%d with 0x%" PRIx64 ":0x%" PRIx64 " to %d.%d",
 				range, opteron.sci, opteron.ht, old_base, old_limit, old_dest, old_link, base, limit, dest, link);
 			return;
 		}
@@ -369,7 +369,7 @@ void Opteron::DramMap::print(const unsigned range)
 	xassert(range < 8);
 
 	if (read(range, &base, &limit, &dest))
-		printf("NB DRAM range %u on %03x#%d: 0x%012"PRIx64":0x%012"PRIx64" to %d\n",
+		printf("NB DRAM range %u on %03x#%d: 0x%012" PRIx64 ":0x%012" PRIx64 " to %d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 }
 
@@ -382,7 +382,7 @@ void Opteron::DramMap::print()
 void Opteron::DramMap::set(const unsigned range, const uint64_t base, const uint64_t limit, const ht_t dest)
 {
 	if (options->debug.maps)
-		printf("Adding NB DRAM range %u on %03x#%d: 0x%012"PRIx64":0x%012"PRIx64" to %d\n",
+		printf("Adding NB DRAM range %u on %03x#%d: 0x%012" PRIx64 ":0x%012" PRIx64 " to %d\n",
 		  range, opteron.sci, opteron.ht, base, limit, dest);
 
 	xassert(range < 8);

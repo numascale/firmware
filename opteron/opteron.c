@@ -42,7 +42,7 @@ void Opteron::check(void)
 		if (!(val & (1ULL << 63)))
 			continue;
 
-		printf("%03x#%u MSR%08x=0x%"PRIx64"\n", sci, ht, msr, val);
+		printf("%03x#%u MSR%08x=0x%" PRIx64 "\n", sci, ht, msr, val);
 		lib::wrmsr(msr, 0);
 	}
 #endif
@@ -81,20 +81,20 @@ void Opteron::check(void)
 		  "Probe Filter Error", "Compute Unit Data Error"};
 
 		warning("%s on %03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
-		printf("- ErrorCode=0x%"PRIx64" ErrorCodeExt=0x%"PRIx64" Syndrome=0x%"PRIx64"\n",
+		printf("- ErrorCode=0x%" PRIx64 " ErrorCodeExt=0x%" PRIx64 " Syndrome=0x%" PRIx64 "\n",
 		  s & 0xffff, (s >> 16) & 0xf, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
-		printf("- Link=%"PRIu64" Scrub=%"PRIu64" SubLink=%"PRIu64" McaStatSubCache=%"PRIu64"\n",
+		printf("- Link=%" PRIu64 " Scrub=%" PRIu64 " SubLink=%" PRIu64 " McaStatSubCache=%" PRIu64 "\n",
 		  (s >> 26) & 0xf, (s >> 40) & 1, (s >> 41) & 1, (s >> 42) & 3);
-		printf("- UECC=%"PRIu64" CECC=%"PRIu64" PCC=%"PRIu64"\n",
+		printf("- UECC=%" PRIu64 " CECC=%" PRIu64 " PCC=%" PRIu64 "\n",
 		  (s >> 45) & 1, (s >> 46) & 1, (s >> 57) & 1);
-		printf("- MiscV=%"PRIu64" En=%"PRIu64" UC=%"PRIu64" Overflow=%"PRIu64"\n",
+		printf("- MiscV=%" PRIu64 " En=%" PRIu64 " UC=%" PRIu64 " Overflow=%" PRIu64 "\n",
 		  (s >> 59) & 1, (s >> 60) & 1, (s >> 61) & 1, (s >> 62) & 1);
 
 		if ((s >> 56) & 1) // ErrCoreIdVal
-			printf(" ErrCoreId=%"PRIu64, (s >> 32) & 0xf);
+			printf(" ErrCoreId=%" PRIu64, (s >> 32) & 0xf);
 
 		if ((s >> 58) & 1) // AddrV
-			printf(" Address=0x%016"PRIx64, read64(MC_NB_ADDR));
+			printf(" Address=0x%016" PRIx64, read64(MC_NB_ADDR));
 
 		write64_split(MC_NB_ADDR, 0);
 		write64_split(MC_NB_STAT, 0);

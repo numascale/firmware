@@ -116,7 +116,7 @@ bool Numachip2::fabric_train(void)
 		if (options->debug.fabric) {
 			printf("<links not up:");
 			foreach_lc(lc)
-				printf(" %s(%"PRIx64")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
+				printf(" %s(%" PRIx64 ")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
 			printf(">");
 		}
 		return 0;

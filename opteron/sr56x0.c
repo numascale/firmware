@@ -125,7 +125,7 @@ SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
 void SR56x0::limits(const uint64_t limit)
 {
 	if (options->debug.maps)
-		printf("Setting limits on %03x IOH to 0x%"PRIx64"\n", sci, limit);
+		printf("Setting limits on %03x IOH to 0x%" PRIx64 "\n", sci, limit);
 	xassert((limit & ((1ULL << 24) - 1)) == (1ULL << 24) - 1);
 
 	// limit to HyperTransport range
@@ -158,4 +158,35 @@ void SR56x0::ldtstop(void)
 	lib::pmio_write8(0x8a, 0xf0);
 	lib::pmio_write8(0x87, 1);
 	lib::pmio_write8(0x8a, val8);
+}
+
+void SR56x0::watchdog_write(const uint8_t reg, const uint32_t val)
+{
+	xassert(watchdog_base);
+	watchdog_base[reg] = val;
+}
+
+void SR56x0::watchdog_run(const unsigned centisecs)
+{
+	watchdog_write(0, 0x81); // WatchDogRunStopB | WatchDogTrigger
+	watchdog_write(1, centisecs);
+	watchdog_write(0, 0x81);
+}
+
+void SR56x0::watchdog_stop(void)
+{
+	watchdog_write(0, 0);
+}
+
+void SR56x0::watchdog_setup(void)
+{
+	// enable watchdog timer
+	pmio_clear8(0x69, 1);
+	// enable watchdog decode
+	uint32_t val2 = mcfg_read32(0, 20, 0, 0x41);
+	mcfg_write32(0xfff0, 0, 20, 0, 0x41, val2 | (1 << 3));
+
+	watchdog_base = WATCHDOG_BASE;
+	// write watchdog base address */
+	pmio_write32(0x6c, (unsigned int)watchdog_base);
 }

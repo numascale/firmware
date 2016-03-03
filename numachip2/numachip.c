@@ -272,7 +272,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 		uint32_t checksum = lib::checksum((unsigned char *)buf, len);
 		if (image_info.checksum != checksum || (read32(FLASH_REG0) >> 28) != 0xa) {
-			printf("Flashing %uMB image %s with checksum %u\n", len >> 20, options->flash, checksum);
+			printf("Flashing %zuMB image %s with checksum %u\n", len >> 20, options->flash, checksum);
 			flash(buf, len);
 
 			// store filename for printing
