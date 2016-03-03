@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../numachip2/routing.h"
+#include "../numachip2/router.h"
 #include "../platform/os.h"
 #include "../platform/config.h"
 #include "../platform/options.h"
@@ -23,22 +23,22 @@
 #include "../node.h"
 #include <string.h>
 
-OS *os;
-Config *config;
-Options *options;
-Node *local_node;
-E820 *e820;
-
 int main(int argc, char *argv[])
 {
-	os = new OS();
-	options = new Options(argc, argv);
-//	local_node = new Node(0x000, 0x000);
-//	config = new Config();
-	RingRouter *router = new RingRouter();
+	Router r(4);
 
-	delete router;
-	delete local_node;
+	// LC0 is XA, ...
+	r.neigh[0x000][0] = 0x001;
+	r.neigh[0x000][1] = 0x002;
+	r.neigh[0x001][0] = 0x003;
+	r.neigh[0x001][1] = 0x000;
+	r.neigh[0x002][0] = 0x000;
+	r.neigh[0x002][1] = 0x003;
+	r.neigh[0x003][0] = 0x002;
+	r.neigh[0x003][1] = 0x001;
+
+	r.run();
+	r.dump();
 
 	return 0;
 }

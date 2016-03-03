@@ -18,19 +18,3 @@
 #include "../../numachip2/numachip.h"
 #include <stdint.h>
 
-void Numachip2::spi_master_enable(void)
-{
-}
-
-void Numachip2::spi_master_disable(void)
-{
-}
-
-uint8_t Numachip2::spi_master_read_fifo(void)
-{
-	return 0;
-}
-
-void Numachip2::spi_master_read(const uint16_t addr, const unsigned len, uint8_t *data)
-{
-}

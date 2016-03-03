@@ -142,7 +142,7 @@ sci_t Router::neigh(sci_t pos, const uint8_t lc) const
 }
 
 // calculate optimal route
- void Router::find(const sci_t pos, const unsigned cost, const unsigned offset, const uint8_t available_lcs, const uint8_t lastlc)
+void Router::find(const sci_t pos, const unsigned cost, const unsigned offset, const uint8_t available_lcs, const uint8_t lastlc)
 {
 	debugf(3, "<find: pos=%03x cost=%u offset=%u available=0x%x>", pos, cost, offset, available_lcs);
 

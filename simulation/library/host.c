@@ -24,7 +24,7 @@ OS::OS(void)
 {
 }
 
-char *OS::read_file(const char *filename, int *const len)
+uint8_t *OS::read_file(const char *filename, size_t *const len)
 {
 	return 0;
 }
