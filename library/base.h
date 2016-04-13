@@ -47,6 +47,11 @@
 #define CLEAR         "\033\143"
 
 #define SCI_LOCAL 0xfff
+#define XBAR_PORTS 7
+#define MAX_NODE 64
+#define NODE_NONE ((nodeid_t)~0U)
+#define XBARID_NONE  ((xbarid_t)~0U)
+#define XBARID_BITS  3
 
 #define STR_DW_N(a) (uint32_t)((a[0] << 24) + (a[1] << 16) + (a[2] << 8) + a[3])
 #define STR_DW_H(a) (uint32_t)(a[0] + (a[1] << 8) + (a[2] << 16) + (a[3] << 24))
@@ -97,6 +102,12 @@ typedef uint16_t sci_t;
 typedef uint16_t reg_t;
 typedef uint32_t msr_t;
 typedef uint16_t apic_t;
+typedef uint8_t nodeid_t;
+typedef uint8_t xbarid_t;
+typedef struct {
+	nodeid_t nodeid;
+	xbarid_t xbarid;
+} dest_t;
 
 #ifdef SIM
 inline void lfree(void *ptr)

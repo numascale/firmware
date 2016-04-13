@@ -16,37 +16,41 @@
  */
 
 #include "router.h"
+#include "../library/base.h"
+#include "../platform/config.h"
 #include <stdio.h>
 #include <string.h>
 
-void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, const unsigned _usage, deps_t _deps, const lc_t last_lc)
-{
-	for (unsigned i = 0; i < hops; i++)
-		printf(" ");
+static bool debug = 0;
 
-	printf("%03x hops=%u _usage=%u", pos, hops, _usage);
+void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, const unsigned _usage, deps_t _deps, const xbarid_t last_xbarid)
+{
+	if (debug) {
+		for (unsigned i = 0; i < hops; i++)
+			printf(" ");
+
+		printf("%03x hops=%u usage=%u", pos, hops, _usage);
+	}
 
 	// no room
 	if (hops > nodes)
 		return;
 
 	if (hops > best.hops) {
-		printf(" overhops\n");
+		if (debug) printf(" overhops\n");
 		return;
 	}
 
 	if (_usage > best.usage) {
-		printf(" overusage\n");
+		if (debug) printf(" overusage\n");
 		return;
 	}
 
 	// if reached goal, update best
 	if (pos == dst) {
 		if ((hops * HOP_COST + _usage) < (best.hops * HOP_COST + best.usage)) {
-//		if ((hops < best.hops) || (hops == best.hops && _usage < best.usage)) {
 			memcpy(best.route, route, hops * sizeof(route[0]));
 			best.deps = _deps;
-//			memcpy(best.deps, _deps, sizeof(_deps));
 			best.route[hops] = 0; // route to local Numachip
 			best.hops = hops;
 			best.usage = _usage;
@@ -54,48 +58,64 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 		return;
 	}
 
-	for (lc_t lc = 1; lc <= LCS; lc++) {
-		nodeid_t next = neigh[pos][lc-1];
-		if (next == NODE_NONE)
+	for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++) {
+		dest_t next = ::config->nodes[pos].neigh[xbarid];
+		if (next.nodeid == NODE_NONE)
 			continue;
 
+		// if route already defined, skip alternatives
+		// FIXME: move out of loop
+		if (routes[pos][last_xbarid][dst] != XBARID_NONE && xbarid != routes[pos][last_xbarid][dst]) {
+			printf("!");
+			continue;
+		}
+
 		// check if cyclic
-		if (lc && last_lc) {
-			if (_deps.table[next][lc-1][pos][last_lc-1]) {
-				printf(" %03x:%u already depends on %03x:%u\n", next, lc, pos, last_lc);
+		if (xbarid && last_xbarid) {
+			if (_deps.table[next.nodeid][xbarid][pos][last_xbarid]) {
+				if (debug) printf(" %03x:%u already depends on %03x:%u\n", next.nodeid, xbarid, pos, last_xbarid);
 				continue;
 			}
 
-			_deps.table[next][lc-1][pos][last_lc-1] = 1;
+			_deps.table[next.nodeid][xbarid][pos][last_xbarid] = 1;
 		}
 
-		printf(" lc=%u next=%03x \n", lc, next);
-		route[hops] = lc;
-		find(next, dst, hops + 1, _usage + usage[pos][lc-1], _deps, lc);
+		if (debug) printf(" xbarid=%u next=%03x:%u \n", xbarid, next.nodeid, next.xbarid);
+		route[hops] = xbarid;
+		find(next.nodeid, dst, hops + 1, _usage + usage[pos][xbarid], _deps, next.xbarid);
 	}
 }
 
 void Router::update(const nodeid_t src, const nodeid_t dst)
 {
-	printf("update hops=%u usage=%u:\n", best.hops, best.usage);
+	printf("usage=%u:", best.usage);
+
+	xbarid_t xbarid = 0;
+	unsigned hop = 0;
 	nodeid_t pos = src;
 
-	for (unsigned hop = 0; best.route[hop]; hop++) {
-		printf(" hop=%u", hop);
-		assert(hop < nodes);
-		lc_t lc = best.route[hop];
-		printf(" lc=%u pos=%03x", lc, pos);
-		usage[pos][lc-1]++;
-		pos = neigh[pos][lc-1];
-		printf("->%03x\n", pos);
-	}
+	while (1) {
+		printf(" %03x:%u", pos, xbarid);
+		xbarid = routes[pos][xbarid][dst] = best.route[hop++];
+		usage[pos][xbarid]++; // model congestion at link controller send buffer
+		printf("->%u", xbarid);
 
-	assert(pos == dst);
+		if (xbarid == 0)
+			break;
+
+		xassert(hop < nodes);
+		dest_t next = ::config->nodes[pos].neigh[xbarid];
+		pos = next.nodeid;
+		xbarid = next.xbarid;
+	};
+
+	xassert(pos == dst);
+	printf("\n");
 }
 
 Router::Router(const unsigned _nodes): nodes(_nodes)
 {
-	memset(neigh, ~0, sizeof(neigh));
+	memset(routes, XBARID_NONE, sizeof(routes));
 	memset(usage, 0, sizeof(usage));
 	memset(&deps, 0, sizeof(deps));
 }
@@ -108,28 +128,26 @@ void Router::run()
 			best.hops = ~0U;
 			best.usage = ~0U;
 
-			printf("%03x->%03x:\n", src, dst);
+			printf("%03x->%03x: ", src, dst);
 			find(src, dst, 0, 0, deps, 0); // calculate optimal route
-			printf("\n");
 			update(src, dst); // increment path usage
-
-			dump();
-			printf("\n\n");
 		}
 	}
+
+	dump();
 }
 
 void Router::dump() const
 {
 	printf("usage:");
-	for (lc_t lc = 1; lc <= LCS; lc++)
-		printf(" %3x", lc);
+	for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
+		printf(" %3x", xbarid);
 	printf("\n");
 
 	for (nodeid_t node = 0; node < nodes; node++) {
 		printf("  %03x:", node);
-		for (lc_t lc = 1; lc <= LCS; lc++)
-			printf(" %3x", usage[node][lc-1]);
+		for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
+			printf(" %3x", usage[node][xbarid]);
 		printf("\n");
 	}
 }

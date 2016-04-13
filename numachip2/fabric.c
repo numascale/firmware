@@ -21,6 +21,7 @@
 
 #include "numachip.h"
 #include "lc.h"
+#include "router.h"
 #include "../platform/config.h"
 #include "../bootloader.h"
 
@@ -35,12 +36,14 @@ void Numachip2::fabric_reset(void)
 	linkmask = read32(HSS_PLLCTL);
 
 	// bring configured links out of reset
-	for (unsigned i = 0; i < 3; i++) {
+	mask &= ~15; // FIXME
+
+/*	for (unsigned i = 0; i < 3; i++) {
 		if (::config->size[i]) {
 			assertf(((linkmask >> (i * 2)) & 3) == 3, "Image doesn't support configured %c axis", 'X' + i);
 			mask &= ~(3 << (i * 2));
 		}
-	}
+	}*/
 
 	write32(HSS_PLLCTL, mask);
 }
@@ -50,7 +53,7 @@ void Numachip2::fabric_check(void) const
 	uint32_t val = read32(SIU_EVENTSTAT);
 
 	if (val) {
-		warning("SIU on %s has issues 0x%08x", config->hostname, val);
+		warning("SIU on %s-%02u has issues 0x%08x", ::config->prefix, config->id, val);
 
 		if (val & (1ULL << 22)) printf(" RS master illegal packet\n");
 		if (val & (1ULL << 21)) printf(" CC master illegal packet\n");
@@ -114,19 +117,23 @@ bool Numachip2::fabric_train(void)
 	// not all links are up; restart training if we have errors
 	if (i == 0) {
 		if (options->debug.fabric) {
-			printf("<links not up:");
-			foreach_lc(lc)
-				printf(" %s(%" PRIx64 ")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
-			printf(">");
+			foreach_lc(lc) {
+				printf(" LC%u,%s", (*lc)->index, (*lc)->is_up() ? "up" : "down");
+				uint64_t status = (*lc)->status();
+				if (status)
+					printf(",status %" PRIx64, status);
+			}
 		}
 		return 0;
 	}
 
 	if (options->debug.fabric) {
-		printf("<up:");
-		foreach_lc(lc)
-			printf(" %s(%" PRIx64 ")", (*lc)->is_up() ? "up" : "down", (*lc)->status());
-		printf(">");
+		foreach_lc(lc) {
+			printf(" LC%u,%s", (*lc)->index, (*lc)->is_up() ? "up" : "down");
+			uint64_t status = (*lc)->status();
+			if (status)
+				printf(",status %" PRIx64, status);
+		}
 	}
 
 	// clear link errors
@@ -183,10 +190,15 @@ void Numachip2::fabric_routing(void)
 	// default route is to link 7 to trap unexpected behaviour
 	memset(xbar_routes, 0xff, sizeof(xbar_routes));
 
-	printf("Routing:");
+	printf("Routing:\n");
+	Router r(::config->nnodes);
+	r.run();
+
 	for (unsigned node = 0; node < ::config->nnodes; node++) {
-		uint8_t out = lcs[0]->route1(config->position, ::config->nodes[node].position);
+		uint8_t out = r.routes[config->id][0][::config->nodes[node].id];
 		printf(" %03x:%u->%03x", config->id, out, ::config->nodes[node].id);
+		printf(" routes[%03x][0][%03x]=%u", config->id, ::config->nodes[node].id, out);
+		xassert(out != XBARID_NONE);
 		xbar_route(::config->nodes[node].id, out);
 
 		foreach_lc(lc)
@@ -209,26 +221,16 @@ void Numachip2::fabric_routing(void)
 void Numachip2::fabric_init(void)
 {
 	uint32_t val = read32(HSS_PLLCTL);
-	is_lc4 = (val >> 16) == 0x0704;
-
-	if (local)
-		printf("Fabric is %s\n", is_lc4 ? "LC4" : "LC5");
 
 	for (unsigned index = 0; index < 6; index++) {
-		if (!::config->size[index / 2])
+		if (index > 2)
 			continue;
 
-		if (is_lc4) {
-			lcs[nlcs++] = new LC4(*this, index);
-		} else {
-			xassert((val >> 16) == 0x0705);
-			lcs[nlcs++] = new LC5(*this, index);
-		}
+		xassert((val >> 16) == 0x0705);
+		lcs[nlcs++] = new LC5(*this, index);
 	}
 
 	// enable SIU CRC if LC5
-	if (!is_lc4) {
-		val = read32(SIU_NODEID);
-		write32(SIU_NODEID, val | (1<<31));
-	}
+	val = read32(SIU_NODEID);
+	write32(SIU_NODEID, val | (1<<31));
 }

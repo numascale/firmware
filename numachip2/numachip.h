@@ -211,7 +211,6 @@ public:
 
 	const Config::node *config;
 	const ht_t ht;
-	bool is_lc4;
 	uint8_t linkmask;
 
 	uint16_t xbar_routes[256][3];
@@ -227,8 +226,6 @@ public:
 	friend class DramAtt;
 	MmioAtt mmioatt;
 	friend class MmioAtt;
-
-	uint32_t uuid;
 
 	uint64_t read64(const reg_t reg) const;
 	void write64_split(const reg_t reg, const uint64_t val) const;

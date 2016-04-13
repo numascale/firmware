@@ -180,7 +180,7 @@ static void setup_gsm(void)
 	printf("Setting up GSM to");
 	for (unsigned n = 0; n < config->nnodes; n++)
 		if (!config->nodes[n].partition)
-			printf(" %s", config->nodes[n].hostname);
+			printf(" %s%02u", ::config->prefix, config->nodes[n].id);
 
 	foreach_node(node) {
 		uint64_t base = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_base;
@@ -198,7 +198,7 @@ static void setup_gsm(void)
 			ht_t ht = Numachip2::probe(config->nodes[n].id);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\n%s: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %03x", config->nodes[n].hostname, base, limit, dest);
+					printf("\n%s%02u: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %03x", ::config->prefix, config->nodes[n].id, base, limit, dest);
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -232,7 +232,6 @@ static void setup_info(void)
 		infop->self = nodes[n]->config->id;
 		infop->partition = nodes[n]->config->partition;
 		infop->master = local_node->config->partition ? config->master->id : 0xfff;
-		infop->lc4 = local_node->numachip->is_lc4;
 
 		struct Config::node *cur = nodes[n]->config;
 
@@ -879,7 +878,7 @@ static void wait_status(void)
 			continue;
 
 		if (!config->nodes[n].seen)
-			printf(" %s", config->nodes[n].hostname);
+			printf(" %s%02u", ::config->prefix, config->nodes[n].id);
 	}
 
 	printf("\n");
@@ -1043,13 +1042,16 @@ static void wait_for_slaves(void)
 						   (rsp->state == RSP_FABRIC_NOT_READY) ||
 						   (rsp->state == RSP_FABRIC_NOT_OK)) {
 						if (!config->nodes[n].seen) {
-							printf("%03x/%s failed with %s; restarting synchronisation\n",
-							       rsp->sci, config->nodes[n].hostname, node_state_name[rsp->state]);
+							printf("%s%02u failed with %s; restarting synchronisation\n",
+							       ::config->prefix, config->nodes[n].id, node_state_name[rsp->state]);
 							do_restart = 1;
 							config->nodes[n].seen = 1;
 						}
-					} else if (rsp->state == RSP_ERROR)
-						error_remote(rsp->sci, config->nodes[n].hostname, ip, (char *)rsp + sizeof(struct state_bcast));
+					} else if (rsp->state == RSP_ERROR) {
+						char name[32];
+						snprintf(name, sizeof(name), "%s%02u", ::config->prefix, config->nodes[n].id);
+						error_remote(rsp->sci, name, ip, (char *)rsp + sizeof(struct state_bcast));
+					}
 					break;
 				}
 			}
@@ -1319,7 +1321,7 @@ int main(const int argc, char *const argv[])
 //		lib::pmio_write8(0xba, 64); // FIXME: check?
 
 		// read from master after mapped
-		printf("Waiting for %s", config->master->hostname);
+		printf("Waiting for %s%02u", ::config->prefix, config->master->id);
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
@@ -1340,9 +1342,9 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system, t = %" PRId64 "ms\n"
-		       "Refer to the console on %s", config->local_node->hostname,
-		       nnodes, lib::mem_read64(Numachip2::PIU_TIMER_NOW) / 1000000, config->master->hostname);
+		printf(BANNER "This server %s%02u is part of a %u-server NumaConnect2 system\n"
+		       "Refer to the console on %s%02u", ::config->prefix, config->local_node->id,
+		       nnodes, ::config->prefix, config->master->id);
 
 		caches(0);
 

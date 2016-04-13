@@ -29,192 +29,16 @@ extern "C" {
 }
 #endif
 
-static const char *json_errors[] = {
-	"Unknown",
-	"Success",
-	"Incomplete",
-	"Extra characters at end",
-	"Structural errors detected",
-	"Incorrect type detected",
-	"Out of memory",
-	"Unexpected character detected",
-	"Malformed tree structure",
-	"Maximum allowed size exceeded",
-	"Unclassified problem",
-};
-
-bool Config::parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt)
-{
-	*val = -1;
-	json_t *item = json_find_first_label(obj, label);
-
-	if (!(item && item->child)) {
-		if (!opt)
-			warning("Label <%s> not found in fabric configuration file", label);
-		return 0;
-	}
-
-	if (item->child->type == JSON_TRUE) {
-		*val = 1;
-	} else if (item->child->type == JSON_FALSE) {
-		*val = 0;
-	} else {
-		warning("Label <%s> has bad type %d in fabric configuration file", label, item->child->type);
-		return 0;
-	}
-
-	return 1;
-}
-
-bool Config::parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt)
-{
-	*val = -1;
-	json_t *item = json_find_first_label(obj, label);
-
-	if (!(item && item->child)) {
-		if (!opt)
-			warning("Label <%s> not found in fabric configuration file", label);
-
-		return 0;
-	}
-
-	char *end;
-	if (item->child->type == JSON_NUMBER) {
-		*val = strtol(item->child->text, &end, 10);
-	} else if (item->child->type == JSON_STRING) {
-		*val = strtol(item->child->text, &end, 16);
-	} else {
-		warning("Label <%s> has bad type %d in fabric configuration file", label, item->child->type);
-		return 0;
-	}
-
-	if (end[0] != '\0') {
-		warning("Label <%s> value bad format in fabric configuration file", label);
-		*val = -1;
-		return 0;
-	}
-
-	return 1;
-}
-
-bool Config::parse_json_str(const json_t *obj, const char *label, char *val, int len, const int opt)
-{
-	val[0] = '\0';
-	json_t *item = json_find_first_label(obj, label);
-
-	if (!(item && item->child)) {
-		if (!opt)
-			warning("Label <%s> not found in fabric configuration file", label);
-		return 0;
-	}
-
-	if (item->child->type == JSON_STRING) {
-		strncpy(val, item->child->text, len);
-		val[len - 1] = '\0';
-	} else {
-		warning("Label <%s> has bad type %d in fabric configuration file", label, item->child->type);
-		return 0;
-	}
-
-	return 1;
-}
-
-void Config::parse_json(json_t *root)
-{
-	uint32_t val;
-	int errors = 0;
-
-	const json_t *fab = json_find_first_label(root, "fabric");
-	if (!fab)
-		fatal("Label <fabric> not found in fabric configuration file");
-
-	if (!parse_json_num(fab->child, "x-size", &size[0], 0)) {
-		error("Label <x-size> not found in fabric configuration file");
-		errors++;
-	}
-
-	if (!parse_json_num(fab->child, "y-size", &size[1], 0)) {
-		error("Label <y-size> not found in fabric configuration file");
-		errors++;
-	}
-
-	if (!parse_json_num(fab->child, "z-size", &size[2], 0)) {
-		error("Label <z-size> not found in fabric configuration file");
-		errors++;
-	}
-
-	const json_t *list = json_find_first_label(fab->child, "nodes");
-	if (!(list && list->child && list->child->type == JSON_ARRAY))
-		fatal("Label <nodes> not found in fabric configuration file");
-
-	const json_t *obj;
-	for (nnodes = 0, obj = list->child->child; obj; obj = obj->next)
-		nnodes++;
-
-	nodes = (struct node *)zalloc(nnodes * sizeof(*nodes));
-	xassert(nodes);
-
-	int i;
-	for (i = 0, obj = list->child->child; obj; obj = obj->next, i++) {
-		nodes[i].id = i;
-
-		parse_json_num(obj, "uuid", &nodes[i].uuid, 1); /* Optional */
-		if (!parse_json_num(obj, "sci", &nodes[i].position, 0)) {
-			error("Label <sci> not found in fabric configuration file");
-			errors++;
-		}
-
-		if (parse_json_num(obj, "partition", &nodes[i].partition, 1))
-			assertf(nodes[i].partition, "Partition 0 is invalid");
-		else
-			nodes[i].partition = 0;
-
-		if (!parse_json_str(obj, "hostname", nodes[i].hostname, sizeof(nodes[i].hostname), 0)) {
-			error("Label <hostname> not found in fabric configuration file");
-			errors++;
-		}
-
-		/* Optional MAC address */
-		char mac[18];
-		if (parse_json_str(obj, "mac", mac, sizeof(mac), 1)) {
-			unsigned j = 0;
-
-			char *token = strtok(mac, ":");
-			while (token && j < sizeof(nodes[i].mac)) {
-				nodes[i].mac[j++] = strtoul(token, NULL, 16);
-				token = strtok(NULL, ":");
-			}
-		}
-
-		if (parse_json_bool(obj, "devices", &val, 1))
-			nodes[i].devices = val;
-
-		if (parse_json_bool(obj, "master", &val, 1))
-			nodes[i].master = val;
-	}
-
-	if (errors)
-		fatal("%d errors found in fabric configuration file", errors);
-}
-
 Config::Config(void)
 {
-	size[0] = 1;
-	size[1] = 1;
-	size[2] = 1;
-
 	nnodes = 1;
-	nodes = (struct node *)zalloc(sizeof(*nodes));
-	xassert(nodes);
 
-	nodes->uuid = ::local_node->numachip->uuid;
-	nodes->position = 0;
-	nodes->partition = 0;
-	nodes->master = 1;
-	nodes->id = 0;
-	strcpy(nodes->hostname, "self");
+	nodes[0].partition = 0;
+	nodes[0].master = 1;
+	nodes[0].id = 0;
+	strcpy(prefix, "self");
 
-	local_node = nodes;
+	local_node = &nodes[0];
 }
 
 struct Config::node *Config::find(const sci_t id)
@@ -226,35 +50,126 @@ struct Config::node *Config::find(const sci_t id)
 	fatal("Failed to find %03x in configuration", id);
 }
 
+bool Config::parse_blank(const char *data)
+{
+	return *data == '#' || *data == '\n' || *data == '\0';
+}
+
+bool Config::parse_prefix(const char *data)
+{
+	return sscanf(data, "prefix=%s\n", prefix);
+}
+
+bool Config::parse_partition(const char *data)
+{
+	char part[32];
+	char unified[8];
+	int ret = sscanf(data, "label=%s unified=%s\n", part, unified);
+	if (ret == 1)
+		fatal("Partition line missing 'unified=<true|false>' argument");
+
+	return ret;
+}
+
+bool Config::parse_node(char const *data)
+{
+	nodeid_t suffix;
+	char mac[32];
+	unsigned partition;
+	char ports[32];
+
+	int ret = sscanf(data, "suffix=%u mac=%s partition=%u ports=%s", &suffix, mac, &partition, ports);
+	if (ret > 0 && ret < 4)
+		fatal("Malformed config file node line; syntax is eg 'suffix=01 mac=0025905a7810 partition=1 ports=02A,03A,04A' but only %d parsed", ret);
+
+	nodes[nnodes].id = suffix - 1;
+
+	// parse MAC address
+	for (unsigned i = 0; i < 6; i++) {
+		nodes[nnodes].mac[i] = strtoul(&mac[i*3], NULL, 16);
+		if (i < 5 && mac[i*3+2] != ':')
+			fatal("MAC address separator should be ':' not '%c'", mac[i*3+2]);
+	}
+
+	char *p = ports;
+	unsigned q = 1;
+
+	// parse ports
+	while (1) {
+		if (*p == ',') {
+			p++;
+			q++;
+			continue;
+		}
+
+		char *end;
+		unsigned rnode = strtoul(p, &end, 10);
+		if (end == p)
+			break;
+
+		p = end; // move to suffix
+		unsigned port = *p - 'A' + 1;
+		xassert(port <= 6);
+		p++; // move to next char
+
+		rnode--; // array starts from 0, not 1
+		nodes[nnodes].neigh[q] = {(nodeid_t)rnode, (xbarid_t)port};
+
+		// setup the reverse of the connection
+		nodes[rnode].neigh[port] = {(nodeid_t)nnodes, (xbarid_t)q};
+	}
+
+	nodes[nnodes].partition = partition;
+	nodes[nnodes].master = nnodes == 0; // FIXME
+	nnodes++;
+
+	return !!ret;
+}
+
+void Config::parse(const char *pos)
+{
+	printf(" parsing:\n");
+
+	while (1) {
+		char *eol = strchr(pos, '\n');
+		if (!eol)
+			break;
+
+		// parse
+		if (!parse_blank(pos) && !parse_prefix(pos) && !parse_partition(pos) && !parse_node(pos))
+			fatal("unexpected line in config file:\n%s<END>", pos);
+
+		pos = eol + 1;
+	}
+
+	printf("done\n");
+}
+
 Config::Config(const char *filename)
 {
+	// mark all ports as unused
+	for (unsigned n = 0; n < MAX_NODE; n++)
+		for (unsigned p = 0; p < XBAR_PORTS; p++)
+			nodes[n].neigh[p] = {NODE_NONE, XBARID_NONE};
+
 	size_t len;
 	printf("Config %s", filename);
-	const uint8_t *data = os->read_file(filename, &len);
+	const char *data = os->read_file(filename, &len);
 	assertf(data && len > 0, "Failed to open file");
 
-#ifdef DEBUG
 	if (options->debug.config)
 		printf("content:\n%s", data);
-#endif
 
-	json_t *root = NULL;
-	enum json_error err = json_parse_document(&root, (const char *)data);
-	assertf(err == JSON_OK, "Fabric configuration file malformed (%s)", json_errors[err]);
-
-	parse_json(root);
+	parse(data);
 	lfree((char *)data);
 
 	if (options->debug.config) {
-		printf("; geometry %dx%xx%d\n", size[0], size[1], size[2]);
+		printf("\n");
 
 		for (unsigned i = 0; i < nnodes; i++) {
-			printf("Node %u: hostname %s, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
-			  i, nodes[i].hostname, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
+			printf("Node %u: hostname %s-%02u, MAC %02x:%02x:%02x:%02x:%02x:%02x, ",
+			  i, prefix, nodes[i].id, nodes[i].mac[0], nodes[i].mac[1], nodes[i].mac[2],
 			  nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5]);
-
-			if (nodes[i].uuid != 0xffffffff)
-				printf("UUID %08X, ", nodes[i].uuid);
 
 			printf("%03x, ", nodes[i].id);
 			if (nodes[i].partition)
@@ -264,27 +179,11 @@ Config::Config(const char *filename)
 		}
 	}
 
-	/* Locate UUID or hostname */
+	// find local MAC address
 	for (unsigned i = 0; i < nnodes; i++) {
-#ifdef FIXME /* Uncomment when Numachip EEPROM has UUID */
-		if (local_node->numachip->uuid == nodes[i].uuid) {
-			if (options->debug.config)
-				printf("UUID matches node %u", i);
-			node = &nodes[i];
-			break;
-		}
-#endif
-
 		if (!memcmp(os->mac, nodes[i].mac, sizeof(os->mac))) {
 			if (options->debug.config)
 				printf("MAC matches node %u", i);
-			local_node = &nodes[i];
-			break;
-		}
-
-		if (!strcmp(os->hostname, nodes[i].hostname)) {
-			if (options->debug.config)
-				printf("Hostname matches node %u", i);
 			local_node = &nodes[i];
 			break;
 		}

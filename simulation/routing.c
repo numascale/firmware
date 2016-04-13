@@ -27,18 +27,24 @@ int main(int argc, char *argv[])
 {
 	Router r(4);
 
-	// LC0 is XA, ...
-	r.neigh[0x000][0] = 0x001;
-	r.neigh[0x000][1] = 0x002;
-	r.neigh[0x001][0] = 0x003;
-	r.neigh[0x001][1] = 0x000;
-	r.neigh[0x002][0] = 0x000;
-	r.neigh[0x002][1] = 0x003;
-	r.neigh[0x003][0] = 0x002;
-	r.neigh[0x003][1] = 0x001;
+//          snode  xbarid dnode  xbarid
+	r.neigh[0x000][1] = {0x001, 1};
+	r.neigh[0x000][2] = {0x002, 1};
+	r.neigh[0x000][3] = {0x003, 1};
+
+	r.neigh[0x001][1] = {0x000, 1};
+	r.neigh[0x001][2] = {0x002, 2};
+	r.neigh[0x001][3] = {0x003, 2};
+
+	r.neigh[0x002][1] = {0x000, 2};
+	r.neigh[0x002][2] = {0x001, 2};
+	r.neigh[0x002][3] = {0x003, 3};
+
+	r.neigh[0x003][1] = {0x000, 3};
+	r.neigh[0x003][2] = {0x001, 3};
+	r.neigh[0x003][3] = {0x002, 3};
 
 	r.run();
-	r.dump();
 
 	return 0;
 }

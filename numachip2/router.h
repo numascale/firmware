@@ -17,48 +17,40 @@
 
 #pragma once
 
-//#include "../library/base.h"
+#include "../library/base.h"
+
 #include <stdint.h>
 #include <assert.h>
 
 #define HOP_COST 10
-#define LC_BITS  3
-#define LCS      6
-#define MAX_NODE 64
 #define MAX_ROUTE (MAX_NODE / 2) // safe estimate
-#define NODE_NONE ((lc_t)~0U)
 
-typedef uint8_t nodeid_t;
-typedef uint8_t lc_t;
-struct deps {
-	bool table[MAX_NODE][LCS][MAX_NODE][LCS];
-};
-typedef struct deps deps_t;
+// NOTE: congestion is modelled at the link controller send buffer
+
+typedef struct {
+	bool table[MAX_NODE][XBAR_PORTS][MAX_NODE][XBAR_PORTS];
+} deps_t;
 
 class Router {
 	// fabric state
 	unsigned nodes;
 
 	// built-up state
-	unsigned usage[MAX_NODE][LCS];
-	//       < dest node   >< depends on  >
-//	bool deps[MAX_NODE][LCS][MAX_NODE][LCS];
+	unsigned usage[MAX_NODE][XBAR_PORTS];
 	deps_t deps;
-	lc_t table[MAX_NODE][LCS][MAX_NODE];
 
 	// per-route state
-	lc_t route[MAX_ROUTE];
+	xbarid_t route[MAX_ROUTE];
 	struct {
-		lc_t route[MAX_ROUTE];
+		xbarid_t route[MAX_ROUTE];
 		unsigned hops, usage;
-//		bool deps[MAX_NODE][LCS][MAX_NODE][LCS];
 		deps_t deps;
 	} best;
 
-	void find(const nodeid_t src, const nodeid_t dst, const unsigned hops, const unsigned usage, deps_t _deps, const lc_t last_lc);
+	void find(const nodeid_t src, const nodeid_t dst, const unsigned hops, const unsigned usage, deps_t _deps, const xbarid_t last_xbarid);
 	void update(const nodeid_t src, const nodeid_t dst);
 public:
-	nodeid_t neigh[MAX_NODE][LCS]; // defined by wiring
+	xbarid_t routes[MAX_NODE][XBAR_PORTS][MAX_NODE]; // built-up state
 
 	Router(const unsigned _nodes);
 	void run();

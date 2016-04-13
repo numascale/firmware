@@ -17,33 +17,31 @@
 
 #pragma once
 
-#include "../json-1.6/src/json.h"
 #include "../library/base.h"
 
 class Config {
 public:
 	struct node {
-		uint32_t uuid;
-		uint32_t position; // used only for routing
-		uint32_t partition;
-		char hostname[32];
-		uint16_t id;
+		sci_t id;
 		uint8_t mac[6];
+		dest_t neigh[XBAR_PORTS]; // defined by wiring config
+		uint8_t partition;
 		bool master;
 		bool seen;
 		bool added;
-		bool devices;
 	};
 private:
 	struct node *find(const sci_t sci) nonnull;
-	bool parse_json_bool(const json_t *obj, const char *label, uint32_t *val, const bool opt) nonnull;
-	bool parse_json_num(const json_t *obj, const char *label, uint32_t *val, const int opt) nonnull;
-	bool parse_json_str(const json_t *obj, const char *label, char *val, const int len, const int opt) nonnull;
-	void parse_json(json_t *root) nonnull;
+	bool parse_blank(const char *data);
+	bool parse_prefix(const char *data);
+	bool parse_partition(const char *data);
+	bool parse_node(char const *data);
+	void parse(const char *pos);
 public:
-	uint32_t size[3];
+	char prefix[16];
 	unsigned nnodes;
-	struct node *local_node, *master, *nodes;
+	struct node nodes[MAX_NODE];
+	struct node *local_node, *master;
 
 	explicit Config();
 	explicit Config(const char *filename);
