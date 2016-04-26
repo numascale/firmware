@@ -253,7 +253,7 @@ static void setup_info(void)
 			}
 		}
 
-		if (!config->local_node->partition)
+		if (!config->partitions[config->local_node->partition].unified)
 			infop->next = 0xfff;
 		else {
 			cur = nodes[n]->config;
@@ -840,8 +840,8 @@ static void finished(const char *label)
 	uint64_t msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
 
-	if (config->local_node->partition)
-		printf("Partition %u unification", config->local_node->partition);
+	if (config->partitions[config->local_node->partition].unified)
+		printf("Partition %u unification", config->local_node->partition + 1);
 	else
 		printf("Observer setup");
 
@@ -1247,7 +1247,7 @@ int main(const int argc, char *const argv[])
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
-		finished(options->next_label);
+		finished(config->partitions[config->local_node->partition].label);
 	}
 
 	// initialize SPI/SPD, DRAM, NODEID etc
@@ -1289,7 +1289,7 @@ int main(const int argc, char *const argv[])
 		halt();
 	}
 
-	if (config->local_node->partition) {
+	if (config->partitions[config->local_node->partition].unified) {
 		for (unsigned n = 0; n < config->nnodes; n++)
 			if (config->nodes[n].partition == config->local_node->partition)
 				nnodes++;
@@ -1300,14 +1300,14 @@ int main(const int argc, char *const argv[])
 	xassert(nodes);
 	nodes[0] = local_node;
 
-	if (!config->local_node->partition) {
+	if (!config->partitions[config->local_node->partition].unified) {
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			if (options->tracing)
 				e820->add((*nb)->trace_base, (*nb)->trace_limit - (*nb)->trace_base + 1, E820::RESERVED);
 
 		setup_cores_observer();
 		setup_info();
-		finished(options->observer_label ? options->observer_label : options->next_label);
+		finished(config->partitions[config->local_node->partition].label);
 	}
 
 	// slaves
@@ -1414,5 +1414,5 @@ int main(const int argc, char *const argv[])
 	if (!options->fastboot)
 		test_cores();
 //	test_map();
-	finished(options->next_label);
+	finished(config->partitions[config->local_node->partition].label);
 }

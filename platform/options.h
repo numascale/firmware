@@ -25,7 +25,6 @@ class Options {
 	static void parse_int64(const char *val, void *intp);
 	static void parse_flags(const char *val, void *flags);
 public:
-	const char *next_label, *observer_label;
 	const char *config_filename, *flash;
 	bool ht_slowmode;
 	bool init_only;

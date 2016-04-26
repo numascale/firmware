@@ -140,15 +140,13 @@ void Options::parse_flags(const char *val, void *data)
 	}
 }
 
-Options::Options(const int argc, char *const argv[]): next_label("menu.c32"), config_filename("nc-config/fabric.json"),
+Options::Options(const int argc, char *const argv[]): config_filename("fabric.txt"),
 	ht_slowmode(0), boot_wait(0), handover_acpi(0),
 	fastboot(0), remote_io(1), dimmtest(2), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 
 	static const struct optargs list[] = {
-		{"next-label",	    &Options::parse_string, &next_label},      // next PXELINUX label to boot after loader
-		{"observer-label",  &Options::parse_string, &observer_label},  // next PXELINUX label to boot after loader for observers
 		{"ht.slowmode",     &Options::parse_bool,   &ht_slowmode},     // enforce 200MHz 8-bit HT link
 		{"init-only",       &Options::parse_bool,   &init_only},       // load next-label after adding NumaChip to coherent fabric
 		{"wait",            &Options::parse_bool,   &boot_wait},       // wait for keypress before loading next-label

@@ -65,8 +65,16 @@ bool Config::parse_partition(const char *data)
 	char part[32];
 	char unified[8];
 	int ret = sscanf(data, "label=%s unified=%s\n", part, unified);
+	if (!ret)
+		return;
+
 	if (ret == 1)
 		fatal("Partition line missing 'unified=<true|false>' argument");
+
+	xassert(ret == 2);
+	strcpy(partitions[npartitions].label, part);
+	partitions[npartitions].unified = !strcmp(unified, "true");
+	npartitions++;
 
 	return ret;
 }
@@ -119,7 +127,7 @@ bool Config::parse_node(char const *data)
 		nodes[rnode].neigh[port] = {(nodeid_t)nnodes, (xbarid_t)q};
 	}
 
-	nodes[nnodes].partition = partition;
+	nodes[nnodes].partition = partition - 1; // starts from 1
 	nodes[nnodes].master = nnodes == 0; // FIXME
 	nnodes++;
 
@@ -128,8 +136,6 @@ bool Config::parse_node(char const *data)
 
 void Config::parse(const char *pos)
 {
-	printf(" parsing:\n");
-
 	while (1) {
 		char *eol = strchr(pos, '\n');
 		if (!eol)
@@ -141,8 +147,6 @@ void Config::parse(const char *pos)
 
 		pos = eol + 1;
 	}
-
-	printf("done\n");
 }
 
 Config::Config(const char *filename)
@@ -172,10 +176,7 @@ Config::Config(const char *filename)
 			  nodes[i].mac[3], nodes[i].mac[4], nodes[i].mac[5]);
 
 			printf("%03x, ", nodes[i].id);
-			if (nodes[i].partition)
-				printf("partition %u\n", nodes[i].partition);
-			else
-				printf("observer\n");
+			printf("partition %u (%sunified)\n", nodes[i].partition, partitions[nodes[i].partition].unified ? "" : "non-");
 		}
 	}
 

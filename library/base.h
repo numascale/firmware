@@ -49,6 +49,7 @@
 #define SCI_LOCAL 0xfff
 #define XBAR_PORTS 7
 #define MAX_NODE 64
+#define MAX_PARTITIONS 16
 #define NODE_NONE ((nodeid_t)~0U)
 #define XBARID_NONE  ((xbarid_t)~0U)
 #define XBARID_BITS  3

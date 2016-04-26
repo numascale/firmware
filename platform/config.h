@@ -30,6 +30,10 @@ public:
 		bool seen;
 		bool added;
 	};
+	struct partition_s {
+		char label[32];
+		bool unified;
+	};
 private:
 	struct node *find(const sci_t sci) nonnull;
 	bool parse_blank(const char *data);
@@ -42,6 +46,9 @@ public:
 	unsigned nnodes;
 	struct node nodes[MAX_NODE];
 	struct node *local_node, *master;
+
+	unsigned npartitions;
+	struct partition_s partitions[MAX_PARTITIONS];
 
 	explicit Config();
 	explicit Config(const char *filename);
