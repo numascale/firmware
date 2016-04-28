@@ -767,7 +767,7 @@ static void acpi_tables(void)
 							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
 					} else {
 						xassert(router->dist[snode - nodes][dnode - nodes]);
-						dist = 80 + router->dist[snode - nodes][dnode - nodes] * 20;
+						dist = 80 + (router->dist[snode - nodes][dnode - nodes] + router->dist[dnode - nodes][snode - nodes]) * 10;
 					}
 
 					if (options->debug.acpi)
