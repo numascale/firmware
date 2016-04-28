@@ -122,12 +122,12 @@ bool Config::parse_node(char const *data)
 
 		rnode--; // array starts from 0, not 1
 		nodes[nnodes].neigh[q] = {(nodeid_t)rnode, (xbarid_t)port};
-		nodes[nnodes].portmask |= 1 << (port - 1);
+		nodes[nnodes].portmask |= 1 << (q - 1);
 
 		// setup the reverse of the connection
 		nodes[rnode].neigh[port] = {(nodeid_t)nnodes, (xbarid_t)q};
-		nodes[rnode].portmask |= 1 << (q - 1);
-   }
+		nodes[rnode].portmask |= 1 << (port - 1);
+	}
 
 	nodes[nnodes].partition = partition - 1; // starts from 1
 	nodes[nnodes].master = nnodes == 0; // FIXME
