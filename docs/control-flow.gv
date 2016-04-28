@@ -1,0 +1,89 @@
+digraph {
+	graph [fontname="sans"];
+	node [shape=rectangle, fontname="sans", style=filled, fillcolor="yellow"];
+	edge [fontname="sans", color=blue];
+
+	subgraph cluster_0 {
+		label="host BIOS";
+		style=filled;
+		color=invis;
+		fillcolor="0.9 0.05 0.98";
+
+		"BSC init" ->
+		"HT discovery, routing, setup" ->
+		"memory controller init" ->
+		"memory map setup, routing" ->
+		"PCI discovery, setup" ->
+		"ACPI, legacy table generation" ->
+		"PXE chainload";
+	}
+
+	subgraph cluster_1 {
+		label="numconnect firmware entry";
+		style=filled;
+		color=invis;
+		fillcolor="0.6 0.05 0.98";
+
+		"replace e820 memory handler" ->
+		"load options, topology from PXE" ->
+		"scan HT for unrouted coherent links" ->
+		"setup HT link params" ->
+		"parse SPI EEPROM" ->
+		"flash FPGA image" ->
+		"set fabric ID" ->
+		"read SPD, setup DRAM partitions, test, zero" ->
+		"enable fabric phys, test lock" ->
+		"load protocol engine ucode, start" ->
+		"network barrier";
+
+		"load protocol engine ucode, start" -> "manufacture test";
+		"parse SPI EEPROM" -> "set fabric ID";
+	}
+
+	subgraph cluster_2 {
+		style=filled;
+		color=invis;
+		fillcolor="0.6 0.05 0.98";
+
+		"USB, AHCI, ACPI, NIC stack, SMI, XT-PIC handover" ->
+		"PCI detach" ->
+		"disable cache";
+	}
+
+	subgraph cluster_3 {
+		style=filled;
+		color=invis;
+		fillcolor="0.6 0.05 0.98";
+
+		"add, wait for slave servers" ->
+		"scan local,remote opteron DRAM" ->
+		"scan, reallocate slave PCI resources" ->
+		"program DRAM, IO, MMIO windows on Opterons" ->
+		"route DRAM, IO, MMIO address space on numachip" ->
+		"zero non-BSC DRAM via controllers" ->
+		"setup MMIO info table" ->
+		"boot non-BSC cores into setup code" ->
+		"generate/append MCFG, APIC, SRAT, SLIT ACPI tables" ->
+		"emit SSDT bytecode for PCI trees" ->
+		"start protocol tracing to DRAM" ->
+		"boot non-BSC cores into random address tester" ->
+		"halt non-BSC cores";
+
+		"emit SSDT bytecode for PCI trees" ->
+		"boot non-BSC cores into random address tester";
+	}
+
+	"S0 transition" -> "BSC init";
+	"PXE chainload" -> "replace e820 memory handler" [label="default"];
+	"PXE chainload" -> "OS boot" [label="selected by bootloader"];
+	"network barrier" -> "PXE chainload" [label="observer"];
+	"network barrier" -> "USB, AHCI, ACPI, NIC stack, SMI, XT-PIC handover" [label="slave"];
+	"halt non-BSC cores" -> "PXE chainload";
+	"network barrier" -> "add, wait for slave servers" [label="master"];
+	"manufacture test" -> "halt BSC";
+	"disable cache" -> "halt BSC";
+
+	"S0 transition" [shape=circle];
+	"OS boot" [shape=circle];
+	"halt BSC" [shape=circle];
+}
