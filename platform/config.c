@@ -217,9 +217,5 @@ Config::Config(const char *filename)
 		}
 	}
 
-	if (local_node->partition)
-		printf("; partition %u", local_node->partition);
-	else
-		printf("; observer");
-	printf("; %03x; %s\n", local_node->id, local_node->master ? "master" : "slave");
+	printf("; partition %u %sunified; %03x; %s\n", local_node->partition, partitions[local_node->partition].unified ? "" : "non-", local_node->id, local_node->master ? "master" : "slave");
 }
