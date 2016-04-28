@@ -66,7 +66,7 @@ bool Config::parse_partition(const char *data)
 	char unified[8];
 	int ret = sscanf(data, "label=%s unified=%s\n", part, unified);
 	if (!ret)
-		return;
+		return 0;
 
 	if (ret == 1)
 		fatal("Partition line missing 'unified=<true|false>' argument");
@@ -86,7 +86,7 @@ bool Config::parse_node(char const *data)
 	unsigned partition;
 	char ports[32];
 
-	int ret = sscanf(data, "suffix=%u mac=%s partition=%u ports=%s", &suffix, mac, &partition, ports);
+	int ret = sscanf(data, "suffix=%hhu mac=%s partition=%u ports=%s", &suffix, mac, &partition, ports);
 	if (ret > 0 && ret < 4)
 		fatal("Malformed config file node line; syntax is eg 'suffix=01 mac=0025905a7810 partition=1 ports=02A,03A,04A' but only %d parsed", ret);
 
