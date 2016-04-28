@@ -131,6 +131,7 @@ void Router::run()
 			printf("%03x->%03x: ", src, dst);
 			find(src, dst, 0, 0, deps, 0); // calculate optimal route
 			update(src, dst); // increment path usage
+			dist[src][dst] = best.hops; // used for ACPI SLIT
 		}
 	}
 

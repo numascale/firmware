@@ -51,8 +51,11 @@ class Router {
 	void update(const nodeid_t src, const nodeid_t dst);
 public:
 	xbarid_t routes[MAX_NODE][XBAR_PORTS][MAX_NODE]; // built-up state
+	uint8_t dist[MAX_NODE][MAX_NODE]; // used in ACPI SLIT table
 
 	Router(const unsigned _nodes);
 	void run();
 	void dump() const;
 };
+
+extern Router *router;

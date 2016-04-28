@@ -15,10 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Todo:
-- drop config->{local_node,master} in favour of {local_node,master}->config
-*/
-
+// FIXME: drop config->{local_node,master} in favour of {local_node,master}->config
 
 #include <string.h>
 #include <stdio.h>
@@ -49,6 +46,7 @@ extern "C" {
 #include "platform/pcialloc.h"
 #include "opteron/msrs.h"
 #include "numachip2/numachip.h"
+#include "numachip2/router.h"
 
 OS *os;
 Options *options;
@@ -58,6 +56,7 @@ Node *local_node;
 Node **nodes;
 ACPI *acpi;
 IPMI *ipmi;
+Router *router;
 char *asm_relocated;
 
 uint64_t dram_top;
@@ -764,8 +763,10 @@ static void acpi_tables(void)
 							dist = 10;
 						else
 							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
-					} else
-						dist = 160;
+					} else {
+						xassert(router->dist[snode - nodes][dnode - nodes]);
+						dist = 80 + router->dist[snode - nodes][dnode - nodes] * 20;
+					}
 
 					if (options->debug.acpi)
 						printf(" %3u", dist);
