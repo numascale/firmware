@@ -229,8 +229,10 @@ static void setup_info(void)
 	for (unsigned n = 0; n < nnodes; n++) {
 		infop = (struct numachip_info *)&info;
 		infop->self = nodes[n]->config->id;
-		infop->partition = nodes[n]->config->partition;
-		infop->master = local_node->config->partition ? config->master->id : 0xfff;
+
+		bool unified = config->partitions[nodes[n]->config->partition].unified;
+		infop->partition = unified ? nodes[n]->config->partition + 1 : 0;
+		infop->master = unified ? config->master->id : 0xfff;
 
 		struct Config::node *cur = nodes[n]->config;
 
