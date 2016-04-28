@@ -29,6 +29,7 @@ public:
 		bool master;
 		bool seen;
 		bool added;
+		uint8_t portmask; // bitmask of used ports for releasing reset
 	};
 	struct partition_s {
 		char label[32];

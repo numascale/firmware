@@ -33,18 +33,9 @@ void Numachip2::fabric_reset(void)
 	// ensure all links are in reset
 	uint32_t mask = 0x3f;
 	write32(HSS_PLLCTL, mask);
-	linkmask = read32(HSS_PLLCTL);
 
 	// bring configured links out of reset
-	mask &= ~15; // FIXME
-
-/*	for (unsigned i = 0; i < 3; i++) {
-		if (::config->size[i]) {
-			assertf(((linkmask >> (i * 2)) & 3) == 3, "Image doesn't support configured %c axis", 'X' + i);
-			mask &= ~(3 << (i * 2));
-		}
-	}*/
-
+	mask &= ~local_node->config->portmask;
 	write32(HSS_PLLCTL, mask);
 }
 
@@ -220,17 +211,15 @@ void Numachip2::fabric_routing(void)
 
 void Numachip2::fabric_init(void)
 {
+	// ensure built with LC5
 	uint32_t val = read32(HSS_PLLCTL);
+	xassert((val >> 16) == 0x0705);
 
-	for (unsigned index = 0; index < 6; index++) {
-		if (index > 2)
-			continue;
+	for (unsigned index = 0; index < 6; index++)
+		if (local_node->config->portmask & (1 << index))
+			lcs[nlcs++] = new LC5(*this, index);
 
-		xassert((val >> 16) == 0x0705);
-		lcs[nlcs++] = new LC5(*this, index);
-	}
-
-	// enable SIU CRC if LC5
+	// enable SIU CRC
 	val = read32(SIU_NODEID);
 	write32(SIU_NODEID, val | (1<<31));
 }
