@@ -117,6 +117,7 @@ Router::Router()
 	memset(routes, XBARID_NONE, sizeof(routes));
 	memset(usage, 0, sizeof(usage));
 	memset(&deps, 0, sizeof(deps));
+	memset(neigh, 0, sizeof(neigh));
 }
 
 void Router::run()
