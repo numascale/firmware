@@ -205,3 +205,5 @@ public:
 		}
 	}
 };
+
+extern unsigned nnodes;

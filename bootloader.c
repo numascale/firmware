@@ -1221,6 +1221,7 @@ int main(const int argc, char *const argv[])
 	e820 = new E820();
 	Opteron::prepare();
 	acpi = new ACPI();
+	router = new Router();
 
 	uint16_t reason = lib::pmio_read16(0x44);
 	if (reason & ~((1 << 2) | (1 << 6))) /* Mask out CF9 and keyboard reset */

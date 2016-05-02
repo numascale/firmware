@@ -17,11 +17,10 @@
 
 #include "router.h"
 #include "../library/base.h"
-#include "../platform/config.h"
 #include <stdio.h>
 #include <string.h>
 
-static bool debug = 0;
+static bool debug;
 
 void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, const unsigned _usage, deps_t _deps, const xbarid_t last_xbarid)
 {
@@ -33,7 +32,7 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 	}
 
 	// no room
-	if (hops > nodes)
+	if (hops > nnodes)
 		return;
 
 	if (hops > best.hops) {
@@ -59,7 +58,7 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 	}
 
 	for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++) {
-		dest_t next = ::config->nodes[pos].neigh[xbarid];
+		dest_t next = neigh[pos][xbarid];
 		if (next.nodeid == NODE_NONE)
 			continue;
 
@@ -103,8 +102,8 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 		if (xbarid == 0)
 			break;
 
-		xassert(hop < nodes);
-		dest_t next = ::config->nodes[pos].neigh[xbarid];
+		xassert(hop < nnodes);
+		dest_t next = neigh[pos][xbarid];
 		pos = next.nodeid;
 		xbarid = next.xbarid;
 	};
@@ -113,7 +112,7 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 	printf("\n");
 }
 
-Router::Router(const unsigned _nodes): nodes(_nodes)
+Router::Router()
 {
 	memset(routes, XBARID_NONE, sizeof(routes));
 	memset(usage, 0, sizeof(usage));
@@ -123,8 +122,8 @@ Router::Router(const unsigned _nodes): nodes(_nodes)
 void Router::run()
 {
 	// perform routing for all nodes; only write local tables
-	for (nodeid_t src = 0; src < nodes; src++) {
-		for (nodeid_t dst = 0; dst < nodes; dst++) {
+	for (nodeid_t src = 0; src < nnodes; src++) {
+		for (nodeid_t dst = 0; dst < nnodes; dst++) {
 			best.hops = ~0U;
 			best.usage = ~0U;
 
@@ -145,7 +144,7 @@ void Router::dump() const
 		printf(" %3x", xbarid);
 	printf("\n");
 
-	for (nodeid_t node = 0; node < nodes; node++) {
+	for (nodeid_t node = 0; node < nnodes; node++) {
 		printf("  %03x:", node);
 		for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
 			printf(" %3x", usage[node][xbarid]);

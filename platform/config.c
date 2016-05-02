@@ -19,6 +19,7 @@
 
 #include "../library/base.h"
 #include "../platform/os.h"
+#include "../numachip2/router.h"
 #include "../node.h"
 #include "options.h"
 #include "config.h"
@@ -121,11 +122,11 @@ bool Config::parse_node(char const *data)
 		p++; // move to next char
 
 		rnode--; // array starts from 0, not 1
-		nodes[nnodes].neigh[q] = {(nodeid_t)rnode, (xbarid_t)port};
+		router->neigh[nnodes][q] = {(nodeid_t)rnode, (xbarid_t)port};
 		nodes[nnodes].portmask |= 1 << (q - 1);
 
 		// setup the reverse of the connection
-		nodes[rnode].neigh[port] = {(nodeid_t)nnodes, (xbarid_t)q};
+		router->neigh[rnode][port] = {(nodeid_t)nnodes, (xbarid_t)q};
 		nodes[rnode].portmask |= 1 << (port - 1);
 	}
 
@@ -156,7 +157,7 @@ Config::Config(const char *filename)
 	// mark all ports as unused
 	for (unsigned n = 0; n < MAX_NODE; n++)
 		for (unsigned p = 0; p < XBAR_PORTS; p++)
-			nodes[n].neigh[p] = {NODE_NONE, XBARID_NONE};
+			router->neigh[n][p] = {NODE_NONE, XBARID_NONE};
 
 	size_t len;
 	printf("Config %s", filename);

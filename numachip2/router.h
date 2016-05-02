@@ -32,9 +32,6 @@ typedef struct {
 } deps_t;
 
 class Router {
-	// fabric state
-	unsigned nodes;
-
 	// built-up state
 	unsigned usage[MAX_NODE][XBAR_PORTS];
 	deps_t deps;
@@ -50,10 +47,11 @@ class Router {
 	void find(const nodeid_t src, const nodeid_t dst, const unsigned hops, const unsigned usage, deps_t _deps, const xbarid_t last_xbarid);
 	void update(const nodeid_t src, const nodeid_t dst);
 public:
+	dest_t neigh[MAX_NODE][XBAR_PORTS]; 	// fabric state
 	xbarid_t routes[MAX_NODE][XBAR_PORTS][MAX_NODE]; // built-up state
 	uint8_t dist[MAX_NODE][MAX_NODE]; // used in ACPI SLIT table
 
-	Router(const unsigned _nodes);
+	Router();
 	void run();
 	void dump() const;
 };

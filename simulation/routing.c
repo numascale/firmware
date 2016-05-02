@@ -16,35 +16,32 @@
  */
 
 #include "../numachip2/router.h"
-#include "../platform/os.h"
-#include "../platform/config.h"
-#include "../platform/options.h"
-#include "../platform/e820.h"
-#include "../node.h"
-#include <string.h>
+
+unsigned nnodes = 4;
+Router *router;
 
 int main(int argc, char *argv[])
 {
-	Router r(4);
+	router = new Router();
 
-//          snode  xbarid dnode  xbarid
-	r.neigh[0x000][1] = {0x001, 1};
-	r.neigh[0x000][2] = {0x002, 1};
-	r.neigh[0x000][3] = {0x003, 1};
+	router->neigh[0x000][1] = {0x001, 1};
+	router->neigh[0x000][2] = {0x002, 1};
+	router->neigh[0x000][3] = {0x003, 1};
 
-	r.neigh[0x001][1] = {0x000, 1};
-	r.neigh[0x001][2] = {0x002, 2};
-	r.neigh[0x001][3] = {0x003, 2};
+	router->neigh[0x001][1] = {0x000, 1};
+	router->neigh[0x001][2] = {0x002, 2};
+	router->neigh[0x001][3] = {0x003, 2};
 
-	r.neigh[0x002][1] = {0x000, 2};
-	r.neigh[0x002][2] = {0x001, 2};
-	r.neigh[0x002][3] = {0x003, 3};
+	router->neigh[0x002][1] = {0x000, 2};
+	router->neigh[0x002][2] = {0x001, 2};
+	router->neigh[0x002][3] = {0x003, 3};
 
-	r.neigh[0x003][1] = {0x000, 3};
-	r.neigh[0x003][2] = {0x001, 3};
-	r.neigh[0x003][3] = {0x002, 3};
+	router->neigh[0x003][1] = {0x000, 3};
+	router->neigh[0x003][2] = {0x001, 3};
+	router->neigh[0x003][3] = {0x002, 3};
 
-	r.run();
+	router->run();
+	delete router;
 
 	return 0;
 }

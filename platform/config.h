@@ -24,7 +24,6 @@ public:
 	struct node {
 		sci_t id;
 		uint8_t mac[6];
-		dest_t neigh[XBAR_PORTS]; // defined by wiring config
 		uint8_t partition;
 		bool master;
 		bool seen;
