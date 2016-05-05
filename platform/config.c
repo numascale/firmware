@@ -86,11 +86,13 @@ bool Config::parse_node(char const *data)
 	char mac[32];
 	unsigned partition;
 	char ports[32];
+	memset(ports, 0, sizeof(ports));
 
-	int ret = sscanf(data, "suffix=%hhu mac=%s partition=%u ports=%s", &suffix, mac, &partition, ports);
-	if (ret > 0 && ret < 4)
-		fatal("Malformed config file node line; syntax is eg 'suffix=01 mac=0025905a7810 partition=1 ports=02A,03A,04A' but only %d parsed", ret);
+	int ret = sscanf(data, "suffix=%hhu mac=%s partition=%u ports=%[A-F0-6, ]", &suffix, mac, &partition, ports);
+	if (ret > 0 && ret < 3) // ports arguments needs to be optional
+		fatal("Malformed config file node line; syntax is eg 'suffix=01 mac=0025905a7810 partition=1 ports= , ,02A,03A,04A' but only %d parsed\nInput is [%s]", ret, data);
 
+	xassert(suffix > 0 && suffix < 64);
 	nodes[nnodes].id = suffix - 1;
 
 	// parse MAC address
@@ -105,6 +107,12 @@ bool Config::parse_node(char const *data)
 
 	// parse ports
 	while (1) {
+		// skip whitespace
+		if (*p == ' ') {
+			p++;
+			continue;
+		}
+
 		if (*p == ',') {
 			p++;
 			q++;
@@ -128,6 +136,9 @@ bool Config::parse_node(char const *data)
 		// setup the reverse of the connection
 		router->neigh[rnode][port] = {(nodeid_t)nnodes, (xbarid_t)q};
 		nodes[rnode].portmask |= 1 << (port - 1);
+
+		if (options->debug.config)
+			printf(", %02u%c-%02u%c", nnodes+1, 'A'+q-1, rnode+1, 'A'+port-1);
 	}
 
 	nodes[nnodes].partition = partition - 1; // starts from 1
@@ -163,9 +174,6 @@ Config::Config(const char *filename)
 	printf("Config %s", filename);
 	const char *data = os->read_file(filename, &len);
 	assertf(data && len > 0, "Failed to open file");
-
-	if (options->debug.config)
-		printf("content:\n%s", data);
 
 	parse(data);
 	lfree((char *)data);

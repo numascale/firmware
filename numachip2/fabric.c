@@ -182,7 +182,7 @@ void Numachip2::fabric_routing(void)
 	memset(xbar_routes, 0xff, sizeof(xbar_routes));
 
 	printf("Routing:\n");
-	router->run();
+	router->run(::config->nnodes);
 
 	for (unsigned node = 0; node < ::config->nnodes; node++) {
 		uint8_t out = router->routes[config->id][0][::config->nodes[node].id];

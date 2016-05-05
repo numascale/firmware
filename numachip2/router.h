@@ -32,6 +32,8 @@ typedef struct {
 } deps_t;
 
 class Router {
+	unsigned nnodes;
+
 	// built-up state
 	unsigned usage[MAX_NODE][XBAR_PORTS];
 	deps_t deps;
@@ -52,7 +54,7 @@ public:
 	uint8_t dist[MAX_NODE][MAX_NODE]; // used in ACPI SLIT table
 
 	Router();
-	void run();
+	void run(const unsigned _nnodes);
 	void dump() const;
 };
 

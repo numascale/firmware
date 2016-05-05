@@ -120,8 +120,10 @@ Router::Router()
 	memset(neigh, 0, sizeof(neigh));
 }
 
-void Router::run()
+void Router::run(const unsigned _nnodes)
 {
+	nnodes = _nnodes;
+
 	// perform routing for all nodes; only write local tables
 	for (nodeid_t src = 0; src < nnodes; src++) {
 		for (nodeid_t dst = 0; dst < nnodes; dst++) {
