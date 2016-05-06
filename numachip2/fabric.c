@@ -163,14 +163,14 @@ bool Numachip2::fabric_train(void)
 	return 1;
 }
 
-// on LC 'in', route packets to SCI 'dest' via LC 'out'
-void Numachip2::xbar_route(const sci_t dst, const uint8_t out)
+// on SIU, route packets to SCI 'dest' via LC 'out'
+void Numachip2::siu_route(const sci_t dst, const uint8_t out)
 {
 	const unsigned regoffset = dst >> 4;
 	const unsigned bitoffset = dst & 0xf;
 
 	for (unsigned bit = 0; bit < lc_bits; bit++) {
-		uint16_t *ent = &xbar_routes[regoffset][bit];
+		uint16_t *ent = &siu_routes[regoffset][bit];
 		*ent &= ~(1 << bitoffset);
 		*ent |= ((out >> bit) & 1) << bitoffset;
 	}
@@ -179,20 +179,25 @@ void Numachip2::xbar_route(const sci_t dst, const uint8_t out)
 void Numachip2::fabric_routing(void)
 {
 	// default route is to link 7 to trap unexpected behaviour
-	memset(xbar_routes, 0xff, sizeof(xbar_routes));
+	memset(siu_routes, 0xff, sizeof(siu_routes));
 
 	printf("Routing:\n");
 	router->run(::config->nnodes);
 
 	for (unsigned node = 0; node < ::config->nnodes; node++) {
-		uint8_t out = router->routes[config->id][0][::config->nodes[node].id];
-		printf(" %03x:%u->%03x", config->id, out, ::config->nodes[node].id);
-		printf(" routes[%03x][0][%03x]=%u", config->id, ::config->nodes[node].id, out);
-		xassert(out != XBARID_NONE);
-		xbar_route(::config->nodes[node].id, out);
+		for (unsigned p = 0; p <= 6; p++) {
+			uint8_t out = router->routes[config->id][p][::config->nodes[node].id];
+			if (out == XBARID_NONE)
+				continue;
 
-		foreach_lc(lc)
-			(*lc)->add_route(::config->nodes[node].id, out);
+			printf(" routes[%03x][%u][%03x] via LC%u;", config->id, p, ::config->nodes[node].id, out);
+
+			if (p)
+				// FIXME: fix array access of LCs
+				lcs[p-1]->add_route(::config->nodes[node].id, out);
+			else
+				siu_route(::config->nodes[node].id, out);
+		}
 	}
 	printf("\n");
 
@@ -201,7 +206,7 @@ void Numachip2::fabric_routing(void)
 		write32(SIU_XBAR_CHUNK, chunk);
 		for (unsigned offset = 0; offset < lc_offsets; offset++)
 			for (unsigned bit = 0; bit < lc_bits; bit++)
-				write32(SIU_XBAR_TABLE + bit * SIU_XBAR_TABLE_SIZE + offset * 4, xbar_routes[(chunk<<4)+offset][bit]);
+				write32(SIU_XBAR_TABLE + bit * SIU_XBAR_TABLE_SIZE + offset * 4, siu_routes[(chunk<<4)+offset][bit]);
 	}
 
 	foreach_lc(lc)

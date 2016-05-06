@@ -94,40 +94,32 @@ void LC5::clear(void)
 	numachip.write32(EVENTSTAT + index * SIZE, 0xffffffff);
 }
 
-uint8_t LC5::route1(const sci_t src, const sci_t dst)
+// on LC, route packets to SCI 'dest' via LC 'out'
+void LC5::add_route(const sci_t dst, const uint8_t out)
 {
-	if (src == dst)
-		return 0;
+	const unsigned regoffset = dst >> 4;
+	const unsigned bitoffset = dst & 0xf;
 
-	uint8_t dim = 0;
-	sci_t src2 = src;
-	sci_t dst2 = dst;
-
-	while ((src2 ^ dst2) & ~0xf) {
-		dim++;
-		src2 >>= 4;
-		dst2 >>= 4;
+	for (unsigned bit = 0; bit < numachip.lc_bits; bit++) {
+		uint16_t *ent = &lc_routes[regoffset][bit];
+		*ent &= ~(1 << bitoffset);
+		*ent |= ((out >> bit) & 1) << bitoffset;
 	}
-	src2 &= 0xf;
-	dst2 &= 0xf;
-
-	xassert(dim < 3);
-	int out = dim * 2 + 1;
-	// 2QOS routing only on LC5 (otherwise we have credit loops)
-	out += (dst2 < src2) ? 1 : 0;
-	return out;
 }
 
 void LC5::commit(void)
 {
 	for (unsigned chunk = 0; chunk < numachip.lc_chunks; chunk++) {
 		numachip.write32(ROUTE_CHUNK + index * SIZE, chunk);
+
 		for (unsigned offset = 0; offset < numachip.lc_offsets; offset++)
 			for (unsigned bit = 0; bit < numachip.lc_bits; bit++)
-				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, numachip.xbar_routes[(chunk<<4)+offset][bit]);
+				numachip.write32(ROUTE_RAM + index * SIZE + bit * TABLE_SIZE + offset * 4, lc_routes[(chunk<<4)+offset][bit]);
 	}
 }
 
 LC5::LC5(Numachip2& _numachip, const uint8_t _index): LC(_numachip, _index)
 {
+	// default route is to link 7 to trap unexpected behaviour
+	memset(lc_routes, 0xff, sizeof(lc_routes));
 }

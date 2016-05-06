@@ -165,11 +165,6 @@ void Config::parse(const char *pos)
 
 Config::Config(const char *filename)
 {
-	// mark all ports as unused
-	for (unsigned n = 0; n < MAX_NODE; n++)
-		for (unsigned p = 0; p < XBAR_PORTS; p++)
-			router->neigh[n][p] = {NODE_NONE, XBARID_NONE};
-
 	size_t len;
 	printf("Config %s", filename);
 	const char *data = os->read_file(filename, &len);

@@ -36,8 +36,7 @@ public:
 	virtual uint64_t status(void) {return 0;};
 	virtual void check(void) {};
 	virtual void clear(void) {};
-	virtual uint8_t route1(const sci_t, const sci_t) {return 0;};
-	virtual void add_route(const sci_t, const uint8_t) {};
+	virtual void add_route(const sci_t, const uint8_t) = 0;
 	virtual void commit(void) {};
 };
 
@@ -83,7 +82,6 @@ public:
 	uint64_t status(void);
 	void check(void);
 	void clear(void);
-	uint8_t route1(const sci_t src, const sci_t dst);
 	void add_route(const sci_t dst, const uint8_t out);
 	void commit(void);
 	LC4(Numachip2 &_numachip, const uint8_t _index);
@@ -98,13 +96,14 @@ class LC5: public LC
 	static const reg_t LINKSTAT      = 0x28c4;
 	static const reg_t EVENTSTAT     = 0x28c8;
 	static const reg_t ERRORCNT      = 0x28cc;
+	uint16_t lc_routes[256][3];
 
 public:
 	bool is_up(void);
 	uint64_t status(void);
 	void check(void);
 	void clear(void);
-	uint8_t route1(const sci_t src, const sci_t dst);
+	void add_route(const sci_t dst, const uint8_t out);
 	void commit(void);
 	LC5(Numachip2 &_numachip, const uint8_t _index);
 };

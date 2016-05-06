@@ -117,12 +117,25 @@ Router::Router()
 	memset(routes, XBARID_NONE, sizeof(routes));
 	memset(usage, 0, sizeof(usage));
 	memset(&deps, 0, sizeof(deps));
-	memset(neigh, 0, sizeof(neigh));
+	memset(neigh, XBARID_NONE, sizeof(neigh));
 }
 
 void Router::run(const unsigned _nnodes)
 {
 	nnodes = _nnodes;
+
+	for (nodeid_t n = 0; n < nnodes; n++) {
+		printf("node %u:", n);
+
+		for (xbarid_t x = 1; x <= 6; x++) {
+			if (neigh[n][x].xbarid == XBARID_NONE)
+				printf("     ");
+			else
+				printf(" %02u%c", neigh[n][x].nodeid, 'A' + neigh[n][x].xbarid - 1);
+		}
+
+		printf("\n");
+	}
 
 	// perform routing for all nodes; only write local tables
 	for (nodeid_t src = 0; src < nnodes; src++) {

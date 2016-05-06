@@ -94,35 +94,6 @@ void LC4::clear(void)
 	numachip.write32(ELOG1 + index * SIZE, 0);
 }
 
-uint8_t LC4::route1(const sci_t src, const sci_t dst)
-{
-	if (src == dst)
-		return 0;
-
-	uint8_t dim = 0;
-	sci_t src2 = src;
-	sci_t dst2 = dst;
-
-	while ((src2 ^ dst2) & ~0xf) {
-		dim++;
-		src2 >>= 4;
-		dst2 >>= 4;
-	}
-	src2 &= 0xf;
-	dst2 &= 0xf;
-
-	xassert(dim < 3);
-	int out = dim * 2 + 1;
-	// Shortest path routing
-	int len = config->size[dim];
-	int forward = ((len - src2) + dst2) % len;
-	int backward = ((src2 + (len - dst2)) + len) % len;
-
-	out += (forward == backward) ? (src2 & 1) :
-	       (backward < forward) ? 1 : 0;
-	return out;
-}
-
 void LC4::add_route(const sci_t dst, const uint8_t out)
 {
 	// don't touch packets already on correct dim

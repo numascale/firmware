@@ -104,7 +104,7 @@ class Numachip2 {
 	void pe_init(void);
 
 	/* fabric.c */
-	void xbar_route(const sci_t sci, const uint8_t out);
+	void siu_route(const sci_t sci, const uint8_t out);
 	void fabric_init(void);
 	bool fabric_trained;
 public:
@@ -213,7 +213,7 @@ public:
 	const ht_t ht;
 	uint8_t linkmask;
 
-	uint16_t xbar_routes[256][3];
+	uint16_t siu_routes[256][3];
 	static const uint8_t lc_chunks = 4;
 	static const uint8_t lc_offsets = 16;
 	static const uint8_t lc_bits = 3;
