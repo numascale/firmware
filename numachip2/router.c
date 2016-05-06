@@ -65,7 +65,7 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 		// if route already defined, skip alternatives
 		// FIXME: move out of loop
 		if (routes[pos][last_xbarid][dst] != XBARID_NONE && xbarid != routes[pos][last_xbarid][dst]) {
-			printf("!");
+//			printf("!");
 			continue;
 		}
 

@@ -16,6 +16,7 @@
  */
 
 // FIXME: drop config->{local_node,master} in favour of {local_node,master}->config
+// FIXME: server add name should use id+1, not id
 
 #include <string.h>
 #include <stdio.h>
@@ -1325,7 +1326,7 @@ int main(const int argc, char *const argv[])
 //		lib::pmio_write8(0xba, 64); // FIXME: check?
 
 		// read from master after mapped
-		printf("Waiting for %s%02u", ::config->prefix, config->master->id);
+		printf("Waiting for %s%02u", ::config->prefix, config->master->id + 1);
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
