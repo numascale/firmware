@@ -17,30 +17,35 @@
 
 #include "../numachip2/router.h"
 
-unsigned nnodes = 4;
 Router *router;
 
 int main(int argc, char *argv[])
 {
 	router = new Router();
 
-	router->neigh[0x000][1] = {0x001, 1};
-	router->neigh[0x000][2] = {0x002, 1};
-	router->neigh[0x000][3] = {0x003, 1};
+	// X axis
+	router->neigh[0x000][1] = {0x001, 2};
+	router->neigh[0x001][2] = {0x000, 1};
+	router->neigh[0x000][2] = {0x001, 1};
+	router->neigh[0x001][1] = {0x000, 2};
 
-	router->neigh[0x001][1] = {0x000, 1};
-	router->neigh[0x001][2] = {0x002, 2};
-	router->neigh[0x001][3] = {0x003, 2};
+	router->neigh[0x002][1] = {0x003, 2};
+	router->neigh[0x003][2] = {0x002, 1};
+	router->neigh[0x002][2] = {0x003, 1};
+	router->neigh[0x003][1] = {0x002, 2};
 
-	router->neigh[0x002][1] = {0x000, 2};
-	router->neigh[0x002][2] = {0x001, 2};
-	router->neigh[0x002][3] = {0x003, 3};
+	// Y axis
+	router->neigh[0x000][3] = {0x002, 4};
+	router->neigh[0x002][4] = {0x000, 3};
+	router->neigh[0x000][4] = {0x002, 3};
+	router->neigh[0x002][3] = {0x000, 4};
 
-	router->neigh[0x003][1] = {0x000, 3};
-	router->neigh[0x003][2] = {0x001, 3};
-	router->neigh[0x003][3] = {0x002, 3};
+	router->neigh[0x001][3] = {0x003, 4};
+	router->neigh[0x003][4] = {0x001, 3};
+	router->neigh[0x001][4] = {0x003, 3};
+	router->neigh[0x003][3] = {0x001, 4};
 
-	router->run();
+	router->run(4);
 	delete router;
 
 	return 0;
