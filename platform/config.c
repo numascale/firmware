@@ -88,7 +88,7 @@ bool Config::parse_node(char const *data)
 	char ports[32];
 	memset(ports, 0, sizeof(ports));
 
-	int ret = sscanf(data, "suffix=%hhu mac=%s partition=%u ports=%[A-F0-6, ]", &suffix, mac, &partition, ports);
+	int ret = sscanf(data, "suffix=%hhu mac=%s partition=%u ports=%[A-F0-9, ]", &suffix, mac, &partition, ports);
 	if (ret > 0 && ret < 3) // ports arguments needs to be optional
 		fatal("Malformed config file node line; syntax is eg 'suffix=01 mac=0025905a7810 partition=1 ports= , ,02A,03A,04A' but only %d parsed\nInput is [%s]", ret, data);
 
