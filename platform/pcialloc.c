@@ -183,11 +183,13 @@ void Device::assign_pref()
 		for (BAR **bar = bars_io.elements; bar < bars_io.limit; bar++)
 			(*bar)->assign(0);
 
-		// set Interrupt Line register to 0 (unallocated)
-		lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0xff00);
-
-		// assign bridge windows
-		if (type == TypeBridge) {
+		if (type == TypeEndpoint) {
+			// the Nvidia GPU driver requires a non-zero interrupt to load
+			// set Interrupt Line register to 0 (unallocated)
+			if ((lib::mcfg_read32(node->config->id, bus, dev, fn, 0x0) & 0xffff) != 0x10de)
+				lib::mcfg_write32(node->config->id, bus, dev, fn, 0x3c, 0xff00);
+			// assign bridge windows
+		} else if (type == TypeBridge) {
 			// clear IO and upper IO registers
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x1c, 0x00ff);
 			lib::mcfg_write32(node->config->id, bus, dev, fn, 0x30, 0x0000ffff);
