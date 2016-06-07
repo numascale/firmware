@@ -36,7 +36,7 @@ public:
 	virtual uint64_t status(void) {return 0;};
 	virtual void check(void) {};
 	virtual void clear(void) {};
-	virtual void add_route(const sci_t, const uint8_t) = 0;
+	virtual void add_route(const sci_t, const uint8_t);
 	virtual void commit(void) {};
 };
 
