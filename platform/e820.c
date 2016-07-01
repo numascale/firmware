@@ -38,7 +38,7 @@ void E820::dump(void)
 {
 	uint64_t last_base = map->base, last_length = map->length;
 
-	for (int i = 0; i < *used; i++) {
+	for (unsigned i = 0; i < *used; i++) {
 		printf(" %011" PRIx64 ":%011" PRIx64 " (%011" PRIx64 ") %s\n",
 		  map[i].base, map[i].base + map[i].length, map[i].length, names[map[i].type]);
 
@@ -50,6 +50,15 @@ void E820::dump(void)
 			last_length = map[i].length;
 		}
 	}
+}
+
+bool E820::exists(const uint64_t base, const uint64_t length) const
+{
+	for (unsigned i = 0; i < *used; i++)
+		if (map[i].base == base && map[i].length == length)
+			return 1;
+
+	return 0;
 }
 
 struct e820entry *E820::position(const uint64_t addr)

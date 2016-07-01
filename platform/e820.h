@@ -52,6 +52,7 @@ public:
 
 	struct e820entry *position(const uint64_t base);
 	E820(void);
+	bool exists(const uint64_t base, const uint64_t length) const;
 	void dump(void);
 	void add(const uint64_t base, const uint64_t length, const uint32_t type);
 	uint64_t expand(const uint64_t type, const uint64_t size);

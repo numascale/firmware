@@ -177,7 +177,10 @@ bool OS::memmap_entry(uint64_t *base, uint64_t *length, uint64_t *type)
 
 	__intcall(0x15, &state, &state);
 	xassert(state.eax.l == STR_DW_N("SMAP"));
-	xassert(ent->length);
+
+	// detect if bootloader is called again
+	if (!ent->length)
+		fatal("Bootloader already executed; check boot configuration!");
 
 	*base = ent->base;
 	*length = ent->length;
