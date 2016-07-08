@@ -164,7 +164,7 @@ static void add(const Node &node)
 static void setup_gsm_early(void)
 {
 	for (unsigned n = 0; n < config->nnodes; n++) {
-		if (config->nodes[n].partition)
+		if (config->partitions[config->nodes[n].partition].unified)
 			continue;
 
 		// setup read-only map on observer
@@ -179,7 +179,7 @@ static void setup_gsm(void)
 {
 	printf("Setting up GSM to");
 	for (unsigned n = 0; n < config->nnodes; n++)
-		if (!config->nodes[n].partition)
+		if (!config->partitions[config->nodes[n].partition].unified)
 			printf(" %s", pr_node(config->nodes[n].id));
 
 	foreach_node(node) {
@@ -190,7 +190,7 @@ static void setup_gsm(void)
 
 		// setup ATT on observers for GSM
 		for (unsigned n = 0; n < config->nnodes; n++) {
-			if (config->nodes[n].partition)
+			if (config->partitions[config->nodes[n].partition].unified)
 				continue;
 
 			// We must probe first to find NumaChip HT node (it might be different from others)
