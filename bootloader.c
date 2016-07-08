@@ -619,6 +619,7 @@ static void acpi_tables(void)
 	uint16_t segment = 0;
 	foreach_node(node) {
 		struct acpi_mcfg ent;
+		memset(&ent, 0, sizeof(ent));
 		ent.address = Numachip2::MCFG_BASE | ((uint64_t)(*node)->config->id << 28ULL);
 		ent.pci_segment = segment++;
 		ent.start_bus_number = 0;
@@ -640,6 +641,7 @@ static void acpi_tables(void)
 		for (Opteron **nb = &(*node)->opterons[0]; nb < &(*node)->opterons[(*node)->nopterons]; nb++) {
 			for (unsigned m = 0; m < (*nb)->cores; m++) {
 				struct acpi_x2apic_apic ent;
+				memset(&ent, 0, sizeof(ent));
 				ent.type = 9;
 				ent.length = 16;
 				ent.reserved = 0;
@@ -676,6 +678,7 @@ static void acpi_tables(void)
 	uint32_t domain = 0;
 
 	struct acpi_mem_affinity ment;
+	memset(&ment, 0, sizeof(ment));
 	ment.type = 1;
 	ment.length = 40;
 	ment.reserved1 = 0;
@@ -716,6 +719,7 @@ static void acpi_tables(void)
 
 			for (unsigned m = 0; m < (*nb)->cores; m++) {
 				struct acpi_x2apic_affinity ent;
+				memset(&ent, 0, sizeof(ent));
 				ent.type = 2;
 				ent.length = 24;
 				ent.reserved1 = 0;
@@ -971,6 +975,7 @@ static void wait_for_slaves(void)
 
 	os->udp_open();
 
+	memset(&cmd, 0, sizeof(cmd));
 	cmd.sig = UDP_SIG;
 	cmd.state = CMD_STARTUP;
 	memcpy(cmd.mac, config->local_node->mac, 6);
@@ -1124,9 +1129,10 @@ static void wait_for_master(void)
 
 	os->udp_open();
 
+	memset(&rsp, 0, sizeof(rsp));
 	rsp.sig = UDP_SIG;
 	rsp.state = RSP_SLAVE_READY;
-	memcpy(rsp.mac, config->local_node->mac, 6);
+	memcpy(rsp.mac, config->local_node->mac, sizeof(config->local_node->mac));
 	rsp.sci = config->local_node->id;
 	rsp.tid = 0;
 
