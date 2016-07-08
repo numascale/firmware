@@ -18,6 +18,9 @@
 #pragma once
 
 #include "../library/base.h"
+#define NODEBUF "xxxxxxxxxxxxxxxxxxxxxxxx"
+
+#define pr_node(x) _pr_node(x, NODEBUF)
 
 class Config {
 public:
@@ -55,3 +58,8 @@ public:
 };
 
 extern Config *config;
+
+static inline const char *_pr_node(const sci_t id, const char *buf) {
+	snprintf((char *)buf, sizeof(NODEBUF), "%s%02u", config->prefix, id + 1);
+	return buf;
+}

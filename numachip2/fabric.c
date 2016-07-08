@@ -44,7 +44,7 @@ void Numachip2::fabric_check(void) const
 	uint32_t val = read32(SIU_EVENTSTAT);
 
 	if (val) {
-		warning("SIU on %s%02u has issues 0x%08x", ::config->prefix, config->id, val);
+		warning("SIU on %s has issues 0x%08x", pr_node(config->id), val);
 
 		if (val & (1ULL << 22)) printf(" RS master illegal packet\n");
 		if (val & (1ULL << 21)) printf(" CC master illegal packet\n");

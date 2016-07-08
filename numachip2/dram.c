@@ -29,10 +29,10 @@
 void Numachip2::dram_check(void) const
 {
 	uint32_t val = read32(MCTR_ECC_STATUS);
-	assertf(!(val & (1 << 1)), "Uncorrectable ECC issue occurred on Numachip at on %s%02u", ::config->prefix, config->id);
+	assertf(!(val & (1 << 1)), "Uncorrectable ECC issue occurred on Numachip at on %s", pr_node(config->id));
 
 	if (val & (1 << 0))
-		warning("Correctable ECC issue occurred on Numachip on %s%02u", ::config->prefix, config->id);
+		warning("Correctable ECC issue occurred on Numachip on %s", pr_node(config->id));
 }
 
 void Numachip2::dram_reset(void)

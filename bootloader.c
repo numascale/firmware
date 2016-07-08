@@ -93,8 +93,8 @@ static void scan(void)
 		(*node)->dram_end = dram_top - 1;
 
 		if (options->debug.maps)
-			printf("%03x dram_base=0x%" PRIx64 " dram_size=0x%" PRIx64 " dram_end=0x%" PRIx64 "\n",
-				(*node)->config->id, (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
+			printf("%s dram_base=0x%" PRIx64 " dram_size=0x%" PRIx64 " dram_end=0x%" PRIx64 "\n",
+				pr_node((*node)->config->id), (*node)->dram_base, (*node)->dram_size, (*node)->dram_end);
 	}
 }
 
@@ -180,12 +180,11 @@ static void setup_gsm(void)
 	printf("Setting up GSM to");
 	for (unsigned n = 0; n < config->nnodes; n++)
 		if (!config->nodes[n].partition)
-			printf(" %s%02u", ::config->prefix, config->nodes[n].id);
+			printf(" %s", pr_node(config->nodes[n].id));
 
 	foreach_node(node) {
 		uint64_t base = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_base;
 		uint64_t limit = (1ULL << Numachip2::GSM_SHIFT) + (*node)->dram_end;
-		sci_t dest = (*node)->config->id;
 
 		(*node)->numachip->write32(Numachip2::GSM_MASK, (1ULL << (Numachip2::GSM_SHIFT - 36)) - 1);
 
@@ -198,7 +197,7 @@ static void setup_gsm(void)
 			ht_t ht = Numachip2::probe(config->nodes[n].id);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\n%s%02u: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %03x", ::config->prefix, config->nodes[n].id, base, limit, dest);
+					printf("\n%s: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %s", pr_node(config->nodes[n].id), base, limit, pr_node((*node)->config->id));
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -212,8 +211,7 @@ static void setup_gsm(void)
 
 				for (uint64_t addr = base; addr < (limit + 1U); addr += 1ULL << Numachip2::SIU_ATT_SHIFT)
 					lib::mcfg_write32(config->nodes[n].id, 0, 24 + ht,
-							  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, dest);
-
+							  Numachip2::SIU_ATT_ENTRY >> 12, Numachip2::SIU_ATT_ENTRY & 0xfff, (*node)->config->id);
 			}
 		}
 	}
@@ -886,7 +884,7 @@ static void wait_status(void)
 			continue;
 
 		if (!config->nodes[n].seen)
-			printf(" %s%02u", ::config->prefix, config->nodes[n].id);
+			printf(" %s", pr_node(config->nodes[n].id));
 	}
 
 	printf("\n");
@@ -1051,14 +1049,14 @@ static void wait_for_slaves(void)
 						   (rsp->state == RSP_FABRIC_NOT_READY) ||
 						   (rsp->state == RSP_FABRIC_NOT_OK)) {
 						if (!config->nodes[n].seen) {
-							printf("%s%02u failed with %s; restarting synchronisation\n",
-							       ::config->prefix, config->nodes[n].id, node_state_name[rsp->state]);
+							printf("%s failed with %s; restarting synchronisation\n",
+							       pr_node(config->nodes[n].id), node_state_name[rsp->state]);
 							do_restart = 1;
 							config->nodes[n].seen = 1;
 						}
 					} else if (rsp->state == RSP_ERROR) {
 						char name[32];
-						snprintf(name, sizeof(name), "%s%02u", ::config->prefix, config->nodes[n].id);
+						snprintf(name, sizeof(name), "%s", pr_node(config->nodes[n].id));
 						error_remote(rsp->sci, name, ip, (char *)rsp + sizeof(struct state_bcast));
 					}
 					break;
@@ -1332,7 +1330,7 @@ int main(const int argc, char *const argv[])
 //		lib::pmio_write8(0xba, 64); // FIXME: check?
 
 		// read from master after mapped
-		printf("Waiting for %s%02u", ::config->prefix, config->master->id + 1);
+		printf("Waiting for %s", pr_node(config->master->id));
 		local_node->numachip->write32(Numachip2::INFO + 4, (uint32_t)local_node);
 		local_node->numachip->write32(Numachip2::INFO, 1 << 29);
 
@@ -1353,9 +1351,9 @@ int main(const int argc, char *const argv[])
 		// disable XT-PIC
 		lib::disable_xtpic();
 
-		printf(BANNER "This server %s%02u is part of a %u-server NumaConnect2 system\n"
-		       "Refer to the console on %s%02u", ::config->prefix, config->local_node->id,
-		       nnodes, ::config->prefix, config->master->id);
+		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system\n"
+		       "Refer to the console on %s", pr_node(config->local_node->id),
+		       nnodes, pr_node(config->master->id));
 
 		caches(0);
 

@@ -42,7 +42,7 @@ void LC5::check(void)
 	const uint64_t val = status();
 
 	if (val) {
-		warning("Fabric LC5 link %u on %s%02u has issues 0x%016" PRIx64 ":", index, ::config->prefix, numachip.config->id, val);
+		warning("Fabric LC5 link %u on %s has issues 0x%016" PRIx64 ":", index, pr_node(numachip.config->id), val);
 
 		if (val & (1ULL << 58)) printf(" Sequencer received an Ack/Nack that was not in the Retry Buffer\n");
 		if (val & (1ULL << 56)) printf(" Sequence Retry Buffer overflow\n");
