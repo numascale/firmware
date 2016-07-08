@@ -30,6 +30,21 @@ extern "C" {
 }
 #endif
 
+#define NSTRBUF 4
+#define STRBUFSIZE 32
+
+const char *pr_node(const sci_t id)
+{
+	static char strbufs[NSTRBUF][STRBUFSIZE];
+	static unsigned strbufoffset;
+
+	snprintf(strbufs[strbufoffset], STRBUFSIZE, "%s%02u", config->prefix, id + 1);
+	const char *ret = strbufs[strbufoffset];
+	strbufoffset = (strbufoffset + 1) % NSTRBUF;
+
+	return ret;
+}
+
 Config::Config(void)
 {
 	nnodes = 1;
