@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "base.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -68,8 +69,10 @@ namespace lib
 		int nallocs = 0;
 
 		// allocate 128MB blocks until exhaustion
-		while ((allocs[nallocs] = malloc(128 << 20)))
+		while ((allocs[nallocs] = malloc(128 << 20))) {
 			nallocs++;
+			xassert(nallocs < (int)(sizeof(allocs)/sizeof(*allocs)));
+		}
 
 		// free last one guaranteeing space for allocation
 		free(allocs[nallocs--]);
@@ -78,9 +81,10 @@ namespace lib
 		void *ptr = zalloc(size);
 
 		// free remaining allocations
-		while (nallocs)
+		while (nallocs >= 0) {
+			printf("freeing %d\n", nallocs);
 			free(allocs[nallocs--]);
-
+		}
 		return ptr;
 	}
 
