@@ -66,25 +66,22 @@ namespace lib
 	static inline void *zalloc_top(const size_t size)
 	{
 		void *allocs[32]; // enough for 4GB of 128MB allocations
-		int nallocs = 0;
+		unsigned nallocs = 0;
 
 		// allocate 128MB blocks until exhaustion
-		while ((allocs[nallocs] = malloc(128 << 20))) {
-			nallocs++;
-			xassert(nallocs < (int)(sizeof(allocs)/sizeof(*allocs)));
-		}
+		while ((allocs[nallocs++] = malloc(128 << 20)))
+			xassert(nallocs < sizeof(allocs)/sizeof(*allocs));
 
 		// free last one guaranteeing space for allocation
-		free(allocs[nallocs--]);
+		free(allocs[--nallocs]);
 
 		// allocate requested size
 		void *ptr = zalloc(size);
 
 		// free remaining allocations
-		while (nallocs >= 0) {
-			printf("freeing %d\n", nallocs);
-			free(allocs[nallocs--]);
-		}
+		while (nallocs)
+			free(allocs[--nallocs]);
+
 		return ptr;
 	}
 
