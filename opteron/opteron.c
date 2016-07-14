@@ -374,8 +374,7 @@ void Opteron::init(void)
 	if (options->debug.wdtinfo)
 		clear32(MC_NB_CONF_EXT, 1 << 24);
 
-	if (options->debug.northbridge)
-		disable_syncflood();
+	disable_syncflood(); // needed for debug visibility
 
 	if (options->debug.nowdt)
 		disable_nbwdt();
