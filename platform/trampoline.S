@@ -186,7 +186,7 @@ test:
 	jne	1b
 
 	// reenable wrap32
-	mov	$MSR_HWCR, %eax
+	mov	$MSR_HWCR, %ecx
 	rdmsr
 	and	$~(1 << 17), %eax
 	wrmsr
