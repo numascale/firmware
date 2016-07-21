@@ -203,8 +203,8 @@ void Opteron::prepare(void)
 	// ensure MCEs aren't redirected into SMIs
 	xassert(!lib::rdmsr(MSR_MCE_REDIR));
 
-	// set McStatusWrEn in HWCR to allow adjustments later, enable monitor-wait in userspace
-	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 18) | (1ULL << 10);
+	// enable monitor-wait in userspace
+	uint64_t msr = lib::rdmsr(MSR_HWCR) | (1ULL << 10);
 	// disable 32-bit address wrapping to allow 64-bit access in 32-bit code only on BSC
 	lib::wrmsr(MSR_HWCR, msr | (1ULL << 17));
 	push_msr(MSR_HWCR, msr);
