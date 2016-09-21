@@ -17,35 +17,45 @@
 
 #include "../numachip2/router.h"
 
+#define XPAIR(s, d) \
+	router->neigh[s][1] = {d, 2}; router->neigh[d][2] = {s, 1}
+
+#define YPAIR(s, d) \
+	router->neigh[s][3] = {d, 2}; router->neigh[d][4] = {s, 1}
+
+#define X(n) \
+	XPAIR(00+n, 02+n); \
+	XPAIR(02+n, 01+n); \
+	XPAIR(01+n, 00+n)
+
+#define Y(n) \
+	YPAIR(00+n, 02+n); \
+	YPAIR(02+n, 04+n); \
+	YPAIR(04+n, 06+n); \
+	YPAIR(06+n, 05+n); \
+	YPAIR(05+n, 03+n); \
+	YPAIR(03+n, 01+n); \
+	YPAIR(01+n, 00+n)
+
 Router *router;
 
 int main(int argc, char *argv[])
 {
 	router = new Router();
 
-	// X axis
-	router->neigh[0x000][1] = {0x001, 2};
-	router->neigh[0x001][2] = {0x000, 1};
-	router->neigh[0x000][2] = {0x001, 1};
-	router->neigh[0x001][1] = {0x000, 2};
+	X(0);
+	X(3);
+	X(6);
+	X(9);
+	X(12);
+	X(15);
+	X(18);
 
-	router->neigh[0x002][1] = {0x003, 2};
-	router->neigh[0x003][2] = {0x002, 1};
-	router->neigh[0x002][2] = {0x003, 1};
-	router->neigh[0x003][1] = {0x002, 2};
+	Y(0);
+	Y(7);
+	Y(14);
 
-	// Y axis
-	router->neigh[0x000][3] = {0x002, 4};
-	router->neigh[0x002][4] = {0x000, 3};
-	router->neigh[0x000][4] = {0x002, 3};
-	router->neigh[0x002][3] = {0x000, 4};
-
-	router->neigh[0x001][3] = {0x003, 4};
-	router->neigh[0x003][4] = {0x001, 3};
-	router->neigh[0x001][4] = {0x003, 3};
-	router->neigh[0x003][3] = {0x001, 4};
-
-	router->run(4);
+	router->run(21);
 	delete router;
 
 	return 0;

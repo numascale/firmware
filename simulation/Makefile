@@ -1,4 +1,4 @@
-CFLAGS := -DSIM -I../json-1.6/src -Wall -O3 -g -fpermissive -fno-rtti -std=gnu++11
+CFLAGS := -DSIM -Wall -Wextra -O3 -g -fno-rtti -std=gnu++11
 
 routing: routing.c ../numachip2/router.c ../numachip2/router.h
 	$(CXX) $(CFLAGS) -o routing routing.c ../numachip2/router.c

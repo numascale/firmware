@@ -28,7 +28,7 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 		for (unsigned i = 0; i < hops; i++)
 			printf(" ");
 
-		printf("%03x hops=%u usage=%u", pos, hops, _usage);
+		printf("%02u hops=%u usage=%u", pos, hops, _usage);
 	}
 
 	// no room
@@ -72,14 +72,14 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 		// check if cyclic
 		if (xbarid && last_xbarid) {
 			if (_deps.table[next.nodeid][xbarid][pos][last_xbarid]) {
-				if (debug) printf(" %03x:%u already depends on %03x:%u\n", next.nodeid, xbarid, pos, last_xbarid);
+				if (debug) printf(" %02u:%u already depends on %02u:%u\n", next.nodeid, xbarid, pos, last_xbarid);
 				continue;
 			}
 
 			_deps.table[next.nodeid][xbarid][pos][last_xbarid] = 1;
 		}
 
-		if (debug) printf(" xbarid=%u next=%03x:%u \n", xbarid, next.nodeid, next.xbarid);
+		if (debug) printf(" xbarid=%u next=%02u:%u \n", xbarid, next.nodeid, next.xbarid);
 		route[hops] = xbarid;
 		find(next.nodeid, dst, hops + 1, _usage + usage[pos][xbarid], _deps, next.xbarid);
 	}
@@ -87,14 +87,14 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 
 void Router::update(const nodeid_t src, const nodeid_t dst)
 {
-	printf("usage=%u:", best.usage);
+	printf("usage %3u:", best.usage);
 
 	xbarid_t xbarid = 0;
 	unsigned hop = 0;
 	nodeid_t pos = src;
 
 	while (1) {
-		printf(" %03x:%u", pos, xbarid);
+		printf(" %02u:%u", pos, xbarid);
 		xbarid = routes[pos][xbarid][dst] = best.route[hop++];
 		usage[pos][xbarid]++; // model congestion at link controller send buffer
 		printf("->%u", xbarid);
@@ -143,7 +143,7 @@ void Router::run(const unsigned _nnodes)
 			best.hops = ~0U;
 			best.usage = ~0U;
 
-			printf("%03x->%03x: ", src, dst);
+			printf("%02u->%02u: ", src, dst);
 			find(src, dst, 0, 0, deps, 0); // calculate optimal route
 			update(src, dst); // increment path usage
 			dist[src][dst] = best.hops; // used for ACPI SLIT
@@ -161,9 +161,9 @@ void Router::dump() const
 	printf("\n");
 
 	for (nodeid_t node = 0; node < nnodes; node++) {
-		printf("  %03x:", node);
+		printf("  %02u:", node);
 		for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
-			printf(" %3x", usage[node][xbarid]);
+			printf(" %3u", usage[node][xbarid]);
 		printf("\n");
 	}
 }
