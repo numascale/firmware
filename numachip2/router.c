@@ -21,6 +21,7 @@
 #include <string.h>
 
 static bool debug;
+static unsigned routes_count, routes_total, routes_min = 10000, routes_max;
 
 void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, const unsigned _usage, deps_t _deps, const xbarid_t last_xbarid)
 {
@@ -108,6 +109,14 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 		xbarid = next.xbarid;
 	};
 
+	if (hop < routes_min)
+		routes_min = hop;
+	if (hop > routes_max)
+		routes_max = hop;
+
+	routes_count++;
+	routes_total += hop;
+
 	xassert(pos == dst);
 	printf("\n");
 }
@@ -125,17 +134,19 @@ void Router::run(const unsigned _nnodes)
 	nnodes = _nnodes;
 
 	for (nodeid_t n = 0; n < nnodes; n++) {
-		printf("node %u:", n);
+		printf("node %2u:", n);
 
 		for (xbarid_t x = 1; x <= 6; x++) {
 			if (neigh[n][x].xbarid == XBARID_NONE)
-				printf("     ");
+				printf("    ");
 			else
 				printf(" %02u%c", neigh[n][x].nodeid, 'A' + neigh[n][x].xbarid - 1);
 		}
 
 		printf("\n");
 	}
+
+	printf("\n");
 
 	// perform routing for all nodes; only write local tables
 	for (nodeid_t src = 0; src < nnodes; src++) {
@@ -157,13 +168,15 @@ void Router::dump() const
 {
 	printf("usage:");
 	for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
-		printf(" %3x", xbarid);
+		printf(" %3c", 'A' + xbarid-1);
 	printf("\n");
 
 	for (nodeid_t node = 0; node < nnodes; node++) {
-		printf("  %02u:", node);
+		printf("   %02u:", node);
 		for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
-			printf(" %3u", usage[node][xbarid]);
+			printf("  %3u", usage[node][xbarid]);
 		printf("\n");
 	}
+
+	printf("hops: min %u, max %u, average %0.2f\n", routes_min, routes_max, routes_total / (double)routes_count);
 }
