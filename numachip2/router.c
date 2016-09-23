@@ -109,13 +109,16 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 		xbarid = next.xbarid;
 	};
 
-	if (hop < routes_min)
-		routes_min = hop;
-	if (hop > routes_max)
-		routes_max = hop;
+	// ignore local route
+	if (hop > 1) {
+		if (hop < routes_min)
+			routes_min = hop - 1;
+		if (hop > routes_max)
+			routes_max = hop - 1;
 
-	routes_count++;
-	routes_total += hop;
+		routes_count++;
+		routes_total += hop - 1;
+	}
 
 	xassert(pos == dst);
 	printf("\n");
