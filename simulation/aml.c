@@ -12,9 +12,12 @@
 #include "../platform/aml.h"
 #include "../platform/acpi.h"
 #include "../platform/config.h"
-#include "../node.h"
+#include "node.h"
 
 #include <assert.h>
+
+#define MMIO32 (64 << 20)
+#define MMIO64 (1 << 30)
 
 uint16_t dnc_node_count = 0;
 int verbose = 2;
@@ -107,11 +110,28 @@ int main(void)
 	nodes = (Node **)malloc(sizeof(Node *) * nnodes);
 	assert(nodes);
 
-	struct Config::node cfg = {};
+	uint64_t mmio32_top = 2ULL << 30;
+	uint64_t mmio64_top = 4ULL << 40;
 
-	for (sci_t n = 0; n < nnodes; n++)
-		nodes[n] = new Node(&cfg, n);
+	for (sci_t n = 0; n < nnodes; n++) {
+		struct numachip_s numachip = {.ht = 6};
+		struct config_s config = {.id = n};
 
+		nodes[n] = (Node *)malloc(sizeof(Node));
+		assert(nodes[n]);
+
+		memset(nodes[n], 0, sizeof(Node));
+		nodes[n]->numachip = &numachip;
+		nodes[n]->config = &config;
+		nodes[n]->mmio32_base = mmio32_top;
+		mmio32_top += MMIO32;
+		nodes[n]->mmio32_limit = mmio32_top -1;
+		nodes[n]->mmio64_base = mmio64_top;
+		mmio32_top += MMIO64;
+		nodes[n]->mmio64_limit = mmio64_top -1;
+	}
+
+	local_node = nodes[0];
 	gen();
 
 	free(nodes);
