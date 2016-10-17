@@ -25,7 +25,11 @@
 
 #include "aml.h"
 #include "../numachip2/numachip.h"
+#ifdef SIM
+#include "../simulation/node.h"
+#else
 #include "../node.h"
+#endif
 #include "../bootloader.h"
 #include "../library/base.h"
 
@@ -542,7 +546,7 @@ char *remote_aml(uint32_t *len)
 
 	for (Node *const *node = &nodes[1]; node < &nodes[nnodes]; node++) {
 		char name[5];
-		snprintf(name, sizeof(name), "X%03u", node - &nodes[0]);
+		snprintf(name, sizeof(name), "X%03d", node - &nodes[0]);
 		Container *bus = new Device(name);
 
 		bus->children.push_back(new Name("_HID", new EisaId(EisaId::PNP0A08)));

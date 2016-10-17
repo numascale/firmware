@@ -15,7 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#ifndef NODE_H
+#define NODE_H
 
 #include "library/base.h"
 #include "opteron/opteron.h"
@@ -60,3 +61,5 @@ public:
 extern Node *local_node;
 extern Node **nodes;
 extern unsigned nnodes;
+
+#endif
