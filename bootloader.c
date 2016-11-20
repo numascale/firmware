@@ -570,13 +570,16 @@ static void test_cores(void)
 		lib::wait_key("Press enter to start core testing");
 
 	printf("Testing %u cores", cores);
+#ifdef TEST_CONTENT
 	test_prepare();
+#endif
 	lib::critical_enter();
 
 	*REL32(errors) = 0; // clear error counter
 	trampoline_sem_init(cores);
-//	tracing_start();
-
+#ifdef TEST_CONTENT
+	tracing_start();
+#endif
 	foreach_node(node) {
 		for (unsigned n = 0; n < (*node)->napics; n++) {
 			if (node == &nodes[0] && n == 0) // skip BSC

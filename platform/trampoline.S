@@ -156,32 +156,60 @@ test:
 	or	$(1 << 17), %eax
 	wrmsr
 
-	// setup FS
-	movl	$TEST_BASE_HIGH, %edx
-	movl	$TEST_BASE_LOW, %eax
+	// load top of DRAM into ECX:EAX
+	mov		$MSR_TOPMEM2, %ecx
+	rdmsr
+	mov		%edx, %ebp // store top[63:32] into EBP
+
+	// seed using APIC ID
+	mov		$0x8000001e, %eax
+	cpuid
+
+	// store seed in EDI:ESI
+	mov		$0, %edi
+	mov		%eax, %esi
+
+1:	mov		%edi, %edx
+	mov		%esi, %eax
+
+	// 48-bit Linear Congruntial Generator: next = (25214903917ULL * last + 11) mod 2^48
+	imul		$0xdeece66d, %edx, %ebx
+	mov		%eax, %ecx
+	lea		(%eax, %eax, 4), %eax
+	add		%eax, %ebx
+	mov		$0xdeece66d, %eax
+	mul		%ecx
+	add		%ebx, %edx
+	add		$0xb, %eax
+	adc		$0x0, %edx
+	and		$0xffff, %edx
+
+	// store 48-bit result in EDI:ESI for next iteration
+	mov		%edx, %edi
+	mov		%eax, %esi
+
+	// get addr[63:32] % top[63:32]
+	mov		$0, %edx
+	mov		%edi, %eax
+	div		%ebp
+
+	// start base at 4GB to avoid corrupting state
+	inc		%edx
+
+	// if in HT decode range, skip
+	cmpl		$0xfd, %edx
+	je			1b
+
+	// load addr[31:0] and align access
+	mov		%esi, %eax
+	andl		$~3, %eax
+
+	// generate 64-bit RMW using FS
 	mov		$MSR_FS_BASE, %ecx
 	wrmsr
+	movl 		$0, %fs:(0)
 
-	mov	$1, %ebx // seed
-
-	// generate random number
-1:	mov	$1103515245, %eax
-	mul	%ebx // result in EDX:EAX
-	add	$12345, %eax
-	mov	%eax, %ebx
-
-	andl    $~((1 << 27) - 1), %eax // use granularity of 128MB, align load
-	andl    $(1 << (38 - 32)) - 1, %edx // limit upper bits to 256GB
-	add     $1, %edx // ensure starts from 4GB
-	mov $4, %edx
-
-	// generate 64-bit load using FS
-	mov		$MSR_FS_BASE, %ecx
-	wrmsr
-	movl	%fs:(0), %edi
-	xorl	$0xffffffff, %fs:(0)
-
-2:	// check for termination condition
+	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
 	jne	1b
 
