@@ -53,14 +53,14 @@ static void gen(void)
 {
 	char filename[32];
 
-	snprintf(filename, sizeof(filename), "SSDT-%dnodes.amx", nnodes);
+	snprintf(filename, sizeof(filename), "SSDT-%unodes.amx", nnodes);
 
 	int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	assert(fd != -1);
 
 	if (sizeof(table)) {
 		assert(write(fd, table, sizeof(table)) == sizeof(table));
-		printf("wrote %s (%zd bytes, %d nodes)\n", filename, sizeof(table), nnodes);
+		printf("wrote %s (%zd bytes, %u nodes)\n", filename, sizeof(table), nnodes);
 	} else {
 		uint32_t extra_len;
 		dnc_node_count = nnodes;
@@ -80,7 +80,7 @@ static void gen(void)
 		ssdt->checksum = checksum(ssdt, ssdt->len);
 
 		assert(write(fd, ssdt, ssdt->len) == ssdt->len);
-		printf("wrote %s (%d bytes, %d nodes)\n", filename, ssdt->len, nnodes);
+		printf("wrote %s (%d bytes, %u nodes)\n", filename, ssdt->len, nnodes);
 		free(ssdt);
 	}
 

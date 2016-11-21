@@ -569,7 +569,7 @@ static void test_cores(void)
 	if (options->boot_wait)
 		lib::wait_key("Press enter to start core testing");
 
-	printf("Testing %u cores", cores);
+	printf("Validating with %u cores", cores);
 #ifdef TEST_CONTENT
 	test_prepare();
 #endif

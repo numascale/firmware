@@ -171,7 +171,7 @@ void Router::dump() const
 {
 	printf("usage:");
 	for (xbarid_t xbarid = 1; xbarid < XBAR_PORTS; xbarid++)
-		printf(" %3c", 'A' + xbarid-1);
+		printf(" %4c", 'A' + xbarid-1);
 	printf("\n");
 
 	for (nodeid_t node = 0; node < nnodes; node++) {
@@ -181,5 +181,5 @@ void Router::dump() const
 		printf("\n");
 	}
 
-	printf("hops: min %u, max %u, average %0.2f\n", routes_min, routes_max, routes_total / (double)routes_count);
+	printf("hops: min %u, max %u, average %ue-2\n", routes_min, routes_max, routes_total * 100 / routes_count);
 }
