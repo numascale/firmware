@@ -243,10 +243,10 @@ public:
 	Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id);
 	bool fabric_train(void);
 	void fabric_routing(void);
-	void fabric_check(void) const;
+	bool fabric_check(void) const;
 	void fabric_reset(void);
-	void dram_check(void) const;
-	void check(void) const;
+	bool dram_check(void) const;
+	bool check(void) const;
 	void flash(const uint8_t *buf, const size_t len);
 };
 

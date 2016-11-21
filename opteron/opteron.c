@@ -33,8 +33,10 @@ uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
 uint8_t Opteron::family;
 
-void Opteron::check(void)
+bool Opteron::check(void)
 {
+	bool ret = 0;
+
 #ifdef LOCAL
 	for (unsigned bank = 0; bank < mc_banks; bank++) {
 		const uint32_t msr = MSR_MC0_STATUS + bank * 4;
@@ -44,15 +46,20 @@ void Opteron::check(void)
 
 		printf("%03x#%u MSR%08x=0x%" PRIx64 "\n", sci, ht, msr, val);
 		lib::wrmsr(msr, 0);
+		ret = 1;
 	}
 #endif
 	for (unsigned link = 0; link < 4; link++) {
 		uint32_t val = read32(LINK_CTRL + link * 0x20);
-		if (val & 0x300)
+		if (val & 0x300) {
 			warning("%03x#%u link %u CRC error", sci, ht, link);
+			ret = 1;
+		}
 
-		if (val & 0x10)
+		if (val & 0x10) {
 			warning("%03x#%u link %u failure", sci, ht, link);
+			ret = 1;
+		}
 
 		val = read32(LINK_RETRY + link * 4);
 		if (val & 0xffff1f00) {
@@ -66,6 +73,7 @@ void Opteron::check(void)
 			if (val & (1 << 9))
 				printf(" RetryCountRollover");
 			printf(COL_DEFAULT "\n");
+			ret = 1;
 		}
 	}
 
@@ -99,25 +107,31 @@ void Opteron::check(void)
 		write64_split(MC_NB_ADDR, 0);
 		write64_split(MC_NB_STAT, 0);
 		printf("\n");
+		ret = 1;
 	}
 
 	uint32_t v = read32(MC_NB_DRAM);
 	if (v & 0xff) { // looks like bits 7:0 only are usable
 		warning("DRAM machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_DRAM, 0);
+		ret = 1;
 	}
 
 	v = read32(MC_NB_LINK);
 	if (v & 0xfff) {
 		warning("HT Link machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_LINK, 0);
+		ret = 1;
 	}
 
 	v = read32(MC_NB_L3C);
 	if (v & 0xfff) {
 		warning("L3 Cache machine check 0x%08x on %03x#%u", v, sci, ht);
 		write32(MC_NB_L3C, 0);
+		ret = 1;
 	}
+
+	return ret;
 }
 
 void Opteron::disable_syncflood(void)

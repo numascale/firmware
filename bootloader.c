@@ -63,10 +63,14 @@ char *asm_relocated;
 uint64_t dram_top;
 unsigned nnodes;
 
-void check(void)
+bool check(void)
 {
+	bool ret = 0;
+
 	foreach_node(node)
-		(*node)->check();
+		ret |= (*node)->check();
+
+	return ret;
 }
 
 static void scan(void)
@@ -395,7 +399,7 @@ static void tracing_arm(void)
 	foreach_node(node)
 		(*node)->tracing_arm();
 }
-
+#ifdef TEST_CONTENT
 static void tracing_start(void)
 {
 	if (!options->tracing)
@@ -413,7 +417,7 @@ static void tracing_stop(void)
 	foreach_node(node)
 		(*node)->tracing_stop();
 }
-
+#endif
 static void boot_core_host(const uint32_t apicid, const uint32_t vector)
 {
 	*REL32(vector) = vector;
@@ -519,7 +523,9 @@ static void setup_cores(void)
 			trampoline_sem_init(1);
 			boot_core((*node)->apics[n], VECTOR_SETUP);
 			if (trampoline_sem_wait()) {
+#ifdef TEST_CONTENT
 				tracing_stop();
+#endif
 				fatal("APIC 0x%x failed to complete setup", (*node)->apics[n]);
 			}
 		}
@@ -528,7 +534,7 @@ static void setup_cores(void)
 	printf("\n");
 	lib::critical_leave();
 }
-
+#ifdef TEST_CONTENT
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
@@ -558,7 +564,7 @@ static void test_verify(void)
 		fatal("%u errors detected during test", errors+*REL32(errors));
 	}
 }
-
+#endif
 static void test_cores(void)
 {
 	uint16_t cores = 0;
@@ -577,6 +583,9 @@ static void test_cores(void)
 
 	*REL32(errors) = 0; // clear error counter
 	trampoline_sem_init(cores);
+
+	uint64_t finish = lib::rdtscll() + (uint64_t)1e6 * Opteron::tsc_mhz;
+
 #ifdef TEST_CONTENT
 	tracing_start();
 #endif
@@ -585,26 +594,43 @@ static void test_cores(void)
 			if (node == &nodes[0] && n == 0) // skip BSC
 				continue;
 			boot_core((*node)->apics[n], VECTOR_TEST);
+			if (check())
+				lib::wait_key("Press any key to continue");
 		}
 	}
 	if (trampoline_sem_wait()) {
+#ifdef TEST_CONTENT
 		tracing_stop();
+#endif
 		fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 	}
 
-	lib::udelay(300000);
+	for (unsigned i = 0; i < 5; i++) {
+		while (lib::rdtscll() < finish) {
+			if (check())
+				lib::wait_key("Press any key to continue");
+			cpu_relax();
+		}
+
+		finish = lib::rdtscll() + (uint64_t)1e6 * Opteron::tsc_mhz;
+		printf(".");
+	}
 
 	// initiate finish, order here is important re-initialize the semaphore first
 	trampoline_sem_init(cores);
 	*REL32(vector) = VECTOR_TEST_FINISH;
 
 	if (trampoline_sem_wait()) {
+#ifdef TEST_CONTENT
 		tracing_stop();
+#endif
 		fatal("%u cores failed to finish test", trampoline_sem_getvalue());
 	}
 
+#ifdef TEST_CONTENT
 	test_verify();
 	tracing_stop();
+#endif
 	lib::critical_leave();
 	printf("\n");
 }
@@ -1199,7 +1225,7 @@ static void wait_for_master(void)
 		}
 	}
 }
-
+#ifdef UNUSED
 static void test_map(void)
 {
 	const uint64_t stride = 1ULL << 20;
@@ -1211,7 +1237,7 @@ static void test_map(void)
 
 	printf("\n");
 }
-
+#endif
 int main(const int argc, char *const argv[])
 {
 	os = new OS(); // needed first for console access

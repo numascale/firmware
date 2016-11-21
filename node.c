@@ -46,13 +46,17 @@ void Node::init(void)
 	printf(" (%" PRIu64 "GB, %u cores)\n", dram_size >> 30, cores);
 }
 
-void Node::check(void)
+bool Node::check(void)
 {
+	bool ret = 0;
+
 	for (ht_t n = 0; n < nopterons; n++)
-		opterons[n]->check();
+		ret |= opterons[n]->check();
 
 	if (numachip)
-		numachip->check();
+		ret |= numachip->check();
+
+	return ret;
 }
 
 void Node::tracing_arm(void)

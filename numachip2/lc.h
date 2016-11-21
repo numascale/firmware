@@ -34,7 +34,7 @@ public:
 	// can't use pure virtual (= 0) due to link-time dependency with libstdc++
 	virtual bool is_up(void) {return 0;};
 	virtual uint64_t status(void) {return 0;};
-	virtual void check(void) {};
+	virtual bool check(void) = 0;
 	virtual void clear(void) {};
 	virtual void add_route(const sci_t, const uint8_t);
 	virtual void commit(void) {};
@@ -80,7 +80,7 @@ class LC4: public LC
 public:
 	bool is_up(void);
 	uint64_t status(void);
-	void check(void);
+	bool check(void);
 	void clear(void);
 	void add_route(const sci_t dst, const uint8_t out);
 	void commit(void);
@@ -101,7 +101,7 @@ class LC5: public LC
 public:
 	bool is_up(void);
 	uint64_t status(void);
-	void check(void);
+	bool check(void);
 	void clear(void);
 	void add_route(const sci_t dst, const uint8_t out);
 	void commit(void);

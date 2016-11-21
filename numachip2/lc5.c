@@ -37,7 +37,7 @@ uint64_t LC5::status(void)
 	return val;
 }
 
-void LC5::check(void)
+bool LC5::check(void)
 {
 	const uint64_t val = status();
 
@@ -75,7 +75,7 @@ void LC5::check(void)
 	clear();
 
 	// link up/down reporting
-	if ( link_up && !is_up()) {
+	if (link_up && !is_up()) {
 		warning("Fabric link %u is down!", index);
 		// ratelimit
 		lib::udelay(1000000);
@@ -85,6 +85,8 @@ void LC5::check(void)
 		// ratelimit
 		lib::udelay(1000000);
 	}
+
+	return !!val;
 }
 
 void LC5::clear(void)

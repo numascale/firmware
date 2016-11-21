@@ -188,7 +188,7 @@ public:
 	friend class DramMap;
 
 	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
-	void check(void);
+	bool check(void);
 	uint64_t read64(const reg_t reg) const;
 	uint32_t read32(const reg_t reg) const;
 	void write64_split(const reg_t reg, const uint64_t val) const;

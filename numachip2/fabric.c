@@ -39,8 +39,9 @@ void Numachip2::fabric_reset(void)
 	write32(HSS_PLLCTL, mask);
 }
 
-void Numachip2::fabric_check(void) const
+bool Numachip2::fabric_check(void) const
 {
+	bool ret = 0;
 	uint32_t val = read32(SIU_EVENTSTAT);
 
 	if (val) {
@@ -72,11 +73,14 @@ void Numachip2::fabric_check(void) const
 
 		// clear
 		write32(SIU_EVENTSTAT, val);
+		ret = 1;
 	}
 
 	if (fabric_trained)
 		foreach_lc(lc)
-			(*lc)->check();
+			ret |= (*lc)->check();
+
+	return ret;
 }
 
 // goal: read all phy status successfully 5M times; if any error encountered, reset and restart

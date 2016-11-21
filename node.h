@@ -48,7 +48,7 @@ public:
 	uint16_t apic_offset;
 
 	void init(void);
-	void check(void);
+	bool check(void);
 	void tracing_arm(void);
 	void tracing_start(void);
 	void tracing_stop(void);

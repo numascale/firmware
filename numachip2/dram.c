@@ -26,13 +26,17 @@
 #define MTAG8_SHIFT 6
 #define CTAG_SHIFT 3
 
-void Numachip2::dram_check(void) const
+bool Numachip2::dram_check(void) const
 {
 	uint32_t val = read32(MCTR_ECC_STATUS);
 	assertf(!(val & (1 << 1)), "Uncorrectable ECC issue occurred on Numachip at on %s", pr_node(config->id));
 
-	if (val & (1 << 0))
+	if (val & (1 << 0)) {
 		warning("Correctable ECC issue occurred on Numachip on %s", pr_node(config->id));
+		return 1;
+	}
+
+	return 0;
 }
 
 void Numachip2::dram_reset(void)

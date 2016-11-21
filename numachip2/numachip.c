@@ -147,10 +147,9 @@ uint32_t Numachip2::rom_read(const uint8_t reg)
 	return read32(IMG_PROP_DATA);
 }
 
-void Numachip2::check(void) const
+bool Numachip2::check(void) const
 {
-	fabric_check();
-	dram_check();
+	return fabric_check() | dram_check();
 }
 
 void Numachip2::update_board_info(void)
