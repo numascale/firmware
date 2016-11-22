@@ -83,8 +83,12 @@ static void scan(void)
 		(*node)->trim_dram_maps();
 
 		// if node DRAM range overlaps HT decode range, move up
-		if ((dram_top < Opteron::HT_LIMIT) && ((dram_top + (*node)->dram_size) > Opteron::HT_BASE))
+		if ((dram_top < Opteron::HT_LIMIT) && ((dram_top + (*node)->dram_size) > Opteron::HT_BASE)) {
 			dram_top = Opteron::HT_LIMIT;
+
+			// move previous node's DRAM end to the HT decode range end, so cycles above the DRAM size are aborted, rather than hanging
+			(*(node-1))->dram_end = Opteron::HT_LIMIT - 1;
+		}
 
 		(*node)->dram_base = dram_top;
 
@@ -134,7 +138,15 @@ static void add(const Node &node)
 	// 13. program local DRAM ranges
 	while (range < node.nopterons) {
 		uint64_t base = node.opterons[range]->dram_base;
-		uint64_t limit = base + node.opterons[range]->dram_size - 1;
+
+		uint64_t limit;
+
+		// if last opteron in server, use DRAM limit rounded up to cover map holes (eg HT decoding)
+		// so transactions are aborted rather than hanging
+		if (range < node.nopterons - 1)
+			limit = base + node.opterons[range]->dram_size - 1;
+		else
+			limit = node.dram_end;
 
 		node.numachip->drammap.set(range, base, limit, node.opterons[range]->ht);
 
@@ -201,7 +213,7 @@ static void setup_gsm(void)
 			ht_t ht = Numachip2::probe(config->nodes[n].id);
 			if (ht) {
 				if (options->debug.maps)
-					printf("\n%s: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %s", pr_node(config->nodes[n].id), base, limit, pr_node((*node)->config->id));
+					printf("\n%s: DRAM ATT 0x%012" PRIx64 ":0x%012" PRIx64 " to %s", pr_node(config->nodes[n].id), base, limit, pr_node((*node)->config->id));
 
 				// FIXME: use observer instance
 				xassert(limit > base);
@@ -605,7 +617,7 @@ static void test_cores(void)
 		fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
 	}
 
-	for (unsigned i = 0; i < 5; i++) {
+	for (unsigned i = 0; i < 10; i++) {
 		while (lib::rdtscll() < finish) {
 			if (check())
 				lib::wait_key("Press any key to continue");
@@ -1445,12 +1457,11 @@ int main(const int argc, char *const argv[])
 	if (options->tracing)
 		setup_gsm();
 	setup_info();
-//	e820->test();
 	setup_cores();
 	acpi_tables();
 	tracing_arm();
+//	test_map();
 	if (!options->fastboot)
 		test_cores();
-//	test_map();
 	finished(config->partitions[config->local_node->partition].label);
 }

@@ -38,7 +38,6 @@ EXPORT(entry)
 	xorl	%eax, %eax
 	movl	%eax, %cr3
 
-//	ljmp	$0x8800, $RELOCATED(1f)
 	// setup segments
 1:	mov	%cs, %ax
 	add	$RELOCATED(stack_start) / 16, %ax
@@ -197,9 +196,11 @@ test:
 	inc		%edx
 
 	// if in HT decode range, skip
-	cmpl		$0xfd, %edx
-	je			1b
-
+	cmpl		$0x100, %edx
+	jge		2f
+	cmpl		$0xf8, %edx
+	jge		1b
+2:
 	// load addr[31:0] and align access
 	mov		%esi, %eax
 	andl		$~3, %eax

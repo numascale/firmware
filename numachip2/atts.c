@@ -44,7 +44,7 @@ void Numachip2::DramAtt::init(void)
 void Numachip2::DramAtt::range(const uint64_t base, const uint64_t limit, const sci_t dest)
 {
 	if (options->debug.maps)
-		printf("%s: DRAM ATT 0x%" PRIx64 ":0x%" PRIx64 " to %03x", pr_node(numachip.config->id), base, limit, dest);
+		printf("%s: DRAM ATT 0x%012" PRIx64 ":0x%012" PRIx64 " to %03x", pr_node(numachip.config->id), base, limit, dest);
 
 	xassert(limit > base);
 	xassert(limit < (1ULL << depth));
