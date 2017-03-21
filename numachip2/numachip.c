@@ -255,7 +255,11 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 	printf("- core @ %2dC, DIMM @ %2dC\n", fpga_temp, dimm_temp);
 
-	assertf(fpga_temp <= 80, "Device overtemperature; check heatsink is correctly mounted and fan rotates");
+	assertf(fpga_temp <= 80, "Chip overtemperature; check heatsink is correctly mounted, fan rotates and the server fans are all installed and operational");
+
+	// Higher temperatures can cause state loss
+	if (fpga_temp >= 65)
+		warning("Please ensure all the server fans are installed and operational");
 
 	if (options->debug.access) {
 		printf("Testing CSR response");
