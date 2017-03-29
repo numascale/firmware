@@ -195,10 +195,10 @@ test:
 	// start base at 4GB to avoid corrupting state
 	inc		%edx
 
-	// if in HT decode range, skip
+	// if in hole over HT decode range, skip
 	cmpl		$0x100, %edx
 	jge		2f
-	cmpl		$0xf8, %edx
+	cmpl		$0xc0, %edx // worst-case alignment (386GB+384GB)
 	jge		1b
 2:
 	// load addr[31:0] and align access
