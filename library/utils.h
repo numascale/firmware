@@ -62,29 +62,6 @@ namespace lib
 		return a;
 	}
 
-	// allocate memory at top near ACPI area to avoid conflicts
-	static inline void *zalloc_top(const size_t size)
-	{
-		void *allocs[32]; // enough for 4GB of 128MB allocations
-		unsigned nallocs = 0;
-
-		// allocate 128MB blocks until exhaustion
-		while ((allocs[nallocs++] = malloc(128 << 20)))
-			xassert(nallocs < sizeof(allocs)/sizeof(*allocs));
-
-		// free last one guaranteeing space for allocation
-		free(allocs[--nallocs]);
-
-		// allocate requested size
-		void *ptr = zalloc(size);
-
-		// free remaining allocations
-		while (nallocs)
-			free(allocs[--nallocs]);
-
-		return ptr;
-	}
-
 	// compatible with 'cksum <file>' command
 	static inline uint32_t checksum(const unsigned char *buf, uint32_t len)
 	{

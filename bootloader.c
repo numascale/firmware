@@ -785,8 +785,7 @@ static void acpi_tables(void)
 	AcpiTable slit("SLIT", 1);
 
 	// number of localities
-	uint64_t *n = (uint64_t *)slit.reserve(8);
-	*n = 0;
+	const unsigned n_offset = slit.reserve(8);
 
 	if (options->debug.acpi) {
 		printf("Topology distances:\n   ");
@@ -821,7 +820,7 @@ static void acpi_tables(void)
 			}
 			if (options->debug.acpi)
 				printf("\n");
-			(*n)++;
+			slit.increment64(n_offset);
 		}
 	}
 

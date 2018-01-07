@@ -30,6 +30,7 @@
 #define SHADOW_LEN 65536
 #define RSDT_MAX 1024
 #define FMTRR_WRITETHROUGH 0x1c1c1c1c1c1c1c1cULL
+#define BIOS_ACPI     0x3f000000
 
 void ACPI::shadow_bios(void)
 {
@@ -357,11 +358,10 @@ acpi_sdt *ACPI::find_sdt(const char *sig)
 
 void ACPI::allocate(const unsigned len)
 {
-	allocated = (char *)lib::zalloc_top(len);
+	allocated = (char *)BIOS_ACPI;
 	xassert(allocated);
 	nallocated = len;
 	used = 0;
-
 	e820->add((uint64_t)(uint32_t)allocated, nallocated, E820::ACPI);
 }
 
@@ -664,20 +664,28 @@ void AcpiTable::append(const char *data, const unsigned len)
 	used += len;
 }
 
-char *AcpiTable::reserve(const unsigned len)
+// return offset from payload of zero-initialised memory
+unsigned AcpiTable::reserve(const unsigned len)
 {
 	extend(len);
 
 	if (options->debug.acpi)
 		printf("ACPI extend by %u bytes\n", len);
 
-	char *p = payload + used;
-	memset(p, 0xa5, len);
+	memset(payload + used, 0, len);
 
 	header.len += len;
+
+	unsigned offset = used;
 	used += len;
 
-	return p;
+	return offset;
+}
+
+void AcpiTable::increment64(const unsigned offset)
+{
+   uint64_t *p = (uint64_t *)((unsigned)payload + offset);
+   (*p)++;
 }
 
 void ACPI::add(const AcpiTable &table)
