@@ -12,11 +12,11 @@ all: bootloader.c32
 
 .PHONY: upload
 upload: bootloader.c32
-	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
+	rsync -z bootloader.c32 build2:/net/numastore/tftpboot/nc2-bootloader-$(USER).c32
 
 .PHONY: publish
 publish: bootloader.c32
-	rsync -z bootloader.c32 build:/net/numastore/tftpboot/nc2-bootloader-$(shell git describe).c32
+	rsync -z bootloader.c32 build2:/net/numastore/tftpboot/nc2-bootloader-$(shell git describe).c32
 	rsync -z bootloader.c32 resources@resources:resources/bootloader/validating/nc2-bootloader-$(shell git describe).c32
 
 .PHONY: check
@@ -74,7 +74,7 @@ version.h: library/access.h platform/acpi.h bootloader.h library/access.c bootlo
 
 bootloader.elf: bootloader.o node.o platform/config.o platform/syslinux.o opteron/ht-scan.o opteron/maps.o opteron/opteron.o opteron/sr56x0.o opteron/tracing.o platform/acpi.o platform/aml.o platform/smbios.o platform/ipmi.o platform/options.o library/access.o library/utils.o numachip2/i2c.o numachip2/numachip.o numachip2/pe.o numachip2/spd.o numachip2/spi.o numachip2/lc5.o numachip2/dram.o numachip2/fabric.o numachip2/router.o numachip2/maps.o numachip2/atts.o numachip2/flash.o platform/syslinux.o platform/e820.o platform/trampoline.o platform/devices.o platform/pcialloc.o $(COM32DEPS)
 
-bootloader.o: bootloader.c bootloader.h library/access.h platform/acpi.h version.h numachip2/spd.h numachip2/info.h platform/trampoline.h
+bootloader.o: bootloader.c bootloader.h library/access.h library/utils.h platform/acpi.h version.h numachip2/spd.h numachip2/info.h platform/trampoline.h
 
 node.o: node.h
 
@@ -85,7 +85,7 @@ opteron/sr56x0.o: opteron/sr56x0.c opteron/sr56x0.h
 opteron/tracing.o: opteron/tracing.c opteron/opteron.h
 
 platform/options.o: platform/options.c bootloader.h library/access.h version.h
-platform/acpi.o: platform/acpi.c platform/acpi.h
+platform/acpi.o: platform/acpi.c platform/acpi.h library/utils.h
 platform/aml.o: platform/aml.c platform/aml.h
 platform/smbios.o: platform/smbios.c bootloader.h
 platform/ipmi.o: platform/ipmi.c platform/ipmi.h
