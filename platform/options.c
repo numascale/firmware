@@ -72,17 +72,19 @@ void Options::parse_int64(const char *val, void *intp)
 		case 'T':
 		case 't':
 			ret <<= 10;
+			break;
 		case 'G':
 		case 'g':
 			ret <<= 10;
+			break;
 		case 'M':
 		case 'm':
 			ret <<= 10;
+			break;
 		case 'K':
 		case 'k':
 			ret <<= 10;
 			endptr++;
-		default:
 			break;
 		}
 
