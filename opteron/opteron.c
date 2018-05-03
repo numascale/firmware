@@ -136,8 +136,6 @@ bool Opteron::check(void)
 
 void Opteron::disable_syncflood(void)
 {
-	warning_once("Disabling sync-flood");
-
 	uint32_t val = read32(MC_NB_CONF);
 	val &= ~(1 << 2);  // SyncOnUcEccEn: sync flood on uncorrectable ECC error enable
 	val |= 1 << 3;     // SyncPktGenDis: sync packet generation disable
