@@ -25,6 +25,8 @@
 #include <inttypes.h>
 #include <sys/io.h>
 
+#define SYNC_DEBUG 0
+
 extern "C" {
 	#include <com32.h>
 }
@@ -912,7 +914,6 @@ void caches(const bool enable)
 		boot_core_host(acpi->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
 	if (trampoline_sem_wait())
 		fatal("%u cores did not complete requested operation", trampoline_sem_getvalue());
-
 }
 
 static void wait_status(void)
@@ -1073,13 +1074,13 @@ static void wait_for_slaves(void)
 			len = 0;
 
 		if (len >= sizeof(rsp) && rsp->sig == UDP_SIG) {
-/*
+#if SYNC_DEBUG
 			printf("Got rsp packet from %d.%d.%d.%d (%02x:%02x:%02x:%02x:%02x:%02x) (state %s, sciid %03x, tid %d)\n",
 			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff,
 			       rsp->mac[0], rsp->mac[1], rsp->mac[2],
 			       rsp->mac[3], rsp->mac[4], rsp->mac[5],
 			       (rsp->state > RSP_NONE) ? "UNKNOWNN" : node_state_name[rsp->state], rsp->sci, rsp->tid);
-*/
+#endif
 			for (unsigned n = 0; n < config->nnodes; n++) {
 				if (memcmp(&config->nodes[n].mac, rsp->mac, 6) == 0) {
 					if ((rsp->state == waitfor) && (rsp->tid == cmd.tid)) {
@@ -1204,13 +1205,13 @@ static void wait_for_master(void)
 
 			if (len != sizeof(cmd) || cmd.sig != UDP_SIG)
 				continue;
-/*
+#if SYNC_DEBUG
 			printf("Got cmd packet from %d.%d.%d.%d (%02x:%02x:%02x:%02x:%02x:%02x) (state %s, sciid %03x, tid %d)\n",
 			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff,
 			       cmd.mac[0], cmd.mac[1], cmd.mac[2],
 			       cmd.mac[3], cmd.mac[4], cmd.mac[5],
 			       (cmd.state > RSP_NONE) ? "UNKNOWNN" : node_state_name[cmd.state], cmd.sci, cmd.tid);
-*/
+#endif
 			if (memcmp(config->nodes[0].mac, cmd.mac, 6) == 0) {
 				if (cmd.tid == last_cmd) {
 					/* Ignoring seen command */

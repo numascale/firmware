@@ -154,7 +154,7 @@ bool Numachip2::check(void) const
 
 void Numachip2::update_board_info(void)
 {
-	char sernostr[50];
+	char sernostr[50] = {0};
 	int idx = 0;
 	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
 		sprintf(sernostr, "%s%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
