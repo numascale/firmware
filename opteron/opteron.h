@@ -69,8 +69,6 @@ private:
 
 	static uint32_t phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct);
 	static void phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val);
-	static void platform_reset_cold(void);
-	static void platform_reset_warm(void);
 	static void cht_print(const ht_t neigh, const link_t link);
 	static void optimise_linkbuffers(const ht_t ht, const int link);
 public:
@@ -188,6 +186,7 @@ public:
 	friend class DramMap;
 
 	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
+	static void platform_reset_warm(void);
 	bool check(void);
 	uint64_t read64(const reg_t reg) const;
 	uint32_t read32(const reg_t reg) const;

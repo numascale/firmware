@@ -243,6 +243,7 @@ public:
 	Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id);
 	bool fabric_train(void);
 	void fabric_routing(void);
+	bool fabric_validate(void);
 	bool fabric_check(void) const;
 	void fabric_reset(void);
 	bool dram_check(void) const;

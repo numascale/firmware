@@ -935,19 +935,18 @@ static void wait_status(void)
 	state(CMD_STARTUP)			\
 	state(RSP_SLAVE_READY)			\
 	state(CMD_RESET_FABRIC)			\
-	state(RSP_RESET_COMPLETE)		\
-	state(CMD_TRAIN_FABRIC)			\
+	state(RSP_RESET_OK)			\
+	state(CMD_TRAIN_PHYS)			\
 	state(RSP_PHY_TRAINED)			\
 	state(RSP_PHY_NOT_TRAINED)		\
-	state(CMD_VALIDATE_RINGS)		\
-	state(RSP_RINGS_OK)			\
-	state(RSP_RINGS_NOT_OK)			\
-	state(CMD_SETUP_FABRIC)			\
+	state(CMD_SETUP_ROUTING)		\
+	state(RSP_ROUTING_OK)			\
+	state(CMD_LOAD_FABRIC)			\
 	state(RSP_FABRIC_READY)			\
-	state(RSP_FABRIC_NOT_READY)		\
-	state(CMD_VALIDATE_FABRIC)		\
+	state(CMD_CHECK_FABRIC)			\
 	state(RSP_FABRIC_OK)			\
 	state(RSP_FABRIC_NOT_OK)		\
+	state(CMD_WARM_RESET)			\
 	state(CMD_CONTINUE)			\
 	state(RSP_ERROR)			\
 	state(RSP_NONE)
@@ -974,29 +973,49 @@ static bool handle_command(const enum node_state cstate, enum node_state *rstate
 {
 	switch (cstate) {
 		case CMD_RESET_FABRIC:
+			lib::udelay(500000);
 			local_node->numachip->fabric_reset();
-			*rstate = RSP_RESET_COMPLETE;
+			*rstate = RSP_RESET_OK;
 			return 1;
-		case CMD_TRAIN_FABRIC:
+		case CMD_TRAIN_PHYS:
+			lib::udelay(500000);
 			if (local_node->numachip->fabric_train())
 				*rstate = RSP_PHY_TRAINED;
 			else
 				*rstate = RSP_PHY_NOT_TRAINED;
 			return 1;
-		case CMD_VALIDATE_RINGS:
-			/* Need anything here ?? */
-			*rstate = RSP_RINGS_OK;
-			return 1;
-		case CMD_SETUP_FABRIC:
+		case CMD_SETUP_ROUTING:
+			lib::udelay(500000);
 			local_node->numachip->fabric_routing();
+			*rstate = RSP_ROUTING_OK;
+			return 1;
+		case CMD_LOAD_FABRIC:
+			lib::udelay(500000);
 			*rstate = RSP_FABRIC_READY;
+			printf("Early fabric validation");
+
+			for (unsigned i = 0; i < 3000000; i++) {
+				if (i % 200000 == 0) printf(".");
+				for (unsigned n = 0; n < config->nnodes; n++) {
+					uint32_t vendev = lib::mcfg_read32(config->nodes[n].id, 0, 24 + local_node->numachip->ht, 0, 0);
+					if (vendev != Numachip2::VENDEV_NC2) // stop testing to prevent collateral
+						return 1;
+				}
+			}
+			printf("\n");
 			return 1;
-		case CMD_VALIDATE_FABRIC:
-			/* Need anything here ?? */
-			*rstate = RSP_FABRIC_OK;
+		case CMD_CHECK_FABRIC:
+			lib::udelay(500000);
+			*rstate = local_node->check() ? RSP_FABRIC_NOT_OK : RSP_FABRIC_OK;
+			printf("Fabric %s\n", *rstate == RSP_FABRIC_OK ? "validates" : "failed validation");
 			return 1;
-		default:
-			return 0;
+		case CMD_WARM_RESET:
+			printf(BANNER "Warm-booting to clear fabric error...\n");
+			lib::udelay(500000);
+			Opteron::platform_reset_warm();
+		return 1;
+			default:
+		return 0;
 	}
 	return 1;
 }
@@ -1006,7 +1025,7 @@ static void wait_for_slaves(void)
 	struct state_bcast cmd;
 	bool ready_pending = 1;
 	int count, backoff, last_stat;
-	bool do_restart = 0;
+	bool do_restart = 0, do_reboot = 0;
 	enum node_state waitfor, own_state;
 	uint32_t last_cmd = ~0;
 	char buf[UDP_MAXLEN];
@@ -1031,7 +1050,6 @@ static void wait_for_slaves(void)
 		size_t len;
 
 		if (++count >= backoff) {
-			local_node->check();
 			os->udp_write(&cmd, sizeof(cmd), 0xffffffff);
 
 			lib::udelay(100 * backoff);
@@ -1085,16 +1103,15 @@ static void wait_for_slaves(void)
 				if (memcmp(&config->nodes[n].mac, rsp->mac, 6) == 0) {
 					if ((rsp->state == waitfor) && (rsp->tid == cmd.tid)) {
 						config->nodes[n].seen = 1;
-					} else if ((rsp->state == RSP_PHY_NOT_TRAINED) ||
-						   (rsp->state == RSP_RINGS_NOT_OK) ||
-						   (rsp->state == RSP_FABRIC_NOT_READY) ||
-						   (rsp->state == RSP_FABRIC_NOT_OK)) {
+					} else if (rsp->state == RSP_PHY_NOT_TRAINED) {
 						if (!config->nodes[n].seen) {
 							printf("%s failed with %s; restarting synchronisation\n",
 							       pr_node(config->nodes[n].id), node_state_name[rsp->state]);
 							do_restart = 1;
 							config->nodes[n].seen = 1;
 						}
+					} else if (rsp->state == RSP_FABRIC_NOT_OK) {
+						do_reboot = 1;
 					} else if (rsp->state == RSP_ERROR) {
 						char name[32];
 						snprintf(name, sizeof(name), "%s", pr_node(config->nodes[n].id));
@@ -1119,27 +1136,35 @@ static void wait_for_slaves(void)
 
 		if (!ready_pending || do_restart) {
 			if (do_restart) {
-				cmd.state = CMD_RESET_FABRIC;
-				waitfor = RSP_RESET_COMPLETE;
+				if (cmd.state == CMD_CHECK_FABRIC) {
+					cmd.state = CMD_WARM_RESET;
+				} else {
+					cmd.state = CMD_RESET_FABRIC;
+					waitfor = RSP_RESET_OK;
+				}
 				do_restart = 0;
+			} else if (do_reboot) {
+				cmd.state = CMD_WARM_RESET;
+				waitfor = RSP_NONE;
+				do_reboot = 0;
 			} else if (cmd.state == CMD_STARTUP) {
 				/* Skip over resetting fabric, as that's just if training fails */
-				cmd.state = CMD_TRAIN_FABRIC;
+				cmd.state = CMD_TRAIN_PHYS;
 				waitfor = RSP_PHY_TRAINED;
-			} else if (cmd.state == CMD_TRAIN_FABRIC) {
-				cmd.state = CMD_VALIDATE_RINGS;
-				waitfor = RSP_RINGS_OK;
+			} else if (cmd.state == CMD_TRAIN_PHYS) {
+				cmd.state = CMD_SETUP_ROUTING;
+				waitfor = RSP_ROUTING_OK;
 			} else if (cmd.state == CMD_RESET_FABRIC) {
 				/* When invoked, continue at fabric training */
-				cmd.state = CMD_TRAIN_FABRIC;
+				cmd.state = CMD_TRAIN_PHYS;
 				waitfor = RSP_PHY_TRAINED;
-			} else if (cmd.state == CMD_VALIDATE_RINGS) {
-				cmd.state = CMD_SETUP_FABRIC;
+			} else if (cmd.state == CMD_SETUP_ROUTING) {
+				cmd.state = CMD_LOAD_FABRIC;
 				waitfor = RSP_FABRIC_READY;
-			} else if (cmd.state == CMD_SETUP_FABRIC) {
-				cmd.state = CMD_VALIDATE_FABRIC;
+			} else if (cmd.state == CMD_LOAD_FABRIC) {
+				cmd.state = CMD_CHECK_FABRIC;
 				waitfor = RSP_FABRIC_OK;
-			} else if (cmd.state == CMD_VALIDATE_FABRIC) {
+			} else if (cmd.state == CMD_CHECK_FABRIC) {
 				cmd.state = CMD_CONTINUE;
 				waitfor = RSP_NONE;
 			}
@@ -1180,7 +1205,6 @@ static void wait_for_master(void)
 
 	while (!go_ahead) {
 		if (++count >= backoff) {
-			local_node->check();
 			if (last_state != rsp.state) {
 				printf("Replying with %s", node_state_name[rsp.state]);
 				last_state = rsp.state;
