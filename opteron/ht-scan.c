@@ -479,7 +479,10 @@ ht_t Opteron::ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev)
 #endif
 
 				uint32_t val2 = lib::cht_read32(nc, Numachip2::VENDEV);
-				assertf(val2 == vendev, "Expected Numachip2 vendev %08x but got %08x", vendev, val2);
+				if (val2 != vendev) {
+					printf("\n" BANNER "Expected Numachip2 vendev %08x but got %08x; cold-booting...", vendev, val2);
+					ipmi->reset_cold();
+				}
 			}
 
 			printf("\n");
