@@ -114,7 +114,7 @@ bool Config::parse_node(char const *data)
 	for (unsigned i = 0; i < 6; i++) {
 		nodes[nnodes].mac[i] = strtoul(&mac[i*3], NULL, 16);
 		if (i < 5 && mac[i*3+2] != ':')
-			fatal("MAC address separator should be ':' not '%c'", mac[i*3+2]);
+			return 0;
 	}
 
 	char *p = ports;
@@ -172,7 +172,7 @@ void Config::parse(const char *pos)
 
 		// parse
 		if (!parse_blank(pos) && !parse_prefix(pos) && !parse_partition(pos) && !parse_node(pos))
-			fatal("unexpected line in config file:\n%s<END>", pos);
+			fatal("incorrectly formatted line in config file:\n%s<END>", pos);
 
 		pos = eol + 1;
 	}
