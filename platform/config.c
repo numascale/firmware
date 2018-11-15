@@ -80,6 +80,13 @@ bool Config::parse_partition(const char *data)
 {
 	char part[32];
 	char unified[8];
+
+	if (!strncmp(data, "monitor\n", 8)) {
+		partitions[npartitions].monitor = 1;
+		npartitions++;
+		return 1;
+	}
+
 	int ret = sscanf(data, "label=%s unified=%s\n", part, unified);
 	if (!ret)
 		return 0;

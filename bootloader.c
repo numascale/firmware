@@ -877,6 +877,20 @@ static void clear_dram(void)
 			(*nb)->dram_scrub_enable();
 }
 
+static void monitor()
+{
+	unsigned loop = 0;
+
+	while (1) {
+		printf("checking %u\n", loop++);
+
+		for (unsigned i = 0; i < 100; i++) {
+			lib::udelay(100000);
+			scan();
+		}
+	}
+}
+
 static void finished(const char *label)
 {
 	check();
@@ -887,6 +901,11 @@ static void finished(const char *label)
 	// reenable wrap32
 	uint64_t msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
+
+	if (config->partitions[config->local_node->partition].monitor) {
+		printf("monitoring for errors\n");
+		monitor();
+	}
 
 	if (config->partitions[config->local_node->partition].unified)
 		printf("Partition %u unification", config->local_node->partition + 1);

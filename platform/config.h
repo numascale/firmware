@@ -33,6 +33,7 @@ public:
 	struct partition_s {
 		char label[32];
 		bool unified;
+		bool monitor;
 	};
 private:
 	struct node *find(const sci_t sci) nonnull;
