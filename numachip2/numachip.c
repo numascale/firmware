@@ -19,6 +19,7 @@
 #include <string.h>
 
 #include "numachip.h"
+#include "lc.h"
 #include "spi.h"
 #include "../library/access.h"
 #include "../library/utils.h"
@@ -27,51 +28,53 @@
 #include "../platform/config.h"
 #include "../bootloader.h"
 
+uint32_t Numachip2::read64(const sci_t sci, const ht_t ht, const reg_t reg)
+{
+	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
 uint64_t Numachip2::read64(const reg_t reg) const
 {
-	xassert(ht);
 	return lib::mcfg_read64(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write64_split(const reg_t reg, const uint64_t val) const
 {
-	xassert(ht);
 	lib::mcfg_write64_split(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
+uint32_t Numachip2::read32(const sci_t sci, const ht_t ht, const reg_t reg)
+{
+	return lib::mcfg_read32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 uint32_t Numachip2::read32(const reg_t reg) const
 {
-	xassert(ht);
 	return lib::mcfg_read32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
-	xassert(ht);
 	lib::mcfg_write32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint16_t Numachip2::read16(const reg_t reg) const
 {
-	xassert(ht);
 	return lib::mcfg_read16(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write16(const reg_t reg, const uint16_t val) const
 {
-	xassert(ht);
 	lib::mcfg_write16(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
 uint8_t Numachip2::read8(const reg_t reg) const
 {
-	xassert(ht);
 	return lib::mcfg_read8(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
 void Numachip2::write8(const reg_t reg, const uint8_t val) const
 {
-	xassert(ht);
 	lib::mcfg_write8(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
 }
 
@@ -137,6 +140,7 @@ void Numachip2::late_init(void)
 	lib::mem_write64(PIU_TIMER_RESET, 0);
 
 	prev_tval = lib::mem_read64(PIU_TIMER_NOW);
+
 //	write32(TIMEOUT_RESP, TIMEOUT_VAL);
 //	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 }
@@ -147,37 +151,123 @@ uint32_t Numachip2::rom_read(const uint8_t reg)
 	return read32(IMG_PROP_DATA);
 }
 
+bool Numachip2::check(const sci_t sci, const ht_t ht)
+{
+	unsigned errors = 0;
+
+	// ensure the correct ID Numachip responds
+	uint32_t val = read32(sci, ht, SIU_NODEID) & 0xfff;
+	if (val != sci) {
+		printf("%03x SCI ID %03x\n", sci, val);
+		errors++;
+	}
+
+	val = read32(sci, ht, HT_LINK_STAT) & ~1;
+	if (val) {
+		printf("%03x HT link status %08x\n", sci, val);
+		errors++;
+	}
+
+	val = read32(sci, ht, MTAG_BASE) & 0x8000000;
+	if (val) {
+		printf("%03x MTAG base %08x\n", sci, val);
+		errors++;
+	}
+
+	val = read32(sci, ht, CTAG_BASE) & 0x8000000;
+	if (val) {
+		printf("%03x CTAG base %08x\n", sci, val);
+		errors++;
+	}
+
+	val = read32(sci, ht, NCACHE_CTRL) & ~0x00000018;
+	if (val) {
+		printf("%03x NCACHE_CTRL %08x\n", sci, val);
+		errors++;
+	}
+
+	val = read32(sci, ht, SIU_EVENTSTAT);
+	if (val) {
+		printf("%03x SIU_EVENTSTAT %08x\n", sci, val);
+		errors++;
+	}
+
+	for (unsigned pe = 0; pe < PE_UNITS; pe++) {
+		val = read32(sci, ht, RMPE_STATUS + pe * PE_OFFSET) & ~0x800f0000;
+		if (val) {
+			printf("%03x PE %u status %08x\n", sci, pe, val);
+			errors++;
+		}
+	}
+
+#ifdef UNNEEDED
+		for (unsigned mcms = 0; mcms < MCMS_UNITS; mcms++) {
+			val = read32(sci, ht, MCMS_STAT + mcms * MCMS_OFFSET);
+			if (val) {
+				printf("%03x PE %u MCMS %u status %08x\n", sci, pe, mcms, val);
+				errors++;
+			}
+#endif
+
+	for (unsigned link = 0; link < LC5::LINKS; link++) {
+		val = read32(sci, ht, LC5::LINKSTAT) & ~0x80000000;
+		if (val) {
+			printf("%03x LC5 %u link status %08x\n", sci, link, val);
+			errors++;
+		}
+
+		val = read32(sci, ht, LC5::EVENTSTAT);
+		if (val) {
+			printf("%03x LC5 %u event status %08x\n", sci, link, val);
+			errors++;
+		}
+
+		val = read32(sci, ht, LC5::ERRORCNT);
+		if (val) {
+			printf("%03x LC5 %u error count %08x\n", sci, link, val);
+			errors++;
+		}
+	}
+
+	val = read32(sci, ht, MCTR_ECC_STATUS);
+	if (val) {
+		printf("%03x DRAM status %08x\n", sci, val);
+		errors++;
+	}
+
+	return errors > 0;
+}
+
 bool Numachip2::check(void) const
 {
-	return fabric_check() | dram_check();
+	return check(config->id, ht);
 }
 
 void Numachip2::update_board_info(void)
 {
 	char sernostr[50] = {0};
 	int idx = 0;
-	if ((board_info.part_no[0]=='N') && (board_info.part_no[1]=='3')) {
-		sprintf(sernostr, "%s%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
-		printf ("The serial number is %s.\nPlease press CR for no change, or enter new serial number: ", sernostr);
-	}
-	else
-		printf ("Please enter the serial number: ");
 
-	sernostr[idx]='\0';
-	while(!sernostr[idx]) {
-		if (fgets(&sernostr[idx], 2, stdin)!=NULL) {
+	if ((board_info.part_no[0] == 'N') && (board_info.part_no[1] == '3')) {
+		sprintf(sernostr, "%s%s%c%c%c%s", board_info.part_no, board_info.pcb_type, board_info.pcb_rev, board_info.eco_level, board_info.model, board_info.serial_no);
+		printf("The serial number is %s.\nPlease press CR for no change, or enter new serial number: ", sernostr);
+	} else
+		printf("Please enter the serial number: ");
+
+	sernostr[idx] = '\0';
+
+	while (!sernostr[idx]) {
+		if (fgets(&sernostr[idx], 2, stdin) != NULL) {
 			// Handle backspace. Remove previous char from string and screen
-			if (sernostr[idx] == '\b' || sernostr[idx] == 0x7F) {
-				if (idx>0) {
-					printf ("\b \b");
+			if (sernostr[idx] == '\b' || sernostr[idx] == 0x7f) {
+				if (idx > 0) {
+					printf("\b \b");
 					sernostr[--idx]='\0';
-				}
-				else
+				} else
 					sernostr[idx]='\0';
-			}
-			// All other chars except CR, add to string. If CR continue (break out of while loop since serno[idx]!='\0'
-			else if(sernostr[idx] != '\r') {
-				if (idx<16)
+			} else if (sernostr[idx] != '\r') {
+				// All other chars except CR, add to string. If CR continue (break out of while loop since serno[idx]!='\0'
+				if (idx < 16)
 					printf("%c", sernostr[idx++]);
 				sernostr[idx]='\0';
 			}
@@ -186,11 +276,12 @@ void Numachip2::update_board_info(void)
 	printf("\n");
 	sernostr[idx] = '\0';
 	sernostr[16]  = '\0';
-	if (idx!=0) {
+
+	if (idx != 0) {
 		strcpy(board_info.serial_no, &sernostr[10]);
-		board_info.model     = sernostr[9];
+		board_info.model = sernostr[9];
 		board_info.eco_level = sernostr[8];
-		board_info.pcb_rev   = sernostr[7];
+		board_info.pcb_rev = sernostr[7];
 		sernostr[7] = '\0';
 		strcpy(board_info.pcb_type, &sernostr[4]);
 		sernostr[4] = '\0';
@@ -216,7 +307,7 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	uint32_t vendev = read32(VENDEV);
 	xassert(vendev == VENDEV_NC2);
 #endif
-	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000); // XXX: Should probably check a chip-rev reg instead...
+	const bool is_stratixv = !!(read32(LINK_FREQ_REV) & 0xffc00000);
 	assertf(is_stratixv, "FPGA platform not supported");
 
 	if (options->test_boardinfo)

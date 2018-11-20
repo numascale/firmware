@@ -129,6 +129,7 @@ public:
 	static const reg_t UNIT_ID           = 0x00d0;
 	static const reg_t HT_NODE_ID        = 0x00c8;
 	static const reg_t HT_INIT_CTRL      = 0x00d8;
+	static const reg_t HT_LINK_STAT      = 0x00e0;
 
 	static const reg_t MAP_INDEX         = 0x1044;
 	static const reg_t DRAM_MAP_BASE     = 0x1048;
@@ -145,6 +146,7 @@ public:
 	static const reg_t INFO_SIZE         = 0x8;
 	static const reg_t TIMEOUT_RESP      = 0x10b0;
 	static const reg_t GSM_MASK          = 0x10b4;
+	static const reg_t PIU_UTIL          = 0x10c0;
 
 	static const reg_t I2C_REG0          = 0x2040;
 	static const reg_t I2C_REG1          = 0x2044;
@@ -154,6 +156,9 @@ public:
 	static const reg_t FLASH_REG1        = 0x2054;
 	static const reg_t FLASH_REG2        = 0x2058;
 	static const reg_t FLASH_REG3        = 0x205c;
+	static const reg_t IMG_PROP_ADDR     = 0x2064;
+	static const reg_t IMG_PROP_DATA     = 0x2068;
+	static const reg_t IMG_PROP_TEMP     = 0x206c;
 	static const reg_t MTAG_BASE         = 0x2080;
 	static const reg_t CTAG_BASE         = 0x20a0;
 	static const reg_t NCACHE_CTRL       = 0x20c0;
@@ -165,9 +170,6 @@ public:
 	static const reg_t TAG_MCTR_MASK     = 0x0c;
 	static const reg_t TAG_CPU_ADDR      = 0x10;
 	static const reg_t TAG_CPU_DATA      = 0x18;
-	static const reg_t IMG_PROP_ADDR     = 0x2064;
-	static const reg_t IMG_PROP_DATA     = 0x2068;
-	static const reg_t IMG_PROP_TEMP     = 0x206c;
 	static const reg_t IMG_PROP_FLAGS    = 0x00;
 	static const reg_t IMG_PROP_HASH     = 0x01;
 	static const reg_t IMG_PROP_STRING   = 0x06;
@@ -175,13 +177,22 @@ public:
 	static const reg_t HT_RECFG_ADDR     = 0x20f4;
 	static const reg_t FABRIC_RECFG_DATA = 0x20f8;
 	static const reg_t FABRIC_RECFG_ADDR = 0x20fc;
+	static const reg_t PE_UNITS          = 2;
+	static const reg_t PE_OFFSET         = 0x80;
 	static const reg_t RMPE_CTRL         = 0x2100;
 	static const reg_t RMPE_STATUS       = 0x2104;
+	static const reg_t RMPE_MCMS_STAT    = 0x2110;
+	static const reg_t RMPE_MCMS_OFFSET  = 8;
+	static const reg_t RMPE_MCMS_UNITS   = 4;
 	static const reg_t RMPE_SEQ_INDEX    = 0x2130;
 	static const reg_t RMPE_WCS_ENTRY    = 0x2134;
 	static const reg_t RMPE_JUMP_ENTRY   = 0x2138;
+
 	static const reg_t LMPE_CTRL         = 0x2180;
 	static const reg_t LMPE_STATUS       = 0x2184;
+	static const reg_t LMPE_MCMS_STAT    = 0x2190;
+	static const reg_t LMPE_MCMS_OFFSET  = 8;
+	static const reg_t LMPE_MCMS_UNITS   = 4;
 	static const reg_t LMPE_SEQ_INDEX    = 0x21b0;
 	static const reg_t LMPE_WCS_ENTRY    = 0x21b4;
 	static const reg_t LMPE_JUMP_ENTRY   = 0x21b8;
@@ -227,8 +238,10 @@ public:
 	MmioAtt mmioatt;
 	friend class MmioAtt;
 
+	static uint32_t read64(const sci_t sci, const ht_t ht, const reg_t reg);
 	uint64_t read64(const reg_t reg) const;
 	void write64_split(const reg_t reg, const uint64_t val) const;
+	static uint32_t read32(const sci_t sci, const ht_t ht, const reg_t reg);
 	uint32_t read32(const reg_t reg) const;
 	void write32(const reg_t reg, const uint32_t val) const;
 	uint16_t read16(const reg_t reg) const;
@@ -247,6 +260,7 @@ public:
 	bool fabric_check(void) const;
 	void fabric_reset(void);
 	bool dram_check(void) const;
+	static bool check(const sci_t sci, const ht_t ht);
 	bool check(void) const;
 	void flash(const uint8_t *buf, const size_t len);
 };

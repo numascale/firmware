@@ -456,7 +456,7 @@ static void boot_core(const uint32_t apicid, const uint32_t vector)
 	// ensure semaphore set
 	xassert(trampoline_sem_getvalue());
 
-	// init	IPI
+	// init IPI
 	local_node->numachip->apic_icr_write(APIC_DM_INIT, apicid);
 	// startup IPI
 	local_node->numachip->apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12), apicid);
@@ -879,15 +879,63 @@ static void clear_dram(void)
 
 static void monitor()
 {
-	unsigned loop = 0;
+	uint64_t stats[MAX_NODE];
 
 	while (1) {
-		printf("checking %u\n", loop++);
+		for (unsigned i = 0; i < 12; i++) {
+			for (unsigned n = 0; n < config->nnodes; n++)
+				Numachip2::check(config->nodes[n].id, local_node->numachip->ht); // FIXME: assumed same HT
 
-		for (unsigned i = 0; i < 100; i++) {
-			lib::udelay(100000);
-			scan();
+			lib::udelay(300000);
 		}
+
+		printf("%02d:%02d:%02d",
+			lib::rtc_read(RTC_HOURS), lib::rtc_read(RTC_MINUTES), lib::rtc_read(RTC_SECONDS));
+
+		for (unsigned n = 0; n < config->nnodes; n++) {
+			if (config->partitions[config->nodes[n].partition].monitor)
+				continue;
+
+			// FIXME: assuming same HT
+			stats[n] = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PIU_UTIL)
+				| ((uint64_t)Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PIU_UTIL+4) << 32);
+			printf(" %03u", config->nodes[n].id);
+		}
+
+		printf("\nHREQ/16 ");
+
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", stats[n] & 0xff);
+
+		printf("\nHPRB/16 ");
+
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", (stats[n] >> 16) & 0xff);
+
+		printf("\nPREQ/8  ");
+
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", (stats[n] >> 24) & 0xff);
+
+		printf("\nPPRB/8  ");
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", (stats[n] >> 8) & 0xff);
+
+		printf("\nRMPE/16 ");
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", (stats[n] >> 32) & 0xff);
+
+		printf("\nLMPE/16 ");
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3llu", (stats[n] >> 40) & 0xff);
+
+		printf("\n\n");
 	}
 }
 
@@ -898,14 +946,12 @@ static void finished(const char *label)
 	if (options->boot_wait)
 		lib::wait_key("Press enter to boot");
 
+	if (config->partitions[config->local_node->partition].monitor)
+		monitor();
+
 	// reenable wrap32
 	uint64_t msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
-
-	if (config->partitions[config->local_node->partition].monitor) {
-		printf("monitoring for errors\n");
-		monitor();
-	}
 
 	if (config->partitions[config->local_node->partition].unified)
 		printf("Partition %u unification", config->local_node->partition + 1);

@@ -89,6 +89,9 @@ public:
 
 class LC5: public LC
 {
+	uint16_t lc_routes[256][3];
+public:
+	static const reg_t LINKS         = 6;
 	static const reg_t SIZE          = 0x100;
 	static const reg_t ROUTE_RAM     = 0x2800;
 	static const reg_t ROUTE_CHUNK   = 0x28c0;
@@ -96,9 +99,7 @@ class LC5: public LC
 	static const reg_t LINKSTAT      = 0x28c4;
 	static const reg_t EVENTSTAT     = 0x28c8;
 	static const reg_t ERRORCNT      = 0x28cc;
-	uint16_t lc_routes[256][3];
 
-public:
 	bool is_up(void);
 	uint64_t status(void);
 	bool check(void);
