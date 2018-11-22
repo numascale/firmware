@@ -215,7 +215,7 @@ bool Numachip2::check(const sci_t sci, const ht_t ht)
 #endif
 
 	for (unsigned link = 0; link < LC5::LINKS; link++) {
-		val = read32(sci, ht, LC5::LINKSTAT) & ~0x80000000;
+		val = read32(sci, ht, LC5::LINKSTAT + link * LC5::SIZE) & ~0x80000000;
 		if (val) {
 			printf("%03x LC5 %u link status %08x\n", sci, link, val);
 			errors++;
