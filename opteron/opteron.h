@@ -187,8 +187,11 @@ public:
 
 	static void ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t link);
 	static void platform_reset_warm(void);
+	static bool check(const sci_t _sci, const ht_t _ht);
 	bool check(void);
+	static uint64_t read64(const sci_t _sci, const ht_t _ht, const reg_t reg);
 	uint64_t read64(const reg_t reg) const;
+	static uint32_t read32(const sci_t _sci, const ht_t _ht, const reg_t reg);
 	uint32_t read32(const reg_t reg) const;
 	void write64_split(const reg_t reg, const uint64_t val) const;
 	void write32(const reg_t reg, const uint32_t val) const;

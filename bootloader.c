@@ -883,8 +883,12 @@ static void monitor()
 
 	while (1) {
 		for (unsigned i = 0; i < 12; i++) {
-			for (unsigned n = 0; n < config->nnodes; n++)
+			for (unsigned n = 0; n < config->nnodes; n++) {
 				Numachip2::check(config->nodes[n].id, local_node->numachip->ht); // FIXME: assumed same HT
+
+				for (unsigned ht = 0; ht < local_node->numachip->ht; ht++)
+					Opteron::check(config->nodes[n].id, ht);
+			}
 
 			lib::udelay(300000);
 		}

@@ -33,7 +33,7 @@ uint32_t Opteron::ioh_vendev;
 uint8_t Opteron::mc_banks;
 uint8_t Opteron::family;
 
-bool Opteron::check(void)
+bool Opteron::check(const sci_t _sci, const ht_t _ht)
 {
 	bool ret = 0;
 
@@ -50,20 +50,20 @@ bool Opteron::check(void)
 	}
 #endif
 	for (unsigned link = 0; link < 4; link++) {
-		uint32_t val = read32(LINK_CTRL + link * 0x20);
+		uint32_t val = read32(_sci, _ht, LINK_CTRL + link * 0x20);
 		if (val & 0x300) {
-			warning("%03x#%u link %u CRC error", sci, ht, link);
+			warning("%03x#%u link %u CRC error", _sci, _ht, link);
 			ret = 1;
 		}
 
 		if (val & 0x10) {
-			warning("%03x#%u link %u failure", sci, ht, link);
+			warning("%03x#%u link %u failure", _sci, _ht, link);
 			ret = 1;
 		}
 
-		val = read32(LINK_RETRY + link * 4);
+		val = read32(_sci, _ht, LINK_RETRY + link * 4);
 		if (val & 0xffff1f00) {
-			printf(COL_RED "%03x#%u link %u: %u retries", sci, ht, link, val >> 16);
+			printf(COL_RED "%03x#%u link %u: %u retries", _sci, _ht, link, val >> 16);
 			if (val & (1 << 11))
 				printf(" DataCorruptOut");
 			if (val & (1 << 11))
@@ -77,7 +77,7 @@ bool Opteron::check(void)
 		}
 	}
 
-	uint64_t s = read64(MC_NB_STAT);
+	uint64_t s = read64(_sci, _ht, MC_NB_STAT);
 	if (s & (1ULL << 63)) {
 		const char *sig[] = {
 		  NULL, "CRC Error", "Sync Error", "Mst Abort", "Tgt Abort",
@@ -88,7 +88,7 @@ bool Opteron::check(void)
 		  "L3 Cache Data Error", "L3 Cache Tag Error", "L3 Cache LRU Error",
 		  "Probe Filter Error", "Compute Unit Data Error"};
 
-		warning("%s on %03x#%u:", sig[(s >> 16) & 0x1f], sci, ht);
+		warning("%s on %03x#%u:", sig[(s >> 16) & 0x1f], _sci, _ht);
 		printf("- ErrorCode=0x%" PRIx64 " ErrorCodeExt=0x%" PRIx64 " Syndrome=0x%" PRIx64 "\n",
 		  s & 0xffff, (s >> 16) & 0xf, ((s >> 16) & 0xff00) | ((s >> 47) & 0xff));
 		printf("- Link=%" PRIu64 " Scrub=%" PRIu64 " SubLink=%" PRIu64 " McaStatSubCache=%" PRIu64 "\n",
@@ -102,36 +102,41 @@ bool Opteron::check(void)
 			printf(" ErrCoreId=%" PRIu64, (s >> 32) & 0xf);
 
 		if ((s >> 58) & 1) // AddrV
-			printf(" Address=0x%016" PRIx64, read64(MC_NB_ADDR));
+			printf(" Address=0x%016" PRIx64, read64(_sci, _ht, MC_NB_ADDR));
 
-		write64_split(MC_NB_ADDR, 0);
-		write64_split(MC_NB_STAT, 0);
+//		_write64_split(_sci, _ht, MC_NB_ADDR, 0);
+//		_write64_split(_sci, _ht, MC_NB_STAT, 0);
 		printf("\n");
 		ret = 1;
 	}
 
-	uint32_t v = read32(MC_NB_DRAM);
+	uint32_t v = read32(_sci, _ht, MC_NB_DRAM);
 	if (v & 0xff) { // looks like bits 7:0 only are usable
-		warning("DRAM machine check 0x%08x on %03x#%u", v, sci, ht);
-		write32(MC_NB_DRAM, 0);
+		warning("DRAM machine check 0x%08x on %03x#%u", v, _sci, _ht);
+//		write32(_sci, _ht, MC_NB_DRAM, 0);
 		ret = 1;
 	}
 
-	v = read32(MC_NB_LINK);
+	v = read32(_sci, _ht, MC_NB_LINK);
 	if (v & 0xfff) {
-		warning("HT Link machine check 0x%08x on %03x#%u", v, sci, ht);
-		write32(MC_NB_LINK, 0);
+		warning("HT Link machine check 0x%08x on %03x#%u", v, _sci, _ht);
+//		write32(MC_NB_LINK, 0);
 		ret = 1;
 	}
 
-	v = read32(MC_NB_L3C);
+	v = read32(_sci, _ht, MC_NB_L3C);
 	if (v & 0xfff) {
-		warning("L3 Cache machine check 0x%08x on %03x#%u", v, sci, ht);
-		write32(MC_NB_L3C, 0);
+		warning("L3 Cache machine check 0x%08x on %03x#%u", v, _sci, _ht);
+//		write32(MC_NB_L3C, 0);
 		ret = 1;
 	}
 
 	return ret;
+}
+
+bool Opteron::check(void)
+{
+	return check(sci, ht);
 }
 
 void Opteron::disable_syncflood(void)
@@ -172,9 +177,19 @@ void Opteron::disable_nbwdt(void)
 	write32(MC_NB_CONF, val);
 }
 
+uint64_t Opteron::read64(const sci_t _sci, const ht_t _ht, const reg_t reg)
+{
+	return lib::mcfg_read64(_sci, 0, 24 + _ht, reg >> 12, reg & 0xfff);
+}
+
 uint64_t Opteron::read64(const reg_t reg) const
 {
 	return lib::mcfg_read64(sci, 0, 24 + ht, reg >> 12, reg & 0xfff);
+}
+
+uint32_t Opteron::read32(const sci_t _sci, const ht_t _ht, const reg_t reg)
+{
+	return lib::mcfg_read32(_sci, 0, 24 + _ht, reg >> 12, reg & 0xfff);
 }
 
 uint32_t Opteron::read32(const reg_t reg) const
