@@ -949,6 +949,10 @@ static void finished(const char *label)
 	if (config->partitions[config->local_node->partition].monitor)
 		monitor();
 
+	// disable remote timeout on bootable nodes
+	foreach_node(node)
+		(*node)->numachip->finished();
+
 	// reenable wrap32
 	uint64_t msr = lib::rdmsr(MSR_HWCR);
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));

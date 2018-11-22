@@ -141,8 +141,13 @@ void Numachip2::late_init(void)
 
 	prev_tval = lib::mem_read64(PIU_TIMER_NOW);
 
-//	write32(TIMEOUT_RESP, TIMEOUT_VAL);
-//	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
+	write32(TIMEOUT_RESP, TIMEOUT_VAL);
+	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
+}
+
+void Numachip2::finished(void)
+{
+	write32(RMPE_CTRL, 1 << 31); // disable timeout
 }
 
 uint32_t Numachip2::rom_read(const uint8_t reg)

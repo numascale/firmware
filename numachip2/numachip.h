@@ -252,6 +252,7 @@ public:
 	static ht_t probe(const sci_t sci);
 	static ht_t probe_slave(const sci_t sci);
 	void late_init(void);
+	void finished(void);
 	uint32_t rom_read(const uint8_t reg);
 	Numachip2(const Config::node *_config, const ht_t _ht, const bool _local, const sci_t master_id);
 	bool fabric_train(void);
