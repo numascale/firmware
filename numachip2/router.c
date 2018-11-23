@@ -88,18 +88,22 @@ void Router::find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, c
 
 void Router::update(const nodeid_t src, const nodeid_t dst)
 {
+#ifdef DEBUG
 	printf("usage %3u:", best.usage);
-
+#endif
 	xbarid_t xbarid = 0;
 	unsigned hop = 0;
 	nodeid_t pos = src;
 
 	while (1) {
+#ifdef DEBUG
 		printf(" %02u:%u", pos, xbarid);
+#endif
 		xbarid = routes[pos][xbarid][dst] = best.route[hop++];
 		usage[pos][xbarid]++; // model congestion at link controller send buffer
+#ifdef DEBUG
 		printf("->%u", xbarid);
-
+#endif
 		if (xbarid == 0)
 			break;
 
@@ -121,7 +125,9 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 	}
 
 	xassert(pos == dst);
+#ifdef DEBUG
 	printf("\n");
+#endif
 }
 
 Router::Router()
@@ -156,8 +162,9 @@ void Router::run(const unsigned _nnodes)
 		for (nodeid_t dst = 0; dst < nnodes; dst++) {
 			best.hops = ~0U;
 			best.usage = ~0U;
-
+#ifdef DEBUG
 			printf("%02u->%02u: ", src, dst);
+#endif
 			find(src, dst, 0, 0, deps, 0); // calculate optimal route
 			update(src, dst); // increment path usage
 			dist[src][dst] = best.hops; // used for ACPI SLIT

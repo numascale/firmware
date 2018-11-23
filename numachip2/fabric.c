@@ -193,9 +193,9 @@ void Numachip2::fabric_routing(void)
 			uint8_t out = router->routes[config->id][p][::config->nodes[node].id];
 			if (out == XBARID_NONE)
 				continue;
-
+#ifdef DEBUG
 			printf(" routes[%03x][%u][%03x] via LC%u;", config->id, p, ::config->nodes[node].id, out);
-
+#endif
 			if (p)
 				// FIXME: fix array access of LCs
 				lcs[p-1]->add_route(::config->nodes[node].id, out);
@@ -203,8 +203,9 @@ void Numachip2::fabric_routing(void)
 				siu_route(::config->nodes[node].id, out);
 		}
 	}
+#ifdef DEBUG
 	printf("\n");
-
+#endif
 	// SIU routing table
 	for (unsigned chunk = 0; chunk < lc_chunks; chunk++) {
 		write32(SIU_XBAR_CHUNK, chunk);
