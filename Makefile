@@ -21,7 +21,7 @@ publish: bootloader.c32
 
 .PHONY: check
 check:
-	cppcheck -q --suppress=unusedStructMember --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
+	cppcheck -q --language=c++ --suppress=unusedStructMember --enable=all --inconclusive --force $(addsuffix *.h, $(DIRS)) $(addsuffix *.c, $(DIRS))
 
 .PHONY: clean
 clean:
