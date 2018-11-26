@@ -991,7 +991,7 @@ void caches(const bool enable)
 
 static void wait_status(void)
 {
-	printf("Waiting for");
+	printf("\nWaiting for");
 
 	for (unsigned n = 0; n < config->nnodes; n++) {
 		if (&config->nodes[n] == config->local_node) /* Self */
@@ -1000,8 +1000,6 @@ static void wait_status(void)
 		if (!config->nodes[n].seen)
 			printf(" %s", pr_node(config->nodes[n].id));
 	}
-
-	printf("\n");
 }
 
 #define NODE_SYNC_STATES(state)			\
@@ -1097,7 +1095,6 @@ static void wait_for_slaves(void)
 {
 	struct state_bcast cmd;
 	bool ready_pending = 1;
-	int count, backoff, last_stat;
 	bool do_restart = 0, do_reboot = 0;
 	enum node_state waitfor, own_state;
 	uint32_t last_cmd = ~0;
@@ -1113,10 +1110,8 @@ static void wait_for_slaves(void)
 	cmd.sci = config->local_node->id;
 	cmd.tid = 0; /* Must match initial rsp.tid for RSP_SLAVE_READY */
 	waitfor = RSP_SLAVE_READY;
-	printf("Waiting for %u servers...\n", config->nnodes - 1);
-	count = 0;
-	backoff = 1;
-	last_stat = 0;
+	printf("Waiting for %u servers", config->nnodes - 1);
+	unsigned count = 0, backoff = 1, last_stat = 170, progress = 0;
 
 	while (1) {
 		uint32_t ip = 0;
@@ -1129,7 +1124,7 @@ static void wait_for_slaves(void)
 			last_stat += backoff;
 
 			if (backoff < 32)
-				backoff = backoff * 2;
+				backoff *= 2;
 
 			count = 0;
 		}
@@ -1153,9 +1148,12 @@ static void wait_for_slaves(void)
 		if (config->nnodes > 1) {
 			len = os->udp_read(rsp, UDP_MAXLEN, &ip);
 			if (!do_restart) {
-				if (last_stat > 64) {
+				if (last_stat > 200) {
 					last_stat = 0;
 					wait_status();
+				} else if (last_stat / 8 != progress) {
+					printf(".");
+					progress = last_stat / 8;
 				}
 
 				if (!len)
@@ -1178,7 +1176,7 @@ static void wait_for_slaves(void)
 						config->nodes[n].seen = 1;
 					} else if (rsp->state == RSP_PHY_NOT_TRAINED) {
 						if (!config->nodes[n].seen) {
-							printf("%s failed with %s; restarting synchronisation\n",
+							printf("\n%s failed with %s; restarting synchronisation\n",
 							       pr_node(config->nodes[n].id), node_state_name[rsp->state]);
 							do_restart = 1;
 							config->nodes[n].seen = 1;
@@ -1187,7 +1185,7 @@ static void wait_for_slaves(void)
 						do_reboot = 1;
 					} else if (rsp->state == RSP_ERROR) {
 						char name[32];
-						snprintf(name, sizeof(name), "%s", pr_node(config->nodes[n].id));
+						snprintf(name, sizeof(name), "\n%s", pr_node(config->nodes[n].id));
 						error_remote(rsp->sci, name, ip, (char *)rsp + sizeof(struct state_bcast));
 					}
 					break;
@@ -1249,10 +1247,12 @@ static void wait_for_slaves(void)
 			cmd.tid++;
 			count = 0;
 			backoff = 1;
-			printf("Issuing %s; expecting %s\n",
+			printf("\nIssuing %s; expecting %s\n",
 			       node_state_name[cmd.state], node_state_name[waitfor]);
 		}
 	}
+
+	printf("\n");
 }
 
 static void wait_for_master(void)
