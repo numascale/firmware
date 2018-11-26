@@ -170,8 +170,6 @@ void Opteron::disable_syncflood(void)
 
 void Opteron::disable_nbwdt(void)
 {
-	warning_once("Disabling NorthBridge WatchDog Timer");
-
 	uint32_t val = read32(MC_NB_CONF);
 	val |= 1 << 8;
 	write32(MC_NB_CONF, val);
@@ -286,7 +284,7 @@ void Opteron::prepare(void)
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;
 
 	// disable core WDT
-	if (options->debug.nowdt) {
+	if (options->debug.wdt) {
 		lib::wrmsr(MSR_CPUWDT, 0);
 		push_msr(MSR_CPUWDT, 0);
 	}
@@ -403,7 +401,7 @@ void Opteron::init(void)
 
 	disable_syncflood(); // needed for debug visibility
 
-	if (options->debug.nowdt)
+	if (!options->debug.wdt)
 		disable_nbwdt();
 
 	// detect number of cores
