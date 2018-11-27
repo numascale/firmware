@@ -60,7 +60,7 @@ void Numachip2::dram_init(void)
 	dram_total_shift = density_shift + ranks_shift + devices_shift;
 	const uint64_t total = 1ULL << dram_total_shift; // bytes
 
-	printf("%uGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
+	printf("%dGB %s %s ", 1 << (dram_total_shift - 30), nc2_ddr3_module_type(spd_eeprom.module_type),
 	       spd_eeprom.mpart[0] ? (char *)spd_eeprom.mpart : "unknown");
 
 	bool errors;
@@ -148,7 +148,7 @@ void Numachip2::dram_init(void)
 	write32(MTAG_BASE + TAG_MCTR_OFFSET, mtag_base >> 19);
 	write32(MTAG_BASE + TAG_MCTR_MASK, (mtag_mask >> 19) - 1);
 
-	printf("%uMB nCache", 1 << (ncache_shift - 20));
+	printf("%dMB nCache", 1 << (ncache_shift - 20));
 
 #ifdef DEBUG
 	printf("CTag TAG_ADDR_MASK   %08x\n", read32(CTAG_BASE + TAG_ADDR_MASK));

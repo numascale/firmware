@@ -80,7 +80,7 @@ static void gen(void)
 		ssdt->checksum = checksum(ssdt, ssdt->len);
 
 		assert(write(fd, ssdt, ssdt->len) == ssdt->len);
-		printf("wrote %s (%d bytes, %u nodes)\n", filename, ssdt->len, nnodes);
+		printf("wrote %s (%u bytes, %u nodes)\n", filename, ssdt->len, nnodes);
 		free(ssdt);
 	}
 

@@ -38,7 +38,7 @@ const char *pr_node(const sci_t id)
 	static char strbufs[NSTRBUF][STRBUFSIZE];
 	static unsigned strbufoffset;
 
-	snprintf(strbufs[strbufoffset], STRBUFSIZE, "%s%02u", config->prefix, id + 1);
+	snprintf(strbufs[strbufoffset], STRBUFSIZE, "%s%02d", config->prefix, id + 1);
 	const char *ret = strbufs[strbufoffset];
 	strbufoffset = (strbufoffset + 1) % NSTRBUF;
 

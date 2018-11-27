@@ -36,7 +36,7 @@ public:
 		bool monitor;
 	};
 private:
-	struct node *find(const sci_t sci) nonnull;
+	struct node *find(const sci_t id) nonnull;
 	bool parse_blank(const char *data);
 	bool parse_prefix(const char *data);
 	bool parse_partition(const char *data);

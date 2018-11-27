@@ -46,7 +46,7 @@ class Router {
 		deps_t deps;
 	} best;
 
-	void find(const nodeid_t src, const nodeid_t dst, const unsigned hops, const unsigned usage, deps_t _deps, const xbarid_t last_xbarid);
+	void find(const nodeid_t pos, const nodeid_t dst, const unsigned hops, const unsigned _usage, deps_t _deps, const xbarid_t last_xbarid);
 	void update(const nodeid_t src, const nodeid_t dst);
 public:
 	dest_t neigh[MAX_NODE][XBAR_PORTS]; 	// fabric state

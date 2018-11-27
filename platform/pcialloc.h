@@ -80,7 +80,7 @@ public:
 		const bool _io, const bool _s64, const bool _pref, const uint64_t _len, const uint64_t _addr, const unsigned _vfs):
 		sci(_sci), bus(_bus), dev(_dev), fn(_fn), offset(_offset), addr(_addr), io(_io), s64(_s64), pref(_pref), len(_len), vfs(_vfs)
 	{}
-	void assign(const uint64_t assigned);
+	void assign(const uint64_t _addr);
 	void print(void) const;
 	bool less(const BAR &rhs) const
 	{

@@ -42,7 +42,7 @@ class SR56x0 {
 	void watchdog_write(const uint8_t reg, const uint32_t val);
 public:
 	static bool probe(const sci_t sci);
-	SR56x0(const sci_t sci, const bool local);
+	SR56x0(const sci_t _sci, const bool _local);
 	void smi_disable(void);
 	void smi_enable(void);
 	void limits(const uint64_t limit);

@@ -75,7 +75,7 @@ void BAR::assign(const uint64_t _addr)
 
 void BAR::print() const
 {
-	printf(" %s,%s,%u@%02x:%02x.%x 0x%02x @ 0x%llx", lib::pr_size(len), io ? "I" : pref ? "P" : "NP", s64 ? 64 : 32, bus, dev, fn, offset, addr);
+	printf(" %s,%s,%d@%02x:%02x.%x 0x%02x @ 0x%llx", lib::pr_size(len), io ? "I" : pref ? "P" : "NP", s64 ? 64 : 32, bus, dev, fn, offset, addr);
 	if (vfs > 1)
 		printf(" (%u VFS)", vfs);
 	if (addr < 0x100000000)

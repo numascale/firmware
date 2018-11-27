@@ -46,7 +46,7 @@ void LC4::check(void)
 	if (val) {
 		warning("Fabric LC4 link %u on %s has issues 0x%016" PRIx64, index, numachip.config->hostname, val);
 
-		if (val & 0xff)           printf("Error count: %d\n", (unsigned)(val & 0xff));
+		if (val & 0xff)           printf("Error count: %u\n", (unsigned)(val & 0xff));
 
 		if ((val >> 16) & 0x0004) printf("ELOG0 - CRC error on upstream data\n");
 		if ((val >> 16) & 0x0008) printf("ELOG0 - Circulation count timeout error\n");

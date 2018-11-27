@@ -23,7 +23,7 @@ class Options {
 	static void parse_bool(const char *val, void *voidp);
 	static void parse_int(const char *val, void *intp);
 	static void parse_int64(const char *val, void *intp);
-	static void parse_flags(const char *val, void *flags);
+	static void parse_flags(const char *val, void *data);
 public:
 	const char *config_filename, *flash;
 	bool ht_slowmode;

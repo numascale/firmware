@@ -50,7 +50,7 @@ public:
 	static const uint64_t NVS = 4;
 	static const uint64_t UNUSABLE = 5;
 
-	struct e820entry *position(const uint64_t base);
+	struct e820entry *position(const uint64_t addr);
 	E820(void);
 	bool exists(const uint64_t base, const uint64_t length) const;
 	void dump(void);

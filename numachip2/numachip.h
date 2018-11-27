@@ -104,7 +104,7 @@ class Numachip2 {
 	void pe_init(void);
 
 	/* fabric.c */
-	void siu_route(const sci_t sci, const uint8_t out);
+	void siu_route(const sci_t dst, const uint8_t out);
 	void fabric_init(void);
 	bool fabric_trained;
 public:
@@ -263,7 +263,7 @@ public:
 	bool dram_check(void) const;
 	static bool check(const sci_t sci, const ht_t ht);
 	bool check(void) const;
-	void flash(const uint8_t *buf, const size_t len);
+	void flash(const uint8_t *image, const size_t len);
 };
 
 extern Numachip2 *numachip;

@@ -88,7 +88,7 @@
 		if (sci != 0xffffffff)					\
 			printf(COL_RED "\nError on %03x/%s: %s" COL_DEFAULT "\n", sci, name, msg); \
 		else							\
-			printf(COL_RED "\nError on %d.%d.%d.%d: %s" COL_DEFAULT "\n", \
+			printf(COL_RED "\nError on %u.%u.%u.%u: %s" COL_DEFAULT "\n", \
 			       ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff, msg); \
 	} while (0)
 

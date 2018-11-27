@@ -70,7 +70,7 @@ private:
 	static uint32_t phy_read32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct);
 	static void phy_write32(const ht_t ht, const link_t link, const uint16_t reg, const bool direct, const uint32_t val);
 	static void cht_print(const ht_t neigh, const link_t link);
-	static void optimise_linkbuffers(const ht_t ht, const int link);
+	static void optimise_linkbuffers(const ht_t nb, const int link);
 public:
 	static const uint32_t VENDEV_MCP55     = 0x036910de;
 	static const uint32_t VENDEV_FAM10H    = 0x12001022;
@@ -197,7 +197,7 @@ public:
 	void write32(const reg_t reg, const uint32_t val) const;
 	void set32(const reg_t reg, const uint32_t mask) const;
 	void clear32(const reg_t reg, const uint32_t mask) const;
-	void clearset32(const reg_t reg, const uint32_t setmask, const uint32_t clearmask) const;
+	void clearset32(const reg_t reg, const uint32_t clearmask, const uint32_t setmask) const;
 
 	static void prepare(void);
 #ifdef NOTNEEDED
@@ -211,7 +211,7 @@ public:
 	Opteron(const sci_t _sci, const ht_t _ht, const bool _local);
 	~Opteron(void);
 	static ht_t ht_fabric_fixup(ht_t &neigh, link_t &link, const uint32_t vendev);
-	static void ht_reconfig(const ht_t neigh, const link_t link, const ht_t nnodes);
+	static void ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts);
 	void dram_clear_start(void);
 	void dram_clear_wait(void);
 	void tracing_arm(void);

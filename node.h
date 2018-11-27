@@ -55,7 +55,7 @@ public:
 	void trim_dram_maps(void);
 
 	Node(Config::node *_config, const ht_t ht);
-	Node(Config::node *_config, const sci_t master);
+	Node(Config::node *_config, const sci_t _master_sci);
 };
 
 extern Node *local_node;

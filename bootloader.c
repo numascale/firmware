@@ -967,7 +967,7 @@ static void finished(const char *label)
 	lib::wrmsr(MSR_HWCR, msr & ~(1ULL << 17));
 
 	if (config->partitions[config->local_node->partition].unified)
-		printf("Partition %u unification", config->local_node->partition + 1);
+		printf("Partition %d unification", config->local_node->partition + 1);
 	else
 		printf("Observer setup");
 
