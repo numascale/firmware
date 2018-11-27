@@ -156,13 +156,13 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 		printf("200MHz");
 		lib::cht_write32(nc, Numachip2::LINK_FREQ_REV, (val & ~0xf00) | (max_supported << 8));
 
-		// set HT phy Post1 -2.5dB deemphasis to compensate for attenuation
-		phy_write32(neigh, link, 0x700c, 1, 32 << 16);
-
 		// increase HT phy FIFO pointer distance for HT3
 		phy_write32(neigh, link, 0xcf, 0, (0xa << 8) | (2 << 4) | 0xa);
 		phy_write32(neigh, link, 0xdf, 0, (0xa << 8) | (2 << 4) | 0xa);
 #ifdef UNNEEDED
+		// set HT phy Post1 -2.5dB deemphasis to compensate for attenuation
+		phy_write32(neigh, link, 0x700c, 1, 32 << 16);
+
 		// enable phy Loop Filter Counter and set limits
 		phy_write32(neigh, link, 0xc1, 0, 0x8040280);
 		phy_write32(neigh, link, 0xd1, 0, 0x8040280);
