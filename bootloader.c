@@ -413,7 +413,7 @@ static void tracing_arm(void)
 	foreach_node(node)
 		(*node)->tracing_arm();
 }
-#ifdef TEST_CONTENT
+#ifdef TRACE
 static void tracing_start(void)
 {
 	if (!options->tracing)
@@ -537,7 +537,7 @@ static void setup_cores(void)
 			trampoline_sem_init(1);
 			boot_core((*node)->apics[n], VECTOR_SETUP);
 			if (trampoline_sem_wait()) {
-#ifdef TEST_CONTENT
+#ifdef TRACE
 				tracing_stop();
 #endif
 				fatal("APIC 0x%x failed to complete setup", (*node)->apics[n]);
@@ -548,7 +548,7 @@ static void setup_cores(void)
 	printf("\n");
 	lib::critical_leave();
 }
-#ifdef TEST_CONTENT
+
 static void test_prepare(void)
 {
 	for (unsigned i = 0; i < TEST_SIZE / 4; i++)
@@ -574,11 +574,18 @@ static void test_verify(void)
 
 	check();
 	if (errors || *REL32(errors)) {
+#ifdef TRACE
 		tracing_stop();
+#endif
 		fatal("%u errors detected during test", errors+*REL32(errors));
 	}
+
+	for (unsigned i = 0; i < TEST_SIZE / 4; i++) {
+		uint64_t addr = ((uint64_t)TEST_BASE_HIGH << 32) + TEST_BASE_LOW + i * 4;
+		lib::mem_write32(addr, 0);
+	}
 }
-#endif
+
 static void test_cores(void)
 {
 	uint16_t cores = 0;
@@ -590,9 +597,7 @@ static void test_cores(void)
 		lib::wait_key("Press enter to start core testing");
 
 	printf("Validating with %u cores", cores);
-#ifdef TEST_CONTENT
 	test_prepare();
-#endif
 	lib::critical_enter();
 
 	*REL32(errors) = 0; // clear error counter
@@ -600,7 +605,7 @@ static void test_cores(void)
 
 	uint64_t finish = lib::rdtscll() + (uint64_t)1e6 * Opteron::tsc_mhz;
 
-#ifdef TEST_CONTENT
+#ifdef TRACE
 	tracing_start();
 #endif
 	foreach_node(node) {
@@ -613,7 +618,7 @@ static void test_cores(void)
 		}
 	}
 	if (trampoline_sem_wait()) {
-#ifdef TEST_CONTENT
+#ifdef TRACE
 		tracing_stop();
 #endif
 		fatal("%u cores failed to start test (status %u)", trampoline_sem_getvalue(), *REL32(vector));
@@ -635,16 +640,16 @@ static void test_cores(void)
 	*REL32(vector) = VECTOR_TEST_FINISH;
 
 	if (trampoline_sem_wait()) {
-#ifdef TEST_CONTENT
+#ifdef TRACE
 		tracing_stop();
 #endif
 		fatal("%u cores failed to finish test", trampoline_sem_getvalue());
 	}
 
-#ifdef TEST_CONTENT
-	test_verify();
+#ifdef TRACE
 	tracing_stop();
 #endif
+	test_verify();
 	lib::critical_leave();
 	printf("\n");
 }
