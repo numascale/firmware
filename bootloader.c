@@ -1555,7 +1555,6 @@ int main(const int argc, char *const argv[])
 	}
 
 	copy_inherit();
-	clear_dram();
 	if (options->tracing)
 		setup_gsm();
 	setup_info();
@@ -1565,5 +1564,6 @@ int main(const int argc, char *const argv[])
 //	test_map();
 	if (!options->fastboot)
 		test_cores();
+	clear_dram();
 	finished(config->partitions[config->local_node->partition].label);
 }

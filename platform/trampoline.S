@@ -193,8 +193,10 @@ test:
 	div		%ebp
 
 	// start base at 4GB to avoid corrupting state
-	inc		%edx
-
+	cmpl		$0, %edx
+	jne		skip
+	movl		$1, %edx
+skip:
 	// if in hole over HT decode range, skip
 	cmpl		$0x100, %edx
 	jge		2f
@@ -208,7 +210,7 @@ test:
 	// generate 64-bit RMW using FS
 	mov		$MSR_FS_BASE, %ecx
 	wrmsr
-	movl 		$0, %fs:(0)
+	xorl 		$0xffffffff, %fs:(0)
 
 	// check for termination condition
 	cmpl	$VECTOR_TEST_FINISH, %cs:RELOCATED(vector)
@@ -225,6 +227,8 @@ test:
 	xor	%edx, %edx
 	mov	$MSR_FS_BASE, %ecx
 	wrmsr
+
+	wbinvd
 
 	SEM_POST()
 3:	cli
