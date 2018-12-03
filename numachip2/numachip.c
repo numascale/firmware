@@ -330,6 +330,15 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 
 	printf(" at HT%u\n", ht);
 
+	write32(IMG_PROP_TEMP, 1 << 31);
+	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
+
+	uint16_t spd_temp;
+	i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
+	int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
+
+	printf("- core @ %2dC, DIMM @ %2dC\n", fpga_temp, dimm_temp);
+
 	struct spi_image_info image_info;
 	spi_read(SPI_IMAGE_INFO_BASE, sizeof(image_info), (unsigned char *)&image_info);
 
@@ -341,15 +350,6 @@ Numachip2::Numachip2(const Config::node *_config, const ht_t _ht, const bool _lo
 	buildtime[sizeof(buildtime) - 1] = '\0'; // terminate
 
 	printf("- image %s, checksum %u, built %s\n", image_info.name, image_info.checksum, buildtime);
-
-	write32(IMG_PROP_TEMP, 1 << 31);
-	int fpga_temp = (read32(IMG_PROP_TEMP) & 0xff) - 128;
-
-	uint16_t spd_temp;
-	i2c_master_seq_read(0x18, 0x05, sizeof(spd_temp), (uint8_t *)&spd_temp);
-	int dimm_temp = ((spd_temp >> 8 | (spd_temp & 0xff) << 8) & 0x1fff) >> 4;
-
-	printf("- core @ %2dC, DIMM @ %2dC\n", fpga_temp, dimm_temp);
 
 	assertf(fpga_temp <= 80, "Chip overtemperature; check heatsink is correctly mounted, fan rotates and the server fans are all installed and operational");
 

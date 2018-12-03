@@ -885,6 +885,7 @@ static void clear_dram(void)
 static void monitor()
 {
 	uint64_t stats[MAX_NODE];
+	uint8_t coretemp[MAX_NODE];
 
 	while (1) {
 		for (unsigned i = 0; i < 12; i++) {
@@ -908,6 +909,7 @@ static void monitor()
 			// FIXME: assuming same HT
 			stats[n] = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PIU_UTIL)
 				| ((uint64_t)Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PIU_UTIL+4) << 32);
+			coretemp[n] = (Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::IMG_PROP_TEMP) & 0xff) - 128;
 			printf(" %03u", config->nodes[n].id);
 		}
 
@@ -943,6 +945,11 @@ static void monitor()
 		for (unsigned n = 0; n < config->nnodes; n++)
 			if (!config->partitions[config->nodes[n].partition].monitor)
 				printf(" %3llu", (stats[n] >> 40) & 0xff);
+
+		printf("\ncoretemp");
+		for (unsigned n = 0; n < config->nnodes; n++)
+			if (!config->partitions[config->nodes[n].partition].monitor)
+				printf(" %3u", coretemp[n]);
 
 		printf("\n\n");
 	}
@@ -1116,7 +1123,7 @@ static void wait_for_slaves(void)
 	cmd.tid = 0; /* Must match initial rsp.tid for RSP_SLAVE_READY */
 	waitfor = RSP_SLAVE_READY;
 	printf("Waiting for %u servers", config->nnodes - 1);
-	unsigned count = 0, backoff = 1, last_stat = 170, progress = 0;
+	unsigned count = 0, backoff = 1, last_stat = 150, progress = 0;
 
 	while (1) {
 		uint32_t ip = 0;

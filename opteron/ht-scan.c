@@ -291,9 +291,9 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts)
 		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val & ~1);
 	}
-
+#ifdef DEBUG
 	printf(".");
-
+#endif
 	/* Wait 40us for outstanding scrub requests to complete */
 	lib::udelay(40);
 	lib::critical_enter();
@@ -321,9 +321,9 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts)
 		   CR0.CD for all active cores in the system */
 		caches(1);
 	}
-
+#ifdef DEBUG
 	printf("+");
-
+#endif
 	for (int i = hts; i >= 0; i--) {
 		/* Update "neigh" bcast values for node about to increment fabric size */
 		val = lib::cht_read32(neigh, ROUTING + i * 4);
@@ -332,9 +332,9 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts)
 		val = lib::cht_read32(i, HT_NODE_ID);
 		lib::cht_write32(i, HT_NODE_ID, val + (1 << 4));
 	}
-
+#ifdef DEBUG
 	printf("*");
-
+#endif
 	/* Reassert LimitCldtCfg */
 	for (ht_t ht = 0; ht <= hts; ht++) {
 		val = lib::cht_read32(ht, LINK_TRANS_CTRL);
@@ -352,9 +352,9 @@ void Opteron::ht_reconfig(const ht_t neigh, const link_t link, const ht_t hts)
 		val = lib::cht_read32(ht, SCRUB_ADDR_LOW);
 		lib::cht_write32(ht, SCRUB_ADDR_LOW, val | 1);
 	}
-
+#ifdef DEBUG
 	printf(".");
-
+#endif
 	lib::critical_leave();
 	printf("\n");
 }
