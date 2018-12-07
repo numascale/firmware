@@ -135,6 +135,8 @@ void Options::parse_flags(const char *val, void *data)
 			flags->mctr = 1;
 		else if (!strcmp(pos, "wdtinfo"))
 			flags->wdtinfo = 1;
+		else if (!strcmp(pos, "monitor"))
+			flags->monitor = 1;
 		else
 			fatal("Unknown debug flag '%s'", pos);
 

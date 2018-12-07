@@ -462,6 +462,34 @@ static void boot_core(const uint32_t apicid, const uint32_t vector)
 	local_node->numachip->apic_icr_write(APIC_DM_STARTUP | (start_eip >> 12), apicid);
 }
 
+static void caches_global(const bool enable)
+{
+	if (enable)
+		enable_cache();
+
+	foreach_node(node) {
+		for (unsigned n = 0; n < (*node)->napics; n++) {
+			if (node == &nodes[0] && n == 0) // skip BSC
+				continue;
+
+			trampoline_sem_init(1);
+			boot_core((*node)->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
+
+			if (trampoline_sem_wait())
+				fatal("%u cores did not complete requested operation", trampoline_sem_getvalue());
+		}
+	}
+
+	if (!enable) {
+		if (Opteron::family >= 0x15) {
+			// ensure CombineCr0Cd is set on fam15h
+			uint64_t msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
+			lib::wrmsr(MSR_CU_CFG3, msr);
+		}
+		disable_cache();
+	}
+}
+
 static void setup_cores_observer(void)
 {
 	printf("APICs");
@@ -951,6 +979,30 @@ static void monitor()
 			if (!config->partitions[config->nodes[n].partition].monitor)
 				printf(" %3u", coretemp[n]);
 
+		if (options->debug.monitor) {
+			printf("\n");
+
+			// assume all control words are the same
+			uint32_t ctrl = Numachip2::read32(config->nodes[0].id, local_node->numachip->ht, Numachip2::PE_CTRL);
+
+			for (unsigned n = 0; n < config->nnodes; n++) {
+				if (config->partitions[config->nodes[n].partition].monitor)
+					continue;
+
+				for (unsigned pe = 0; pe < Numachip2::PE_UNITS; pe++) {
+					for (unsigned c = 0; c < Numachip2::PE_CNTXTS; c++) {
+						Numachip2::write32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CTRL + pe * Numachip2::PE_OFFSET, ctrl | (c << 20));
+						uint32_t stat = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_STATUS + pe * Numachip2::PE_OFFSET);
+
+						if ((stat >> 10) & 7) { // skip free contexts
+							uint64_t addr = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_ADDR + pe * Numachip2::PE_OFFSET);
+							printf(" %03x%c%010llx", config->nodes[n].id, pe ? 'L' : 'R', addr);
+						}
+					}
+				}
+			}
+		}
+
 		printf("\n\n");
 	}
 }
@@ -984,14 +1036,7 @@ static void finished(const char *label)
 
 void caches(const bool enable)
 {
-	if (!enable) {
-		if (Opteron::family >= 0x15) {
-			// ensure CombineCr0Cd is set on fam15h
-			uint64_t msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
-			lib::wrmsr(MSR_CU_CFG3, msr);
-		}
-		disable_cache();
-	} else
+	if (enable)
 		enable_cache();
 
 	trampoline_sem_init(acpi->napics - 1);
@@ -999,6 +1044,15 @@ void caches(const bool enable)
 		boot_core_host(acpi->apics[n], enable ? VECTOR_CACHE_ENABLE : VECTOR_CACHE_DISABLE);
 	if (trampoline_sem_wait())
 		fatal("%u cores did not complete requested operation", trampoline_sem_getvalue());
+
+	if (!enable) {
+		if (Opteron::family >= 0x15) {
+			// ensure CombineCr0Cd is set on fam15h
+			uint64_t msr = lib::rdmsr(MSR_CU_CFG3) | (1ULL << 49);
+			lib::wrmsr(MSR_CU_CFG3, msr);
+		}
+		disable_cache();
+	}
 }
 
 static void wait_status(void)
