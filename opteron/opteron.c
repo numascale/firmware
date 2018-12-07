@@ -278,7 +278,7 @@ void Opteron::prepare(void)
 		tsc_mhz = 200 * ((val & 0x1f) + 4) / (1 + ((val2 >> 22) & 1));
 	}
 
-	printf("Family %xh Opteron with %dMHz NB TSC frequency\n", family, tsc_mhz);
+	printf("Family %xh Opteron with %uMHz NB TSC frequency\n", family, tsc_mhz);
 
 	// check number of MCA banks
 	mc_banks = lib::rdmsr(MSR_MC_CAP) & 0xff;

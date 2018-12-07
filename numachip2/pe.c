@@ -24,7 +24,7 @@
 
 #include "numachip2_mseq.h"
 
-void Numachip2::pe_load_microcode(const bool lmpe)
+void Numachip2::pe_load_microcode(const unsigned pe)
 {
 	unsigned mseq_ucode_length = sizeof(numachip2_mseq_ucode) / sizeof(numachip2_mseq_ucode[0]);
 	unsigned mseq_table_length = sizeof(numachip2_mseq_table) / sizeof(numachip2_mseq_table[0]);
@@ -32,27 +32,22 @@ void Numachip2::pe_load_microcode(const bool lmpe)
 	xassert(mseq_ucode_length <= 4096);
 	xassert(mseq_table_length <= 256);
 
-	write32(lmpe ? LMPE_SEQ_INDEX : RMPE_SEQ_INDEX, 1 << 31); // enable AutoInc and zero index
+	write32(PE_SEQ_INDEX + pe * PE_OFFSET, 1 << 31); // enable AutoInc and zero index
 	for (unsigned j = 0; j < mseq_ucode_length; j++)
-		write32(lmpe ? LMPE_WCS_ENTRY : RMPE_WCS_ENTRY, numachip2_mseq_ucode[j]);
+		write32(PE_WCS_ENTRY + pe * PE_OFFSET, numachip2_mseq_ucode[j]);
 
-	write32(lmpe ? LMPE_SEQ_INDEX : RMPE_SEQ_INDEX, 1 << 31); // enable AutoInc and zero index
+	write32(PE_SEQ_INDEX + pe * PE_OFFSET, 1 << 31); // enable AutoInc and zero index
 	for (unsigned j = 0; j < mseq_table_length; j++)
-		write32(lmpe ? LMPE_JUMP_ENTRY : RMPE_JUMP_ENTRY, numachip2_mseq_table[j]);
+		write32(PE_JUMP_ENTRY + pe * PE_OFFSET, numachip2_mseq_table[j]);
 
-	uint32_t val = read32(lmpe ? LMPE_CTRL : RMPE_CTRL);
-	write32(lmpe ? LMPE_CTRL : RMPE_CTRL, val | (1 << 31));
+	uint32_t val = read32(PE_CTRL + pe * PE_OFFSET);
+	write32(PE_CTRL + pe * PE_OFFSET, val | (1 << 31));
 }
 
 void Numachip2::pe_init(void)
 {
-	if (!(read32(RMPE_CTRL) & (1<<31)))
+	for (unsigned pe = 0; pe < PE_UNITS; pe++) {
+		xassert(!(read32(PE_CTRL + pe * PE_OFFSET) & (1<<31)));
 		pe_load_microcode(0);
-	else
-		printf("RMPE already operational\n");
-
-	if (!(read32(LMPE_CTRL) & (1<<31)))
-		pe_load_microcode(1);
-	else
-		printf("LMPE already operational\n");
+	}
 }

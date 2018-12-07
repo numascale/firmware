@@ -100,7 +100,7 @@ class Numachip2 {
 	void dram_init(void);
 
 	/* pe.c */
-	void pe_load_microcode(const bool lmpe);
+	void pe_load_microcode(const unsigned pe);
 	void pe_init(void);
 
 	/* fabric.c */
@@ -178,24 +178,19 @@ public:
 	static const reg_t FABRIC_RECFG_DATA = 0x20f8;
 	static const reg_t FABRIC_RECFG_ADDR = 0x20fc;
 	static const reg_t PE_UNITS          = 2;
+	static const reg_t PE_MCMS_UNITS     = 1;
+	static const reg_t PE_CNTXTS         = 16;
 	static const reg_t PE_OFFSET         = 0x80;
-	static const reg_t RMPE_CTRL         = 0x2100;
-	static const reg_t RMPE_STATUS       = 0x2104;
-	static const reg_t RMPE_MCMS_STAT    = 0x2110;
-	static const reg_t RMPE_MCMS_OFFSET  = 8;
-	static const reg_t RMPE_MCMS_UNITS   = 4;
-	static const reg_t RMPE_SEQ_INDEX    = 0x2130;
-	static const reg_t RMPE_WCS_ENTRY    = 0x2134;
-	static const reg_t RMPE_JUMP_ENTRY   = 0x2138;
+	static const reg_t PE_MCMS_OFFSET    = 0x8;
+	static const reg_t PE_CTRL           = 0x2100;
+	static const reg_t PE_STATUS         = 0x2104;
+	static const reg_t PE_CNTXT_ADDR     = 0x2108;
+	static const reg_t PE_MCMS_STAT      = 0x2110;
+	static const reg_t PE_SEQ_INDEX      = 0x2130;
+	static const reg_t PE_WCS_ENTRY      = 0x2134;
+	static const reg_t PE_JUMP_ENTRY     = 0x2138;
+	static const reg_t PE_CNTXT_STATUS   = 0x214c;
 
-	static const reg_t LMPE_CTRL         = 0x2180;
-	static const reg_t LMPE_STATUS       = 0x2184;
-	static const reg_t LMPE_MCMS_STAT    = 0x2190;
-	static const reg_t LMPE_MCMS_OFFSET  = 8;
-	static const reg_t LMPE_MCMS_UNITS   = 4;
-	static const reg_t LMPE_SEQ_INDEX    = 0x21b0;
-	static const reg_t LMPE_WCS_ENTRY    = 0x21b4;
-	static const reg_t LMPE_JUMP_ENTRY   = 0x21b8;
 	static const reg_t SIU_XBAR_TABLE    = 0x2200;
 	static const reg_t SIU_XBAR_CHUNK    = 0x22c0;
 	static const reg_t SIU_NODEID        = 0x22c4;
@@ -243,6 +238,7 @@ public:
 	void write64_split(const reg_t reg, const uint64_t val) const;
 	static uint32_t read32(const sci_t sci, const ht_t ht, const reg_t reg);
 	uint32_t read32(const reg_t reg) const;
+	static void write32(const sci_t sci, const ht_t, const reg_t reg, const uint32_t val);
 	void write32(const reg_t reg, const uint32_t val) const;
 	uint16_t read16(const reg_t reg) const;
 	void write16(const reg_t reg, const uint16_t val) const;

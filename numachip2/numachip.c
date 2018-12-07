@@ -53,6 +53,11 @@ uint32_t Numachip2::read32(const reg_t reg) const
 	return lib::mcfg_read32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff);
 }
 
+void Numachip2::write32(const sci_t sci, const ht_t ht, const reg_t reg, const uint32_t val)
+{
+	lib::mcfg_write32(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
 void Numachip2::write32(const reg_t reg, const uint32_t val) const
 {
 	lib::mcfg_write32(config->id, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
@@ -142,12 +147,15 @@ void Numachip2::late_init(void)
 	prev_tval = lib::mem_read64(PIU_TIMER_NOW);
 
 	write32(TIMEOUT_RESP, TIMEOUT_VAL);
-	write32(RMPE_CTRL, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
+
+	for (unsigned pe = 0; pe < PE_UNITS; pe++)
+		write32(PE_CTRL + pe * PE_OFFSET, (1 << 31) | (0 << 28) | (3 << 26)); // 335ms timeout
 }
 
 void Numachip2::finished(void)
 {
-	write32(RMPE_CTRL, 1 << 31); // disable timeout
+	for (unsigned pe = 0; pe < PE_UNITS; pe++)
+		write32(PE_CTRL + pe * PE_OFFSET, 1 << 31); // disable timeout
 }
 
 uint32_t Numachip2::rom_read(const uint8_t reg)
@@ -198,21 +206,20 @@ bool Numachip2::check(const sci_t sci, const ht_t ht)
 	}
 
 	for (unsigned pe = 0; pe < PE_UNITS; pe++) {
-		val = read32(sci, ht, RMPE_STATUS + pe * PE_OFFSET) & ~0x800f0000;
+		val = read32(sci, ht, PE_STATUS + pe * PE_OFFSET) & ~0x800f0000;
 		if (val) {
 			printf("%03x PE %u status %08x\n", sci, pe, val);
 			errors++;
 		}
-	}
 
-#ifdef UNNEEDED
-		for (unsigned mcms = 0; mcms < MCMS_UNITS; mcms++) {
-			val = read32(sci, ht, MCMS_STAT + mcms * MCMS_OFFSET);
-			if (val) {
+		for (unsigned mcms = 0; mcms < PE_MCMS_UNITS; mcms++) {
+			val = read32(sci, ht, PE_MCMS_STAT + pe * PE_OFFSET + mcms * PE_MCMS_OFFSET);
+			if (val & (1 << 14)) {
 				printf("%03x PE %u MCMS %u status %08x\n", sci, pe, mcms, val);
 				errors++;
 			}
-#endif
+		}
+	}
 
 	for (unsigned link = 0; link < LC5::LINKS; link++) {
 		val = read32(sci, ht, LC5::LINKSTAT + link * LC5::SIZE) & ~0x80000000;

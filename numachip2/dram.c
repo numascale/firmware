@@ -113,7 +113,7 @@ void Numachip2::dram_init(void)
 	printf(">");
 
 	const uint64_t hosttotal = e820->memlimit();
-	bool mtag_byte_mode = ((read32(LMPE_STATUS) & (1<<31)) != 0);
+	bool mtag_byte_mode = ((read32(PE_STATUS + 1 * PE_OFFSET) & (1<<31)) != 0);
 	unsigned ncache_shift = 30; // minimum
 	uint64_t ctag = 1ULL << (ncache_shift - CTAG_SHIFT);
 	// round up to mask constraints to allow manipulation

@@ -60,7 +60,7 @@ static void gen(void)
 
 	if (sizeof(table)) {
 		assert(write(fd, table, sizeof(table)) == sizeof(table));
-		printf("wrote %s (%zd bytes, %u nodes)\n", filename, sizeof(table), nnodes);
+		printf("wrote %s (%zu bytes, %u nodes)\n", filename, sizeof(table), nnodes);
 	} else {
 		uint32_t extra_len;
 		dnc_node_count = nnodes;
