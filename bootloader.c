@@ -173,10 +173,6 @@ static void add(const Node &node)
 			(*nb)->write32(Opteron::IO_MAP_BASE + r * 8, 0);
 		}
 	}
-
-	// 16. set DRAM range on NumaChip
-	node.numachip->write32(Numachip2::DRAM_SHARED_BASE, node.dram_base >> 24);
-	node.numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (node.dram_end - 1) >> 24);
 }
 
 static void setup_gsm_early(void)
@@ -345,10 +341,6 @@ static void remap(void)
 		for (Opteron *const *nb = &local_node->opterons[0]; nb < &local_node->opterons[local_node->nopterons]; nb++)
 			(*nb)->drammap.set(range, nodes[1]->opterons[0]->dram_base, dram_top - 1, local_node->numachip->ht);
 
-	// 4. setup NumaChip DRAM registers
-	local_node->numachip->write32(Numachip2::DRAM_SHARED_BASE, local_node->dram_base >> 24);
-	local_node->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, (local_node->dram_end - 1) >> 24);
-
 	// 5. setup DRAM ATT routing
 	foreach_node(node)
 		foreach_node(dnode)
@@ -389,15 +381,23 @@ static void remap(void)
 	e820->add(dram_top - len, len, E820::RESERVED);
 }
 
+static void enable_coherency(void)
+{
+	foreach_node(node) {
+		(*node)->numachip->write32(Numachip2::DRAM_SHARED_BASE, (*node)->dram_base >> 24);
+		(*node)->numachip->write32(Numachip2::DRAM_SHARED_LIMIT, ((*node)->dram_end - 1) >> 24);
+	}
+}
+
 #define MTRR_TYPE(x) (x) == 0 ? "uncacheable" : (x) == 1 ? "write-combining" : (x) == 4 ? "write-through" : (x) == 5 ? "write-protect" : (x) == 6 ? "write-back" : "unknown"
 
 static void copy_inherit(void)
 {
 	for (Node **node = &nodes[1]; node < &nodes[nnodes]; node++) {
+#ifdef BROKEN
 		const uint64_t rnode = (*node)->dram_base + (*node)->numachip->read32(Numachip2::INFO + 4);
 		lib::memcpy64((uint64_t)&(*node)->neigh_ht, rnode + xoffsetof(local_node->neigh_ht, local_node), sizeof((*node)->neigh_ht));
-
-		// FIXME
+#endif
 		(*node)->neigh_ht = local_node->neigh_ht;
 		(*node)->neigh_link = local_node->neigh_link;
 		printf("%03x Numachip @ HT%u.%u\n", (*node)->config->id, (*node)->neigh_ht,
@@ -504,6 +504,13 @@ static void setup_cores_observer(void)
 	printf("\n");
 }
 
+static void setup_apicids(void)
+{
+	foreach_node(node)
+		for (unsigned n = 0; n < acpi->napics; n++)
+			(*node)->apics[n] = ((uint32_t)(*node)->config->id << 8) | acpi->apics[n];
+}
+
 static void setup_cores(void)
 {
 #ifdef UNNEEDED
@@ -552,8 +559,6 @@ static void setup_cores(void)
 		push_msr(MSR_MCFG, mcfg);
 
 		for (unsigned n = 0; n < acpi->napics; n++) {
-			(*node)->apics[n] = ((uint32_t)(*node)->config->id << 8) | acpi->apics[n];
-
 			// renumber BSP APICID
 			if (node == &nodes[0] && n == 0) {
 				volatile uint32_t *apic = (uint32_t *)(lib::rdmsr(MSR_APIC_BAR) & ~0xfff);
@@ -1400,10 +1405,10 @@ static void wait_for_master(void)
 		}
 	}
 }
-#ifdef UNUSED
+#ifdef DEBUG
 static void test_map(void)
 {
-	const uint64_t stride = 1ULL << 20;
+	const uint64_t stride = 4ULL << 10;
 
 	printf("Testing memory map");
 	for (uint64_t pos = 0; pos < dram_top + stride * 16; pos += stride)
@@ -1615,14 +1620,18 @@ int main(const int argc, char *const argv[])
 		}
 	}
 
+	setup_apicids();
 	copy_inherit();
 	if (options->tracing)
 		setup_gsm();
 	setup_info();
-	setup_cores();
 	acpi_tables();
 	tracing_arm();
-//	test_map();
+	enable_coherency();
+	setup_cores();
+#ifdef DEBUG
+	test_map();
+#endif
 	if (!options->fastboot)
 		test_cores();
 	clear_dram();
