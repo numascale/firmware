@@ -1000,7 +1000,8 @@ static void monitor()
 						uint32_t stat = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_STATUS + pe * Numachip2::PE_OFFSET);
 
 						if ((stat >> 10) & 7) { // skip free contexts
-							uint64_t addr = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_ADDR + pe * Numachip2::PE_OFFSET);
+							uint64_t addr = Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_ADDR + pe * Numachip2::PE_OFFSET)
+								| ((uint64_t)Numachip2::read32(config->nodes[n].id, local_node->numachip->ht, Numachip2::PE_CNTXT_ADDR+4 + pe * Numachip2::PE_OFFSET) << 32);
 							printf(" %03x%c%010llx", config->nodes[n].id, pe ? 'L' : 'R', addr);
 						}
 					}
