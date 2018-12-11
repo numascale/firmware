@@ -194,6 +194,7 @@ public:
 	static uint32_t read32(const sci_t _sci, const ht_t _ht, const reg_t reg);
 	uint32_t read32(const reg_t reg) const;
 	void write64_split(const reg_t reg, const uint64_t val) const;
+	static void write32(const sci_t _sci, const ht_t _ht, const reg_t reg, const uint32_t val);
 	void write32(const reg_t reg, const uint32_t val) const;
 	void set32(const reg_t reg, const uint32_t mask) const;
 	void clear32(const reg_t reg, const uint32_t mask) const;

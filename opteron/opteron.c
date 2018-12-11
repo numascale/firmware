@@ -61,19 +61,34 @@ bool Opteron::check(const sci_t _sci, const ht_t _ht)
 			ret = 1;
 		}
 
-		val = read32(_sci, _ht, LINK_RETRY + link * 4);
-		if (val & 0xffff1f00) {
-			printf(COL_RED "%03x#%u link %u: %u retries", _sci, _ht, link, val >> 16);
-			if (val & (1 << 11))
-				printf(" DataCorruptOut");
-			if (val & (1 << 11))
-				printf(" InitFail");
-			if (val & (1 << 10))
-				printf(" StompedPktDet");
-			if (val & (1 << 9))
-				printf(" RetryCountRollover");
-			printf(COL_DEFAULT "\n");
-			ret = 1;
+		for (unsigned sublink = 0; sublink < 2; sublink++) {
+			val = read32(_sci, _ht, LINK_RETRY + link * 4 + sublink * 0x10);
+			if (val & 0xffff1f00) {
+				warning("%03x#%u link %u.%u: %u retries", _sci, _ht, link, sublink, val >> 16);
+				if (val & (1 << 11))
+					printf(" DataCorruptOut");
+				if (val & (1 << 11))
+					printf(" InitFail");
+				if (val & (1 << 10))
+					printf(" StompedPktDet");
+				if (val & (1 << 9))
+					printf(" RetryCountRollover");
+//				printf(COL_DEFAULT "\n");
+//				ret = 1;
+				// clear error
+				val &= ~0xffff0000;
+				write32(_sci, _ht, LINK_RETRY + link * 4 + sublink * 0x10, val);
+			}
+#ifdef DEBUG
+			// inject link error to test retry
+			if (_sci == 000 && _ht == 2 && link == 1 && sublink == 0) {
+				static unsigned z;
+				if (z++ % 0x200 == 0x1ff) {
+					printf("Injecting error on %03x#%u link %u.%u\n", _sci, _ht, link, sublink);
+					write32(_sci, _ht, LINK_RETRY + link * 4 + sublink * 0x10, val | 2);
+				}
+			}
+#endif
 		}
 	}
 
@@ -198,6 +213,11 @@ uint32_t Opteron::read32(const reg_t reg) const
 void Opteron::write64_split(const reg_t reg, const uint64_t val) const
 {
 	lib::mcfg_write64_split(sci, 0, 24 + ht, reg >> 12, reg & 0xfff, val);
+}
+
+void Opteron::write32(const sci_t _sci, const ht_t _ht, const reg_t reg, const uint32_t val)
+{
+	lib::mcfg_write32(_sci, 0, 24 + _ht, reg >> 12, reg & 0xfff, val);
 }
 
 void Opteron::write32(const reg_t reg, const uint32_t val) const
