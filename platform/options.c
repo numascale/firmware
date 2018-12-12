@@ -144,9 +144,9 @@ void Options::parse_flags(const char *val, void *data)
 	}
 }
 
-Options::Options(const int argc, char *const argv[]): config_filename("fabric.txt"),
-	ht_slowmode(0), boot_wait(0), handover_acpi(0),
-	fastboot(0), remote_io(1), dimmtest(2), memlimit(~0), tracing(0)
+Options::Options(const int argc, char *const argv[]): config_filename("fabric.txt"), flash(),
+	ht_slowmode(0), init_only(0), boot_wait(0), handover_acpi(0),
+	fastboot(0), remote_io(1), test_manufacture(0), test_boardinfo(0), dimmtest(2), memlimit(~0), tracing(0)
 {
 	memset(&debug, 0, sizeof(debug));
 

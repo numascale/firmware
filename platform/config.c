@@ -45,10 +45,8 @@ const char *pr_node(const sci_t id)
 	return ret;
 }
 
-Config::Config(void)
+Config::Config(void): nnodes(1), nodes(), local_node(), master(), npartitions(), partitions()
 {
-	nnodes = 1;
-
 	nodes[0].partition = 0;
 	nodes[0].master = 1;
 	nodes[0].id = 0;
@@ -185,7 +183,7 @@ void Config::parse(const char *pos)
 	}
 }
 
-Config::Config(const char *filename)
+Config::Config(const char *filename): nnodes(0), nodes(), local_node()
 {
 	size_t len;
 	printf("Config %s", filename);

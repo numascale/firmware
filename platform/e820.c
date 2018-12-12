@@ -210,7 +210,7 @@ out:
 	return base;
 }
 
-E820::E820(void)
+E820::E820(void): test_errors(0)
 {
 	// setup relocated area
 	uint32_t relocate_size = roundup(&asm_relocate_end - &asm_relocate_start, 1024);

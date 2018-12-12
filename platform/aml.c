@@ -469,7 +469,7 @@ class Return: public Container {
 	static const uint8_t ReturnOp = 0xa4;
 	char name[5];
 public:
-	Return(Container *c) {
+	Return(Container *c): name() {
 		children.push_back(c);
 	}
 

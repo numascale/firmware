@@ -82,7 +82,7 @@ bool SR56x0::probe(const sci_t sci)
 	return 0;
 }
 
-SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local)
+SR56x0::SR56x0(const sci_t _sci, const bool _local): sci(_sci), local(_local), watchdog_base(NULL)
 {
 	if (local) {
 		uint32_t val = read32(0xc8);

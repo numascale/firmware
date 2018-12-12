@@ -130,11 +130,9 @@ void Router::update(const nodeid_t src, const nodeid_t dst)
 #endif
 }
 
-Router::Router()
+Router::Router(): nnodes(-1), usage(), deps(), route(), best(), dist()
 {
 	memset(routes, XBARID_NONE, sizeof(routes));
-	memset(usage, 0, sizeof(usage));
-	memset(&deps, 0, sizeof(deps));
 	memset(neigh, XBARID_NONE, sizeof(neigh));
 }
 

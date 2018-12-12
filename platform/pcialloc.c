@@ -28,7 +28,7 @@
 Allocator *Device::alloc;
 
 Allocator::Allocator():
-	start32(lib::rdmsr(MSR_TOPMEM)), end32(0xffffffff), pos32(start32), start64(max(dram_top, Opteron::HT_LIMIT)), pos64(start64)
+	map32(NULL), blocks(0), start32(lib::rdmsr(MSR_TOPMEM)), end32(0xffffffff), pos32(start32), start64(max(dram_top, Opteron::HT_LIMIT)), pos64(start64)
 {
 }
 
