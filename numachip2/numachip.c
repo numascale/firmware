@@ -215,7 +215,7 @@ bool Numachip2::check(const sci_t sci, const ht_t ht)
 		for (unsigned mcms = 0; mcms < PE_MCMS_UNITS; mcms++) {
 			val = read32(sci, ht, PE_MCMS_STAT + pe * PE_OFFSET + mcms * PE_MCMS_OFFSET);
 			if (val & (1 << 14)) {
-				printf("%03x PE %u MCMS %u status %08x\n", sci, pe, mcms, val);
+				printf("%03x PE %u MCMS %u detected protocol error\n", sci, pe, mcms);
 				errors++;
 			}
 		}

@@ -1153,7 +1153,7 @@ static bool handle_command(const enum node_state cstate, enum node_state *rstate
 			printf("Fabric %s\n", *rstate == RSP_FABRIC_OK ? "validates" : "failed validation");
 			return 1;
 		case CMD_WARM_RESET:
-			printf(BANNER "Warm-booting to clear fabric error...\n");
+			printf(BANNER "Warm-booting to clear error...\n");
 			lib::udelay(500000);
 			Opteron::platform_reset_warm();
 		return 1;
