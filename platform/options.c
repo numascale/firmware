@@ -71,15 +71,15 @@ void Options::parse_int64(const char *val, void *intp)
 		switch (*endptr) {
 		case 'T':
 		case 't':
-			ret <<= 10;
+			ret <<= 40;
 			break;
 		case 'G':
 		case 'g':
-			ret <<= 10;
+			ret <<= 30;
 			break;
 		case 'M':
 		case 'm':
-			ret <<= 10;
+			ret <<= 20;
 			break;
 		case 'K':
 		case 'k':
@@ -206,7 +206,7 @@ Options::Options(const int argc, char *const argv[]): config_filename("fabric.tx
 		dimmtest = 0;
 
 	if (tracing > 0 && tracing < (16ULL << 20)) {
-		warning("Too small trace buffers specified (%" PRIu64 " MB), must be 16MB or more. Disabled.", tracing >> 20);
+		warning("%" PRIu64 "MB trace buffers are too small; disabling", tracing >> 20);
 		tracing = 0;
 	}
 }
