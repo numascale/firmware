@@ -1459,6 +1459,9 @@ int main(const int argc, char *const argv[])
 
 	local_node = new Node(config->local_node, (sci_t)config->master->id);
 
+	// ensure low-memory is reserved
+	e820->add(0x83000, 0x1c00, E820::RESERVED);
+
 	// ensure Numachip2 MMIO range is reserved for all cases
 	e820->add(Numachip2::LOC_BASE, Numachip2::LOC_LIM - Numachip2::LOC_BASE + 1, E820::RESERVED);
 
