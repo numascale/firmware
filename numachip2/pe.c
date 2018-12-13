@@ -48,6 +48,6 @@ void Numachip2::pe_init(void)
 {
 	for (unsigned pe = 0; pe < PE_UNITS; pe++) {
 		xassert(!(read32(PE_CTRL + pe * PE_OFFSET) & (1<<31)));
-		pe_load_microcode(0);
+		pe_load_microcode(pe);
 	}
 }
