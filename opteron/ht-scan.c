@@ -136,9 +136,14 @@ void Opteron::ht_optimize_link(const ht_t nc, const ht_t neigh, const link_t lin
 	bool ganged = lib::cht_read32(neigh, LINK_EXT_CTRL + link * 4) & 1;
 	printf("HT %sganged @ ", ganged ? "" : "un");
 
-	// disable additional CRC insertion, as it causes HT failure on Numachip2
-	val = lib::cht_read32(neigh, LINK_RETRY_CTRL);
-	lib::cht_write32(neigh, LINK_RETRY_CTRL, val &= ~(7 << 9));
+	for (unsigned i = 0; i < nc; i++) {
+		// disable additional CRC insertion, as it causes HT failure on Numachip2
+		val = lib::cht_read32(i, LINK_RETRY_CTRL);
+		val &= ~(3 << 12); // disable dynamic command packing/CRC insertion
+		val &= ~(7 << 9); // no additional CRC insertion
+		val |= 1 << 8; // ensure command packing enabled
+		lib::cht_write32(i, LINK_RETRY_CTRL, val);
+	}
 
 	if (options->ht_slowmode)
 		return;
