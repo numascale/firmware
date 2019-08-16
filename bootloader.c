@@ -376,6 +376,9 @@ static void remap(void)
 		}
 	}
 
+	// workaround BIOS bug which can corrupt higher area of memory due to incomplete SMM address mask
+	e820->add(0x1003ff00000, 1 << 20, E820::RESERVED);
+
 	// FIXME: reserve 8MB at top of DRAM to prevent igb tx queue hangs
 	uint64_t len = 8ULL << 20;
 	e820->add(dram_top - len, len, E820::RESERVED);
