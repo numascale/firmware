@@ -24,8 +24,8 @@
 #include "numachip2/numachip.h"
 #include "platform/config.h"
 
-#define foreach_node(x) for (Node *const *(x) = &nodes[0]; (x) < &nodes[nnodes]; (x)++)
-#define foreach_nb(x, y) for (Opteron **(y) = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
+#define foreach_node(x) for (Node *const *x = &nodes[0]; (x) < &nodes[nnodes]; (x)++)
+#define foreach_nb(x, y) for (Opteron **y = &(*(x))->opterons[0]; (y) < &(*(x))->opterons[(*(x))->nopterons]; (y)++)
 
 class Node {
 	bool local;

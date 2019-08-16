@@ -682,7 +682,7 @@ unsigned AcpiTable::reserve(const unsigned len)
 	return offset;
 }
 
-void AcpiTable::increment64(const unsigned offset)
+void AcpiTable::increment64(const unsigned offset) const
 {
    uint64_t *p = (uint64_t *)((unsigned)payload + offset);
    (*p)++;

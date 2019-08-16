@@ -164,7 +164,7 @@ public:
 	AcpiTable(const char *name, const unsigned rev, const bool copy = 0) nonnull;
 	void append(const char *data, const unsigned len) nonnull;
 	unsigned reserve(const unsigned len);
-	void increment64(const unsigned offset);
+	void increment64(const unsigned offset) const;
 };
 
 class ACPI {
