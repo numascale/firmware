@@ -846,15 +846,21 @@ static void acpi_tables(void)
 
 			foreach_node(dnode) {
 				for (Opteron **dnb = &(*dnode)->opterons[0]; dnb < &(*dnode)->opterons[(*dnode)->nopterons]; dnb++) {
+					const unsigned soffset = snb - (*snode)->opterons;
+					const unsigned doffset = dnb - (*dnode)->opterons;
 					uint8_t dist;
+
 					if (*snode == *dnode) {
 						if (*snb == *dnb)
 							dist = 10;
 						else
-							dist = oslit ? odist[(snb - (*snode)->opterons) + (dnb - (*dnode)->opterons) * (*snode)->nopterons] : 16;
+							dist = odist[soffset + doffset * (*snode)->nopterons];
 					} else {
 						xassert(router->dist[snode - nodes][dnode - nodes]);
-						dist = 80 + (router->dist[snode - nodes][dnode - nodes] + router->dist[dnode - nodes][snode - nodes]) * 10;
+						dist = 70 + (router->dist[snode - nodes][dnode - nodes] + router->dist[dnode - nodes][snode - nodes]) * 10;
+
+						// add latency from egress Numachip NUMA node
+						dist += odist[(*snode)->neigh_ht + doffset * (*snode)->nopterons];
 					}
 
 					if (options->debug.acpi)
