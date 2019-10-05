@@ -1569,7 +1569,7 @@ int main(const int argc, char *const argv[])
 		lib::disable_xtpic();
 
 		printf(BANNER "This server %s is part of a %u-server NumaConnect2 system\n"
-		       "Refer to the console on %s", pr_node(config->local_node->id),
+		       "Refer to the console on %s", pr_node(config->master->id),
 		       nnodes, pr_node(config->master->id));
 
 		caches(0);
